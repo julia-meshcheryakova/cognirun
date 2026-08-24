@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CogniRun</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#141b24;--panel2:#1c2733;--violet:#a78bfa;--lime:#d9f99d;
+    --txt:#e8eef5;--dim:#8ca0b3;--good:#34d399;--bad:#f87171;--hr:#fb7185;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .phone{max-width:430px;margin:0 auto;min-height:100vh;padding:14px 14px 24px;display:flex;flex-direction:column;gap:11px}
+  header{display:flex;align-items:center;justify-content:space-between}
+  .brand{font-weight:800;font-size:21px}.brand span{color:var(--violet)}.brand b{color:var(--lime)}
+  .badges{display:flex;gap:6px;align-items:center}
+  .badge{font-size:10px;padding:3px 8px;border-radius:999px;background:#2a2033;color:#e0b0ff}
+  .badge.on{background:#12281c;color:var(--good)}
+  .badge.gps{background:#1b2333;color:#8fb8ff}.badge.gps.on{background:#12281c;color:var(--good)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  .stat{background:var(--panel);border-radius:14px;padding:9px 6px;text-align:center}
+  .stat .v{font-size:18px;font-weight:800}.stat .l{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+  .stat.hr .v{color:var(--hr)}
+  .chart{background:var(--panel);border-radius:16px;padding:11px 8px 5px}
+  .chart h4{margin:0 0 5px;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;padding-left:4px}
+  svg{width:100%;height:96px;display:block}
+  .qcard{background:linear-gradient(160deg,#1c2733,#141b24);border:1px solid #263341;border-radius:18px;padding:15px;min-height:140px;display:flex;flex-direction:column;gap:11px}
+  .qtop{display:flex;align-items:center;justify-content:space-between}
+  .qtag{font-size:11px;color:var(--violet);font-weight:700}
+  .qtype{font-size:10px;color:var(--dim);background:#0b1219;padding:3px 8px;border-radius:999px}
+  .qspeak{background:var(--panel2);border:none;color:var(--txt);border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer}
+  .qtext{font-size:16px;line-height:1.4}
+  .qidle{color:var(--dim);font-size:14px;text-align:center;padding:22px 0}
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .choice{background:#0b1219;border:1px solid #2a3a49;color:var(--txt);border-radius:12px;padding:12px;font-size:15px;cursor:pointer;text-align:center;font-weight:600}
+  .choice:active{background:#16202b}
+  .answer{display:flex;gap:8px}
+  .answer input{flex:1;background:#0b1219;border:1px solid #2a3a49;color:var(--txt);border-radius:12px;padding:12px;font-size:16px;outline:none;text-align:center}
+  .answer button{background:var(--violet);border:none;color:#12181f;font-weight:800;border-radius:12px;padding:0 16px;font-size:14px;cursor:pointer}
+  .verdict{font-weight:800;font-size:15px;text-align:center;padding:6px}
+  .verdict.good{color:var(--good)}.verdict.bad{color:var(--bad)}
+  .runbox{background:var(--panel);border-radius:16px;padding:13px}
+  .runbtns{display:flex;gap:8px}
+  .runbtns button{flex:1;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:800;cursor:pointer}
+  #run{background:var(--lime);color:#12181f}#run.running{background:var(--hr);color:#fff}
+  #hrbtn{background:#2a2033;color:#e0b0ff}#gpsbtn{background:#1b2333;color:#8fb8ff}#reset{background:var(--panel2);color:var(--txt);flex:0 0 auto;padding:13px 14px}
+  .row2{display:flex;gap:8px;margin-top:8px}
+  .log{font-size:11px;color:var(--dim);margin-top:8px;min-height:16px;text-align:center}
+</style>
+</head>
+<body>
+<div class="phone">
+  <header>
+    <div class="brand"><span>Cogni</span><b>Run</b></div>
+    <div class="badges">
+      <span class="badge" id="hrbadge">❤ HR: demo</span>
+      <span class="badge gps" id="gpsbadge">📍 GPS: off</span>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><div class="v" id="s-dist">0.00</div><div class="l">km</div></div>
+    <div class="stat"><div class="v" id="s-pace">6:00</div><div class="l">min/km</div></div>
+    <div class="stat hr"><div class="v" id="s-hr">—</div><div class="l">bpm</div></div>
+    <div class="stat"><div class="v" id="s-time">0:00</div><div class="l">time</div></div>
+  </div>
+
+  <div class="chart">
+    <h4>Heart rate — live from watch when connected</h4>
+    <svg id="svg" viewBox="0 0 400 96" preserveAspectRatio="none"></svg>
+  </div>
+
+  <div class="qcard" id="qcard">
+    <div class="qidle" id="qidle">🏃 Press Run — a question after each kilometre</div>
+    <div id="qbody" style="display:none;flex-direction:column;gap:11px">
+      <div class="qtop">
+        <div class="qtag" id="qtag">Q1 · 1 km</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="qtype" id="qtype">multiple choice</span>
+          <button class="qspeak" id="qspeak">🔊</button>
+        </div>
+      </div>
+      <div class="qtext" id="qtext"></div>
+      <div id="qarea"></div>
+      <div class="verdict" id="qverdict" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="runbox">
+    <div class="runbtns">
+      <button id="run">▶ Run</button>
+      <button id="reset">↺</button>
+    </div>
+    <div class="row2">
+      <button id="hrbtn" style="flex:1;border:none;border-radius:12px;padding:11px;font-weight:700;cursor:pointer">❤ Connect watch</button>
+      <button id="gpsbtn" style="flex:1;border:none;border-radius:12px;padding:11px;font-weight:700;cursor:pointer">📍 Start GPS</button>
+    </div>
+    <div class="log" id="log">Run imitates movement at 6:00/km · HR is real from your fēnix (Broadcast HR)</div>
+  </div>
+</div>
+
+<script>
+const TOTAL_KM=3, BASE_PACE=6.0, TOTAL_S=TOTAL_KM*BASE_PACE*60; // 1080s
+const Cap = window.Capacitor;
+const isNative = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
+
+// ---- 3 questions, strictly ChatGPT categories: A/B/C/D, true/false, numeric ----
+const QUESTIONS = [
+  { km:1, type:"multiple choice",
+    q:"Physicist Brian Greene, as a child, liked to stand between two of these in his room (creating an illusion of parallel universes). What are they?",
+    choices:["Mirrors","Windows","Speakers","Doors"], answer:"Mirrors" },
+  { km:2, type:"true / false",
+    q:"True or false: 2 is the only even prime number.",
+    choices:["True","False"], answer:"True" },
+  { km:3, type:"numeric",
+    q:"What is 17 × 24?", answer:"408" },
+];
+
+function fmtTime(s){const m=Math.floor(s/60),ss=Math.floor(s%60);return m+":"+String(ss).padStart(2,"0");}
+function fmtPace(p){const m=Math.floor(p),s=Math.round((p-m)*60);return m+":"+String(s).padStart(2,"0");}
+function paceAt(t){let p=BASE_PACE-Math.min(0.2,t/9000);for(let k=1;k<=3;k++){const c=k*BASE_PACE*60;if(t>=c&&t<c+18)p+=0.9*(1-(t-c)/18);}return p;}
+function log(m){document.getElementById('log').textContent=m;}
+
+// ---- HR: real from watch (native BLE plugin, else Web Bluetooth) ----
+let liveHR=null, hrHistory=[];
+async function connectWatch(){
+  try{
+    if(isNative && Cap.Plugins && Cap.Plugins.BluetoothLe){
+      const BLE=Cap.Plugins.BluetoothLe;
+      // full 128-bit UUIDs — Android BLE scan silently returns nothing on a short 16-bit filter
+      const HR_SVC='0000180d-0000-1000-8000-00805f9b34fb';
+      const HR_CHR='00002a37-0000-1000-8000-00805f9b34fb';
+      await BLE.initialize({androidNeverForLocation:true}); // prompts BLUETOOTH_SCAN/CONNECT at runtime
+      // requestLEScan + manual pick lets us set a timeout and surface errors instead of a stuck picker
+      let picked=null, done=false;
+      const scanHandle=await BLE.addListener('onScanResult',(r)=>{
+        if(done||!r||!r.device)return;
+        picked=r.device; done=true;
+        finishScan(); connectPicked();
+      });
+      const bail=(msg)=>{ if(done)return; done=true; finishScan(); log(msg); };
+      const timer=setTimeout(()=>bail("Watch not found in 15s. On the fēnix: Broadcast HR must be ON and Bluetooth enabled, then tap Connect watch again."),15000);
+      function finishScan(){ clearTimeout(timer); try{BLE.stopLEScan();}catch(e){} try{scanHandle.remove();}catch(e){} }
+      async function connectPicked(){
+        try{
+          log("Found "+(picked.name||picked.deviceId)+" — connecting…");
+          await BLE.connect({deviceId:picked.deviceId});
+          // raw plugin delivers notifications on a keyed event, not via a startNotifications callback
+          const nkey='notification|'+picked.deviceId+'|'+HR_SVC+'|'+HR_CHR;
+          await BLE.addListener(nkey,(res)=>{
+            try{ const dv=res&&res.value?dataViewFromB64(res.value):null; if(dv){liveHR=parseHR(dv);}}catch(e){}
+          });
+          await BLE.startNotifications({deviceId:picked.deviceId,service:HR_SVC,characteristic:HR_CHR});
+          setHRon(); log("Watch connected (native BLE) ❤ — live bpm now.");
+        }catch(e){ log("Connect failed: "+(e.message||e)); }
+      }
+      log("Scanning for watch (Broadcast HR)…");
+      await BLE.requestLEScan({services:[HR_SVC]}); // filter by 0x180D so only HR broadcasters match
+      return;
+    }
+    // Web Bluetooth fallback
+    if(navigator.bluetooth){
+      const dev=await navigator.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});
+      const srv=await dev.gatt.connect();
+      const s=await srv.getPrimaryService('heart_rate');
+      const c=await s.getCharacteristic('heart_rate_measurement');
+      await c.startNotifications();
+      c.addEventListener('characteristicvaluechanged',e=>{liveHR=parseHR(e.target.value);});
+      setHRon(); log("Watch connected (Web BT) ❤ — live bpm now.");
+      return;
+    }
+    log("No Bluetooth API available on this device/browser.");
+  }catch(err){ log("HR connect failed: "+(err.message||err)); }
+}
+function parseHR(dv){const flags=dv.getUint8(0);return (flags&1)?dv.getUint16(1,true):dv.getUint8(1);}
+function dataViewFromB64(b64){const bin=atob(b64);const buf=new ArrayBuffer(bin.length);const u=new Uint8Array(buf);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new DataView(buf);}
+function setHRon(){const b=document.getElementById('hrbadge');b.textContent='❤ HR: live';b.classList.add('on');}
+
+// ---- GPS: native Geolocation plugin, else browser ----
+let gpsWatchId=null, gpsPoints=0;
+async function startGPS(){
+  try{
+    if(isNative && Cap.Plugins && Cap.Plugins.Geolocation){
+      const Geo=Cap.Plugins.Geolocation;
+      const perm=await Geo.requestPermissions();
+      log("Location permission: "+(perm.location||'?'));
+      gpsWatchId=await Geo.watchPosition({enableHighAccuracy:true},(pos)=>{
+        if(pos){gpsPoints++;document.getElementById('gpsbadge').textContent='📍 GPS: '+gpsPoints+' pts';}
+      });
+      setGPSon();
+      return;
+    }
+    if(navigator.geolocation){
+      gpsWatchId=navigator.geolocation.watchPosition(p=>{gpsPoints++;document.getElementById('gpsbadge').textContent='📍 GPS: '+gpsPoints+' pts';setGPSon();},
+        err=>log("GPS error: "+err.message),{enableHighAccuracy:true});
+      log("Requesting location permission…");
+      return;
+    }
+    log("No Geolocation API available.");
+  }catch(err){ log("GPS failed: "+(err.message||err)); }
+}
+function setGPSon(){const b=document.getElementById('gpsbadge');b.classList.add('on');}
+
+// ---- chart (live HR trace; falls back to a demo curve until real HR arrives) ----
+const svg=document.getElementById('svg');
+function demoHR(t){let hr=120+Math.min(45,(t/(BASE_PACE*60))*9)+3*Math.sin(t/40);for(let k=1;k<=3;k++){const c=k*BASE_PACE*60;if(t>=c&&t<c+18)hr-=6*(1-(t-c)/18);}return Math.round(hr);}
+function drawChart(){
+  const W=400,H=96,pad=6;
+  let pts=hrHistory.length>1?hrHistory:[];
+  let poly;
+  if(pts.length>1){
+    const mn=Math.min(...pts)-5,mx=Math.max(...pts)+5;
+    poly=pts.map((v,i)=>{const x=pad+(i/(pts.length-1))*(W-2*pad);const y=H-pad-((v-mn)/(mx-mn||1))*(H-2*pad);return x+","+y;}).join(' ');
+  }else{
+    let a=[];for(let t=0;t<=TOTAL_S;t+=20){const x=pad+(t/TOTAL_S)*(W-2*pad);const y=H-pad-((demoHR(t)-115)/55)*(H-2*pad);a.push(x+","+y);}poly=a.join(' ');
+  }
+  let km=[];for(let k=1;k<=2;k++){const x=pad+(k/3)*(W-2*pad);km.push(`<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#26333f" stroke-dasharray="3 4"/>`);}
+  svg.innerHTML=km.join("")+`<polyline points="${poly}" fill="none" stroke="#fb7185" stroke-width="2"/>`;
+}
+drawChart();
+
+// ---- run loop ----
+let t=0,running=false,timer=null,answered={};
+function render(){
+  const dist=t/(BASE_PACE*60);
+  document.getElementById('s-dist').textContent=dist.toFixed(2);
+  document.getElementById('s-pace').textContent=fmtPace(paceAt(t));
+  document.getElementById('s-hr').textContent=liveHR!=null?liveHR:'—';
+  document.getElementById('s-time').textContent=fmtTime(t);
+  const kmInt=Math.floor(dist+1e-6);
+  if(kmInt>=1&&kmInt<=3&&Math.abs(dist-kmInt)<0.02&&!answered[kmInt])showQuestion(kmInt);
+}
+function tick(){
+  t+=1; if(t>=TOTAL_S){t=TOTAL_S;stopRun();}
+  const hr=liveHR!=null?liveHR:demoHR(t); hrHistory.push(hr); if(hrHistory.length>200)hrHistory.shift();
+  render(); if(t%5===0)drawChart();
+}
+function startRun(){running=true;document.getElementById('run').textContent='⏸ Pause';document.getElementById('run').classList.add('running');timer=setInterval(tick,1000/6);}
+function stopRun(){running=false;document.getElementById('run').textContent='▶ Run';document.getElementById('run').classList.remove('running');clearInterval(timer);}
+function showQuestion(k){
+  const Q=QUESTIONS.find(q=>q.km===k);if(!Q)return;
+  document.getElementById('qidle').style.display='none';
+  document.getElementById('qbody').style.display='flex';
+  document.getElementById('qtag').textContent=`Q${k} · ${k} km`;
+  document.getElementById('qtype').textContent=Q.type;
+  document.getElementById('qtext').textContent=Q.q;
+  document.getElementById('qverdict').style.display='none';
+  const area=document.getElementById('qarea');
+  if(Q.choices){
+    area.innerHTML=`<div class="choices">`+Q.choices.map(c=>`<button class="choice" data-v="${c}">${c}</button>`).join('')+`</div>`;
+    area.querySelectorAll('.choice').forEach(b=>b.onclick=()=>judge(k,b.dataset.v));
+  }else{
+    area.innerHTML=`<div class="answer"><input id="qinput" inputmode="numeric" placeholder="Type answer…"><button id="qsub">Send</button></div>`;
+    document.getElementById('qsub').onclick=()=>judge(k,document.getElementById('qinput').value.trim());
+    document.getElementById('qinput').addEventListener('keydown',e=>{if(e.key==='Enter')judge(k,e.target.value.trim());});
+  }
+  speak(Q.q);
+}
+function judge(k,val){
+  const Q=QUESTIONS.find(q=>q.km===k);if(!Q||answered[k])return;
+  const ok=String(val).toLowerCase()===String(Q.answer).toLowerCase();answered[k]=true;
+  const v=document.getElementById('qverdict');v.style.display='block';v.className='verdict '+(ok?'good':'bad');
+  v.textContent=ok?'✓ Correct — keep moving!':('✗ Not quite — '+Q.answer);
+  speak(ok?'Correct':'Not quite');
+}
+function speak(txt){try{const u=new SpeechSynthesisUtterance(txt);u.rate=1;u.lang='en-GB';speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
+document.getElementById('qspeak').onclick=()=>speak(document.getElementById('qtext').textContent);
+document.getElementById('run').onclick=()=>{running?stopRun():startRun();};
+document.getElementById('reset').onclick=()=>{stopRun();t=0;answered={};hrHistory=[];document.getElementById('qbody').style.display='none';document.getElementById('qidle').style.display='block';drawChart();render();};
+document.getElementById('hrbtn').onclick=connectWatch;
+document.getElementById('gpsbtn').onclick=startGPS;
+render();
+</script>
+</body>
+</html>
