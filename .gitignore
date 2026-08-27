@@ -1,10 +1,21 @@
 node_modules/
-android/app/build/
 android/build/
+android/app/build/
 android/.gradle/
 android/local.properties
+android/.idea/
 *.apk
-*.keystore
 .DS_Store
-local.properties
-android/capacitor-cordova-android-plugins/build/
+www/node_modules/
+
+# dev scratch (screenshot/probe scripts, not app code)
+probe*.js
+shoot*.js
+smoke.js
+chart-test.js
+demo-test.js
+speed-test.js
+speed-midrun-test.js
+pr366-*.png
+pr366-*.html
+shots/

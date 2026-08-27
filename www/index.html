@@ -55,6 +55,7 @@
     <div class="badges">
       <span class="badge" id="hrbadge">❤ HR: demo</span>
       <span class="badge gps" id="gpsbadge">📍 GPS: off</span>
+      <a id="forget" style="display:none;font-size:9px;color:var(--dim);cursor:pointer;text-decoration:underline">forget</a>
     </div>
   </header>
 
@@ -66,8 +67,13 @@
   </div>
 
   <div class="chart">
-    <h4>Heart rate — live from watch when connected</h4>
+    <h4>Heart rate — 0 → 3 km · avg shown</h4>
     <svg id="svg" viewBox="0 0 400 96" preserveAspectRatio="none"></svg>
+  </div>
+
+  <div class="chart" id="mapcard">
+    <h4>Route</h4>
+    <svg id="mapsvg" viewBox="0 0 400 130" preserveAspectRatio="xMidYMid meet" style="height:130px"></svg>
   </div>
 
   <div class="qcard" id="qcard">
@@ -86,14 +92,48 @@
     </div>
   </div>
 
-  <div class="runbox">
-    <div class="runbtns">
-      <button id="run">▶ Run</button>
-      <button id="reset">↺</button>
+  <div class="qcard" id="results" style="display:none">
+    <div class="qtop"><div class="qtag">🏁 Run complete</div></div>
+    <div class="stats" style="grid-template-columns:repeat(2,1fr)">
+      <div class="stat"><div class="v" id="r-dist">0.00</div><div class="l">km</div></div>
+      <div class="stat"><div class="v" id="r-time">0:00</div><div class="l">time</div></div>
+      <div class="stat hr"><div class="v" id="r-hr">—</div><div class="l">avg bpm</div></div>
+      <div class="stat"><div class="v" id="r-score">0/0</div><div class="l">correct</div></div>
+      <div class="stat"><div class="v" id="r-points" style="color:var(--lime)">0</div><div class="l">points</div></div>
     </div>
-    <div class="row2">
+    <div id="r-breakdown" style="font-size:11px;color:var(--dim);margin-top:9px;line-height:1.7"></div>
+  </div>
+
+  <div class="qcard" id="history" style="display:none">
+    <div class="qtop"><div class="qtag">📜 Run history</div>
+      <div style="display:flex;gap:6px">
+        <button class="qspeak" id="histclear">clear</button>
+        <button class="qspeak" id="histclose">close</button>
+      </div>
+    </div>
+    <div id="histlist" style="font-size:12px;color:var(--dim);line-height:1.6"></div>
+  </div>
+
+  <div class="runbox">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;font-size:12px;color:var(--dim)">
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
+        <input type="checkbox" id="demo" checked style="width:16px;height:16px;accent-color:var(--violet)">
+        <span>Demo mode</span>
+      </label>
+      <select id="speed" style="flex:1;background:#0b1219;border:1px solid #2a3a49;color:var(--txt);border-radius:10px;padding:7px;font-size:13px">
+        <option value="1">x1</option>
+        <option value="10" selected>x10</option>
+        <option value="20">x20</option>
+      </select>
+    </div>
+    <div class="row2" style="margin-top:0">
       <button id="hrbtn" style="flex:1;border:none;border-radius:12px;padding:11px;font-weight:700;cursor:pointer">❤ Connect watch</button>
       <button id="gpsbtn" style="flex:1;border:none;border-radius:12px;padding:11px;font-weight:700;cursor:pointer">📍 Start GPS</button>
+      <button id="histbtn" style="flex:0 0 auto;border:none;border-radius:12px;padding:11px 13px;font-weight:700;cursor:pointer;background:var(--panel2);color:var(--txt)">📜</button>
+    </div>
+    <div class="runbtns" style="margin-top:8px">
+      <button id="run">▶ Run</button>
+      <button id="reset">↺</button>
     </div>
     <div class="log" id="log">Run imitates movement at 6:00/km · HR is real from your fēnix (Broadcast HR)</div>
   </div>
@@ -103,18 +143,41 @@
 const TOTAL_KM=3, BASE_PACE=6.0, TOTAL_S=TOTAL_KM*BASE_PACE*60; // 1080s
 const Cap = window.Capacitor;
 const isNative = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
+// Browser prototype mode: no phone/APK. Enables simulated HR + GPS fallbacks so the
+// app is fully playable by just opening index.html. Native path stays intact.
+const isBrowserDemo = !isNative;
 
-// ---- 3 questions, strictly ChatGPT categories: A/B/C/D, true/false, numeric ----
-const QUESTIONS = [
-  { km:1, type:"multiple choice",
-    q:"Physicist Brian Greene, as a child, liked to stand between two of these in his room (creating an illusion of parallel universes). What are they?",
-    choices:["Mirrors","Windows","Speakers","Doors"], answer:"Mirrors" },
-  { km:2, type:"true / false",
-    q:"True or false: 2 is the only even prime number.",
-    choices:["True","False"], answer:"True" },
-  { km:3, type:"numeric",
-    q:"What is 17 × 24?", answer:"408" },
-];
+// ---- Question POOL: 3 categories, school-level (a little thought needed). One picked
+// per km at run start (km1 MC = easiest, km2 T/F, km3 numeric = hardest) so runs vary. ----
+const QUESTION_POOL = {
+  "multiple choice": [
+    { q:"Which planet is closest to the Sun?", choices:["Mercury","Venus","Mars","Earth"], answer:"Mercury" },
+    { q:"What gas do plants absorb for photosynthesis?", choices:["Oxygen","CO₂","Nitrogen","Hydrogen"], answer:"CO₂" },
+    { q:"What is the capital of Australia?", choices:["Sydney","Melbourne","Canberra","Perth"], answer:"Canberra" },
+    { q:"Which is the largest ocean on Earth?", choices:["Atlantic","Indian","Arctic","Pacific"], answer:"Pacific" },
+  ],
+  "true / false": [
+    { q:"Lightning is hotter than the surface of the Sun.", choices:["True","False"], answer:"True" },
+    { q:"The Great Wall of China is visible from space with the naked eye.", choices:["True","False"], answer:"False" },
+    { q:"A leap year has 366 days.", choices:["True","False"], answer:"True" },
+    { q:"Sound travels faster than light.", choices:["True","False"], answer:"False" },
+  ],
+  "numeric": [
+    { q:"How many minutes are in a quarter of a day?", answer:"360" },
+    { q:"What is 15% of 200?", answer:"30" },
+    { q:"A dozen dozens — how many is that?", answer:"144" },
+    { q:"How many sides does a hexagon have?", answer:"6" },
+  ],
+};
+// Easy→hard ordering by category per km; km field is filled at selection time.
+const QUESTION_ORDER = ["multiple choice","true / false","numeric"];
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+// Rebuilt each run start so different runs show different questions. Shape stays compatible
+// with showQuestion/judge: {km,type,q,choices?,answer}.
+let QUESTIONS = selectQuestions();
+function selectQuestions(){
+  return QUESTION_ORDER.map((type,i)=>{const base=pick(QUESTION_POOL[type]);return {km:i+1,type,q:base.q,choices:base.choices,answer:base.answer};});
+}
 
 function fmtTime(s){const m=Math.floor(s/60),ss=Math.floor(s%60);return m+":"+String(ss).padStart(2,"0");}
 function fmtPace(p){const m=Math.floor(p),s=Math.round((p-m)*60);return m+":"+String(s).padStart(2,"0");}
@@ -122,38 +185,50 @@ function paceAt(t){let p=BASE_PACE-Math.min(0.2,t/9000);for(let k=1;k<=3;k++){co
 function log(m){document.getElementById('log').textContent=m;}
 
 // ---- HR: real from watch (native BLE plugin, else Web Bluetooth) ----
-let liveHR=null, hrHistory=[];
+const HR_SVC='0000180d-0000-1000-8000-00805f9b34fb';
+const HR_CHR='00002a37-0000-1000-8000-00805f9b34fb';
+const DEV_KEY='cognirun.hrDevice';
+let liveHR=null, hrHistory=[], hrConnected=false;
+
+function savedDevice(){try{return JSON.parse(localStorage.getItem(DEV_KEY)||'null');}catch(e){return null;}}
+function rememberDevice(d){try{localStorage.setItem(DEV_KEY,JSON.stringify({deviceId:d.deviceId,name:d.name||''}));}catch(e){}
+  document.getElementById('forget').style.display='inline';}
+function forgetDevice(){try{localStorage.removeItem(DEV_KEY);}catch(e){}
+  document.getElementById('forget').style.display='none'; log("Watch forgotten — tap Connect watch to pick again.");}
+
+// Subscribe to the GATT HR Measurement notification. The raw native plugin delivers
+// value as a HEX STRING (not base64) — atob would corrupt it and yield garbage bpm.
+async function subscribeHR(BLE,deviceId){
+  const nkey='notification|'+deviceId+'|'+HR_SVC+'|'+HR_CHR;
+  await BLE.addListener(nkey,(res)=>{
+    try{ const dv=res&&res.value!=null?dataViewFromNative(res.value):null; if(dv&&dv.byteLength){liveHR=parseHR(dv);} }catch(e){}
+  });
+  await BLE.startNotifications({deviceId,service:HR_SVC,characteristic:HR_CHR});
+}
+// connect + subscribe to a known device, no scan. Used by both the scan pick and auto-connect.
+async function connectDevice(BLE,dev){
+  log("Connecting to "+(dev.name||dev.deviceId)+"…");
+  await BLE.connect({deviceId:dev.deviceId});
+  await subscribeHR(BLE,dev.deviceId);
+  rememberDevice(dev);
+  setHRon(); log("Watch connected ❤ — live bpm now.");
+}
+
 async function connectWatch(){
   try{
     if(isNative && Cap.Plugins && Cap.Plugins.BluetoothLe){
       const BLE=Cap.Plugins.BluetoothLe;
-      // full 128-bit UUIDs — Android BLE scan silently returns nothing on a short 16-bit filter
-      const HR_SVC='0000180d-0000-1000-8000-00805f9b34fb';
-      const HR_CHR='00002a37-0000-1000-8000-00805f9b34fb';
       await BLE.initialize({androidNeverForLocation:true}); // prompts BLUETOOTH_SCAN/CONNECT at runtime
-      // requestLEScan + manual pick lets us set a timeout and surface errors instead of a stuck picker
-      let picked=null, done=false;
+      // requestLEScan + manual pick lets us set a timeout and surface errors instead of a stuck picker.
+      // Scan is used ONLY to discover the device; live HR comes solely from the GATT notification.
+      let done=false;
       const scanHandle=await BLE.addListener('onScanResult',(r)=>{
         if(done||!r||!r.device)return;
-        picked=r.device; done=true;
-        finishScan(); connectPicked();
+        done=true; finishScan(); connectDevice(BLE,r.device).catch(e=>log("Connect failed: "+(e.message||e)));
       });
       const bail=(msg)=>{ if(done)return; done=true; finishScan(); log(msg); };
       const timer=setTimeout(()=>bail("Watch not found in 15s. On the fēnix: Broadcast HR must be ON and Bluetooth enabled, then tap Connect watch again."),15000);
       function finishScan(){ clearTimeout(timer); try{BLE.stopLEScan();}catch(e){} try{scanHandle.remove();}catch(e){} }
-      async function connectPicked(){
-        try{
-          log("Found "+(picked.name||picked.deviceId)+" — connecting…");
-          await BLE.connect({deviceId:picked.deviceId});
-          // raw plugin delivers notifications on a keyed event, not via a startNotifications callback
-          const nkey='notification|'+picked.deviceId+'|'+HR_SVC+'|'+HR_CHR;
-          await BLE.addListener(nkey,(res)=>{
-            try{ const dv=res&&res.value?dataViewFromB64(res.value):null; if(dv){liveHR=parseHR(dv);}}catch(e){}
-          });
-          await BLE.startNotifications({deviceId:picked.deviceId,service:HR_SVC,characteristic:HR_CHR});
-          setHRon(); log("Watch connected (native BLE) ❤ — live bpm now.");
-        }catch(e){ log("Connect failed: "+(e.message||e)); }
-      }
       log("Scanning for watch (Broadcast HR)…");
       await BLE.requestLEScan({services:[HR_SVC]}); // filter by 0x180D so only HR broadcasters match
       return;
@@ -172,12 +247,45 @@ async function connectWatch(){
     log("No Bluetooth API available on this device/browser.");
   }catch(err){ log("HR connect failed: "+(err.message||err)); }
 }
+
+// On load: if we remembered a device, connect straight to it — no scan, no picker.
+async function autoConnect(){
+  const d=savedDevice(); if(!d)return;
+  document.getElementById('forget').style.display='inline';
+  if(!(isNative && Cap.Plugins && Cap.Plugins.BluetoothLe))return; // Web BT can't reconnect silently
+  try{
+    const BLE=Cap.Plugins.BluetoothLe;
+    await BLE.initialize({androidNeverForLocation:true});
+    log("Reconnecting to saved watch…");
+    await connectDevice(BLE,d);
+  }catch(e){ log("Auto-connect failed — tap Connect watch. ("+(e.message||e)+")"); }
+}
+
 function parseHR(dv){const flags=dv.getUint8(0);return (flags&1)?dv.getUint16(1,true):dv.getUint8(1);}
-function dataViewFromB64(b64){const bin=atob(b64);const buf=new ArrayBuffer(bin.length);const u=new Uint8Array(buf);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new DataView(buf);}
-function setHRon(){const b=document.getElementById('hrbadge');b.textContent='❤ HR: live';b.classList.add('on');}
+// Native plugin value is a hex string ("004b"); tolerate a DataView too. Never atob().
+function dataViewFromNative(v){
+  if(v&&typeof v==='object'&&v.buffer)return v; // already a DataView/typed
+  const hex=String(v).replace(/[^0-9a-fA-F]/g,'');const n=hex.length>>1;const u=new Uint8Array(n);
+  for(let i=0;i<n;i++)u[i]=parseInt(hex.substr(i*2,2),16);return new DataView(u.buffer);
+}
+function setHRon(){hrConnected=true;const b=document.getElementById('hrbadge');b.textContent='❤ HR: live';b.classList.add('on');updateSetupUI();}
+
+// ---- browser fallback: simulated HR ----
+// Activates only in browser mode with no real HR source (hrConnected stays false).
+// Feeds the SAME liveHR pipeline so the BPM stat + chart look alive. Base ~120-140bpm
+// during the run, drifting up with effort near km markers, gentle noise; ~70 at rest.
+function simHR(tt,isRunning){
+  if(!isRunning) return Math.round(70 + 2*Math.sin(tt/6) + (Math.random()*3-1.5)); // resting
+  let hr=125 + Math.min(20,(tt/(BASE_PACE*60))*8);            // warms up as run progresses
+  for(let k=1;k<=TOTAL_KM;k++){const c=k*BASE_PACE*60;         // spike near each km marker (harder effort)
+    if(tt>=c-30&&tt<c+10) hr+=9*(1-Math.abs(tt-c)/30);}
+  hr+=1.5*Math.sin(tt/12) + (Math.random()*4-2);              // gentle noise/breathing
+  return Math.round(Math.max(60,Math.min(190,hr)));
+}
+let simHRon=false; // true once the simulator has started feeding liveHR
 
 // ---- GPS: native Geolocation plugin, else browser ----
-let gpsWatchId=null, gpsPoints=0;
+let gpsWatchId=null, gpsPoints=0, gpsActive=false;
 async function startGPS(){
   try{
     if(isNative && Cap.Plugins && Cap.Plugins.Geolocation){
@@ -192,35 +300,153 @@ async function startGPS(){
     }
     if(navigator.geolocation){
       gpsWatchId=navigator.geolocation.watchPosition(p=>{gpsPoints++;document.getElementById('gpsbadge').textContent='📍 GPS: '+gpsPoints+' pts';setGPSon();},
-        err=>log("GPS error: "+err.message),{enableHighAccuracy:true});
+        err=>{ log("GPS error: "+err.message); startSimGPS(); },{enableHighAccuracy:true});
       log("Requesting location permission…");
       return;
     }
-    log("No Geolocation API available.");
-  }catch(err){ log("GPS failed: "+(err.message||err)); }
+    log("No Geolocation API available."); startSimGPS();
+  }catch(err){ log("GPS failed: "+(err.message||err)); startSimGPS(); }
 }
-function setGPSon(){const b=document.getElementById('gpsbadge');b.classList.add('on');}
+// Browser fallback: simulate an advancing position stream (~1 pt/s) with no real geolocation.
+// Only used when the real APIs are absent or denied; native/real GPS above takes priority.
+let simGPStimer=null;
+function startSimGPS(){
+  if(!isBrowserDemo || gpsActive || simGPStimer) return;
+  const b=document.getElementById('gpsbadge');
+  simGPStimer=setInterval(()=>{gpsPoints++;b.textContent='📍 GPS: '+gpsPoints+' pts (sim)';},1000);
+  setGPSon(); log("GPS simulated (browser demo) 📍");
+}
+function setGPSon(){gpsActive=true;const b=document.getElementById('gpsbadge');b.classList.add('on');updateSetupUI();}
+
+// #3: hide setup buttons once that channel is live; reveal again if it drops.
+function updateSetupUI(){
+  document.getElementById('hrbtn').style.display=hrConnected?'none':'';
+  document.getElementById('gpsbtn').style.display=gpsActive?'none':'';
+}
 
 // ---- chart (live HR trace; falls back to a demo curve until real HR arrives) ----
 const svg=document.getElementById('svg');
+const mapsvg=document.getElementById('mapsvg');
 function demoHR(t){let hr=120+Math.min(45,(t/(BASE_PACE*60))*9)+3*Math.sin(t/40);for(let k=1;k<=3;k++){const c=k*BASE_PACE*60;if(t>=c&&t<c+18)hr-=6*(1-(t-c)/18);}return Math.round(hr);}
+
+// Population-average HR zones (Garmin-style). PLACEHOLDER bands, NOT individual — a real
+// app would derive these from max HR / LTHR. Drawn as coloured blocks behind the line.
+const HR_ZONES=[
+  {name:'Z1',lo:0,hi:115,col:'#3b4a5a'},
+  {name:'Z2',lo:115,hi:135,col:'#2f6f5b'},
+  {name:'Z3',lo:135,hi:155,col:'#7a7a2f'},
+  {name:'Z4',lo:155,hi:170,col:'#8a5a2f'},
+  {name:'Z5',lo:170,hi:220,col:'#8a2f3a'},
+];
+const HR_MIN=90, HR_MAX=190; // fixed chart scale so zone bands line up with the trace
+
+// Downsample + moving-average smooth so the trace reads as one clean trend, not spikes.
+function smoothResample(src,n){
+  if(src.length<2) return src.slice();
+  const out=[];
+  for(let i=0;i<n;i++){
+    const p=i/(n-1)*(src.length-1);const idx=Math.round(p);
+    let sum=0,c=0;for(let j=idx-2;j<=idx+2;j++){if(j>=0&&j<src.length){sum+=src[j];c++;}}
+    out.push(sum/c);
+  }
+  return out;
+}
 function drawChart(){
   const W=400,H=96,pad=6;
-  let pts=hrHistory.length>1?hrHistory:[];
-  let poly;
-  if(pts.length>1){
-    const mn=Math.min(...pts)-5,mx=Math.max(...pts)+5;
-    poly=pts.map((v,i)=>{const x=pad+(i/(pts.length-1))*(W-2*pad);const y=H-pad-((v-mn)/(mx-mn||1))*(H-2*pad);return x+","+y;}).join(' ');
-  }else{
-    let a=[];for(let t=0;t<=TOTAL_S;t+=20){const x=pad+(t/TOTAL_S)*(W-2*pad);const y=H-pad-((demoHR(t)-115)/55)*(H-2*pad);a.push(x+","+y);}poly=a.join(' ');
+  const yFor=v=>H-pad-((v-HR_MIN)/(HR_MAX-HR_MIN))*(H-2*pad);
+  // X axis is the full planned run: 0 → TOTAL_KM. The trace grows left→right with real
+  // distance covered (it does NOT stretch to fill the width), so the chart reads as
+  // "how far in" not "how many samples".
+  const xForKm=km=>pad+(Math.max(0,Math.min(TOTAL_KM,km))/TOTAL_KM)*(W-2*pad);
+  // zone bands (behind), clipped to chart area
+  let bands='';
+  for(const z of HR_ZONES){
+    const y2=yFor(Math.max(z.lo,HR_MIN)), y1=yFor(Math.min(z.hi,HR_MAX));
+    const top=Math.min(y1,y2), h=Math.abs(y2-y1); if(h<=0)continue;
+    bands+=`<rect x="0" y="${top.toFixed(1)}" width="${W}" height="${h.toFixed(1)}" fill="${z.col}" opacity="0.35"/>`;
+    if(h>10)bands+=`<text x="${W-4}" y="${(top+11).toFixed(1)}" fill="#c8d4df" font-size="8" text-anchor="end" opacity="0.8">${z.name}</text>`;
   }
-  let km=[];for(let k=1;k<=2;k++){const x=pad+(k/3)*(W-2*pad);km.push(`<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#26333f" stroke-dasharray="3 4"/>`);}
-  svg.innerHTML=km.join("")+`<polyline points="${poly}" fill="none" stroke="#fb7185" stroke-width="2"/>`;
+  // km gridlines at 1 and 2 km
+  let km=[];for(let k=1;k<=TOTAL_KM-1;k++){const x=xForKm(k);km.push(`<line x1="${x.toFixed(1)}" y1="0" x2="${x.toFixed(1)}" y2="${H}" stroke="#26333f" stroke-dasharray="3 4"/>`);}
+  let poly='', avgLine='';
+  if(hrHistory.length>1){
+    // Each sample is ~1 sim-second apart; map sample i -> distance covered at that time.
+    // Full run = TOTAL_S samples, so km(i) = (i/TOTAL_S)*TOTAL_KM. Trace ends at current dist.
+    const sm=smoothResample(hrHistory,Math.min(120,hrHistory.length));
+    const nFull=TOTAL_S; // samples in a complete run
+    poly=sm.map((v,i)=>{const kmAt=( (i/(sm.length-1)) * (hrHistory.length/nFull) )*TOTAL_KM;return xForKm(kmAt).toFixed(1)+","+yFor(v).toFixed(1);}).join(' ');
+    // averaged HR (dashed horizontal line across the covered portion)
+    const avg=hrHistory.reduce((a,b)=>a+b,0)/hrHistory.length;
+    const curKm=(hrHistory.length/nFull)*TOTAL_KM;
+    avgLine=`<line x1="${xForKm(0).toFixed(1)}" y1="${yFor(avg).toFixed(1)}" x2="${xForKm(curKm).toFixed(1)}" y2="${yFor(avg).toFixed(1)}" stroke="#e8eef5" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>`
+      +`<text x="${(xForKm(curKm)+2).toFixed(1)}" y="${(yFor(avg)-3).toFixed(1)}" fill="#e8eef5" font-size="8" opacity="0.85">avg ${Math.round(avg)}</text>`;
+  }else{
+    // idle preview: faint demo curve across the full 0→TOTAL_KM axis
+    let a=[];for(let t=0;t<=TOTAL_S;t+=20){const kmAt=(t/TOTAL_S)*TOTAL_KM;a.push(xForKm(kmAt).toFixed(1)+","+yFor(demoHR(t)).toFixed(1));}poly=a.join(' ');
+  }
+  svg.innerHTML=bands+km.join("")+avgLine+`<polyline points="${poly}" fill="none" stroke="#fb7185" stroke-width="2"/>`;
 }
 drawChart();
 
+// ---- Route map: self-drawn SVG (offline-safe, no CDN). Deterministic looping path
+// generated from a seed so a run keeps the same shape; polyline grows with progress. ----
+function routePoint(u){ // u in [0,1] along a pleasing loop; returns {x,y} in 0..1
+  const a=u*2*Math.PI;
+  const x=0.5+0.34*Math.sin(a)+0.06*Math.sin(3*a+0.7);
+  const y=0.5-0.30*Math.cos(a)-0.07*Math.sin(2*a+0.3);
+  return {x,y};
+}
+function drawMap(){
+  const W=400,H=130,pad=10;
+  const dist=t/(BASE_PACE*60), frac=Math.max(0,Math.min(1,dist/TOTAL_KM));
+  const px=p=>pad+p.x*(W-2*pad), py=p=>pad+p.y*(H-2*pad);
+  // subtle park-like grid backdrop
+  let grid='';
+  for(let gx=0;gx<=W;gx+=40)grid+=`<line x1="${gx}" y1="0" x2="${gx}" y2="${H}" stroke="#1c2733" stroke-width="1"/>`;
+  for(let gy=0;gy<=H;gy+=40)grid+=`<line x1="0" y1="${gy}" x2="${W}" y2="${gy}" stroke="#1c2733" stroke-width="1"/>`;
+  // faint full loop (planned route)
+  let full=[];for(let i=0;i<=120;i++){const p=routePoint(i/120);full.push(px(p).toFixed(1)+","+py(p).toFixed(1));}
+  // travelled portion (grows with progress)
+  const N=Math.max(1,Math.round(frac*120));
+  let done=[];for(let i=0;i<=N;i++){const p=routePoint(i/120);done.push(px(p).toFixed(1)+","+py(p).toFixed(1));}
+  const head=routePoint(N/120);
+  const start=routePoint(0);
+  mapsvg.innerHTML=grid
+    +`<polyline points="${full.join(' ')}" fill="none" stroke="#2a3a49" stroke-width="2" stroke-dasharray="4 5"/>`
+    +`<polyline points="${done.join(' ')}" fill="none" stroke="#a78bfa" stroke-width="3" stroke-linecap="round"/>`
+    +`<circle cx="${px(start).toFixed(1)}" cy="${py(start).toFixed(1)}" r="4" fill="#d9f99d"/>`
+    +`<circle cx="${px(head).toFixed(1)}" cy="${py(head).toFixed(1)}" r="5" fill="#fb7185"/>`;
+}
+// ---- run + question state (declared before any draw call that reads `t` to avoid TDZ) ----
+let t=0,qt=0,running=false,timer=null,answered={},correctCount=0;
+// qt: sim-clock for QUESTION timing; tracks t but keeps ticking after distance is capped so
+// the last question's 90s window/countdown still runs while we wait for its answer.
+let simSpeed=6; // demo multiplier: sim advances 1s per (1000/simSpeed)ms of wall time
+// Scoring: T=90s window from when each question APPEARS, measured in SIM seconds so it
+// stays in sync with the accelerated run. qStart[k]=sim-t at appearance; qBeeped[k]=Set of
+// countdown seconds already sounded; qPoints[k]=awarded points.
+const SCORE_WINDOW=90; let totalScore=0, qStart={}, qBeeped={}, qPoints={};
+
+drawMap();
+
 // ---- run loop ----
-let t=0,running=false,timer=null,answered={};
+
+// WebAudio beep. freq lets us differentiate the milestone (880) from countdown warnings (1320).
+function beep(freq){
+  try{const AC=window.AudioContext||window.webkitAudioContext;const ac=new AC();
+    const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=freq;o.connect(g);g.connect(ac.destination);
+    g.gain.setValueAtTime(0.001,ac.currentTime);g.gain.exponentialRampToValueAtTime(0.3,ac.currentTime+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.35);o.start();o.stop(ac.currentTime+0.35);
+  }catch(e){}
+}
+// #6: alert the runner when a new question unlocks — beep + vibrate (guarded).
+function milestoneAlert(){
+  beep(880);
+  try{if(navigator.vibrate)navigator.vibrate([120,60,120]);}catch(e){}
+}
+// #countdown: 5 warning beeps at sim-elapsed 85..89s before the 90s deadline. Driven from
+// the sim clock in tick() so at high demo speed they don't stretch over 5s of real time.
+function cancelCountdown(k){ qBeeped[k]=new Set([0,1,2,3,4]); } // mark all as fired => none pending
 function render(){
   const dist=t/(BASE_PACE*60);
   document.getElementById('s-dist').textContent=dist.toFixed(2);
@@ -228,15 +454,97 @@ function render(){
   document.getElementById('s-hr').textContent=liveHR!=null?liveHR:'—';
   document.getElementById('s-time').textContent=fmtTime(t);
   const kmInt=Math.floor(dist+1e-6);
-  if(kmInt>=1&&kmInt<=3&&Math.abs(dist-kmInt)<0.02&&!answered[kmInt])showQuestion(kmInt);
+  if(kmInt>=1&&kmInt<=3&&Math.abs(dist-kmInt)<0.02&&!answered[kmInt]&&qStart[kmInt]==null)showQuestion(kmInt);
 }
+// sim-time countdown beeps: fire once per sim-second 85..89 while a question is open+unanswered.
+function pumpCountdown(){
+  for(const k in qStart){
+    if(answered[k])continue;
+    const el=qt-qStart[k];
+    for(let s=85;s<=89;s++){
+      if(el>=s){ if(!qBeeped[k].has(s)){ qBeeped[k].add(s); beep(1320); } }
+    }
+  }
+}
+// #3 finish: complete only when full distance covered AND all questions answered (AND).
+function allAnswered(){ return QUESTIONS.every(Q=>answered[Q.km]); }
 function tick(){
-  t+=1; if(t>=TOTAL_S){t=TOTAL_S;stopRun();}
+  // hold the run at the target distance until the last question is answered; keep it on screen.
+  if(t>=TOTAL_S){
+    t=TOTAL_S;
+    if(allAnswered())return stopRun();
+    qt+=1; render(); pumpCountdown(); // keep question clock + countdown running past distance cap
+    return;
+  }
+  t+=1; qt=t; if(t>TOTAL_S)t=TOTAL_S;
+  // Browser fallback: if no real HR source, drive liveHR from the simulator so the BPM
+  // stat + chart are alive. Real BLE/Web-BT sets liveHR + hrConnected and takes over.
+  if(isBrowserDemo && !hrConnected){
+    liveHR=simHR(t,true);
+    if(!simHRon){simHRon=true;const b=document.getElementById('hrbadge');b.textContent='❤ HR: sim';b.classList.add('on');}
+  }
   const hr=liveHR!=null?liveHR:demoHR(t); hrHistory.push(hr); if(hrHistory.length>200)hrHistory.shift();
-  render(); if(t%5===0)drawChart();
+  render(); pumpCountdown(); if(t%5===0){drawChart();drawMap();}
 }
-function startRun(){running=true;document.getElementById('run').textContent='⏸ Pause';document.getElementById('run').classList.add('running');timer=setInterval(tick,1000/6);}
-function stopRun(){running=false;document.getElementById('run').textContent='▶ Run';document.getElementById('run').classList.remove('running');clearInterval(timer);}
+// Effective sim multiplier: real time (x1) unless Demo mode is on, then the selected speed.
+function effSpeed(){ return document.getElementById('demo').checked ? (parseFloat(document.getElementById('speed').value)||10) : 1; }
+function syncDemoUI(){ document.getElementById('speed').disabled=!document.getElementById('demo').checked; }
+function startRun(){running=true;if(t===0)QUESTIONS=selectQuestions();simSpeed=effSpeed();document.getElementById('run').textContent='⏸ Pause';document.getElementById('run').classList.add('running');timer=setInterval(tick,1000/simSpeed);}
+// Apply a speed/demo change mid-run: restart the interval so the new rate takes effect immediately
+// (otherwise the selector only mattered at Run press).
+function applySpeed(){simSpeed=effSpeed();if(running){clearInterval(timer);timer=setInterval(tick,1000/simSpeed);}}
+document.getElementById('speed').onchange=applySpeed;
+document.getElementById('demo').onchange=()=>{syncDemoUI();applySpeed();};
+syncDemoUI();
+function stopRun(){running=false;document.getElementById('run').textContent='▶ Run';document.getElementById('run').classList.remove('running');clearInterval(timer);
+  if(t>=TOTAL_S&&allAnswered())showResults();}
+
+// #4: summarise the finished run.
+function showResults(){
+  const dist=t/(BASE_PACE*60);
+  document.getElementById('r-dist').textContent=dist.toFixed(2);
+  document.getElementById('r-time').textContent=fmtTime(t);
+  const avg=hrHistory.length?Math.round(hrHistory.reduce((a,b)=>a+b,0)/hrHistory.length):null;
+  document.getElementById('r-hr').textContent=avg!=null?avg:'—';
+  document.getElementById('r-score').textContent=correctCount+'/'+QUESTIONS.length;
+  document.getElementById('r-points').textContent=totalScore;
+  // per-question breakdown: km, correct/wrong, points awarded
+  document.getElementById('r-breakdown').innerHTML=QUESTIONS.map(Q=>{
+    const p=qPoints[Q.km]; const done=(p!=null);
+    return `${Q.km} km · ${done?(p>0?'✓':'✗'):'—'} <b style="color:var(--lime)">${done?p:0} pts</b>`;
+  }).join('<br>');
+  document.getElementById('qcard').style.display='none';
+  document.getElementById('results').style.display='flex';
+  saveRun({dist,avg});
+}
+
+// ---- Run history (localStorage, no backend) ----
+const HIST_KEY='cognirun.history';
+function loadHistory(){try{return JSON.parse(localStorage.getItem(HIST_KEY)||'[]');}catch(e){return [];}}
+function saveRun({dist,avg}){
+  try{
+    const runs=loadHistory();
+    runs.unshift({
+      ts:Date.now(), dist:+dist.toFixed(2), time:t,
+      correct:correctCount, total:QUESTIONS.length, points:totalScore,
+      avgHR:avg, perKm:QUESTIONS.map(Q=>({km:Q.km,pts:qPoints[Q.km]!=null?qPoints[Q.km]:0}))
+    });
+    localStorage.setItem(HIST_KEY,JSON.stringify(runs.slice(0,50)));
+  }catch(e){}
+}
+function renderHistory(){
+  const runs=loadHistory().slice(0,10);
+  const el=document.getElementById('histlist');
+  if(!runs.length){el.innerHTML='No runs yet — finish a run to see it here.';return;}
+  el.innerHTML=runs.map(r=>{
+    const d=new Date(r.ts);
+    const date=d.toLocaleDateString(undefined,{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+    return `<div style="padding:6px 0;border-bottom:1px solid #1c2733">`+
+      `<b style="color:var(--txt)">${date}</b> · ${r.dist.toFixed(2)} km · `+
+      `<b style="color:var(--lime)">${r.points} pts</b> · ${r.correct}/${r.total} · ❤ ${r.avgHR!=null?r.avgHR:'—'}</div>`;
+  }).join('');
+}
+function showHistory(){renderHistory();document.getElementById('history').style.display='flex';}
 function showQuestion(k){
   const Q=QUESTIONS.find(q=>q.km===k);if(!Q)return;
   document.getElementById('qidle').style.display='none';
@@ -245,6 +553,8 @@ function showQuestion(k){
   document.getElementById('qtype').textContent=Q.type;
   document.getElementById('qtext').textContent=Q.q;
   document.getElementById('qverdict').style.display='none';
+  qStart[k]=qt; // t0 for scoring, in SIM seconds (question clock) from appearance
+  qBeeped[k]=new Set();
   const area=document.getElementById('qarea');
   if(Q.choices){
     area.innerHTML=`<div class="choices">`+Q.choices.map(c=>`<button class="choice" data-v="${c}">${c}</button>`).join('')+`</div>`;
@@ -255,21 +565,43 @@ function showQuestion(k){
     document.getElementById('qinput').addEventListener('keydown',e=>{if(e.key==='Enter')judge(k,e.target.value.trim());});
   }
   speak(Q.q);
+  milestoneAlert();
 }
 function judge(k,val){
   const Q=QUESTIONS.find(q=>q.km===k);if(!Q||answered[k])return;
   const ok=String(val).toLowerCase()===String(Q.answer).toLowerCase();answered[k]=true;
+  cancelCountdown(k); // no more warning beeps once locked
+  // Kahoot-style score: t=0→100, t=45→75, t=90→50, floor 50 beyond 90s; wrong→0. Sim-seconds.
+  const elapsed=qt-(qStart[k]!=null?qStart[k]:qt);
+  const pts=ok?Math.round((1-Math.min(elapsed,90)/90/2)*100):0;
+  qPoints[k]=pts; totalScore+=pts;
+  if(ok)correctCount++;
+  // #5: lock the answer UI — disable inputs, highlight the picked choice.
+  const area=document.getElementById('qarea');
+  area.querySelectorAll('.choice').forEach(b=>{b.disabled=true;b.style.opacity='.45';b.style.cursor='default';
+    if(String(b.dataset.v).toLowerCase()===String(val).toLowerCase()){b.style.opacity='1';b.style.borderColor=ok?'var(--good)':'var(--bad)';}});
+  const inp=area.querySelector('#qinput'),sub=area.querySelector('#qsub');
+  if(inp){inp.disabled=true;inp.style.opacity='.6';}if(sub){sub.disabled=true;sub.style.opacity='.45';sub.style.cursor='default';}
   const v=document.getElementById('qverdict');v.style.display='block';v.className='verdict '+(ok?'good':'bad');
   v.textContent=ok?'✓ Correct — keep moving!':('✗ Not quite — '+Q.answer);
   speak(ok?'Correct':'Not quite');
+  // if distance already done and this was the last outstanding question, finish now.
+  if(t>=TOTAL_S&&allAnswered()){stopRun();}
 }
 function speak(txt){try{const u=new SpeechSynthesisUtterance(txt);u.rate=1;u.lang='en-GB';speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
 document.getElementById('qspeak').onclick=()=>speak(document.getElementById('qtext').textContent);
 document.getElementById('run').onclick=()=>{running?stopRun():startRun();};
-document.getElementById('reset').onclick=()=>{stopRun();t=0;answered={};hrHistory=[];document.getElementById('qbody').style.display='none';document.getElementById('qidle').style.display='block';drawChart();render();};
+document.getElementById('reset').onclick=()=>{stopRun();t=0;qt=0;answered={};correctCount=0;totalScore=0;qStart={};qBeeped={};qPoints={};hrHistory=[];
+  if(isBrowserDemo && !hrConnected){liveHR=null;simHRon=false;const b=document.getElementById('hrbadge');b.textContent='❤ HR: demo';b.classList.remove('on');} // reset sim HR badge
+  document.getElementById('qbody').style.display='none';document.getElementById('qidle').style.display='block';document.getElementById('qcard').style.display='flex';document.getElementById('results').style.display='none';drawChart();drawMap();render();};
 document.getElementById('hrbtn').onclick=connectWatch;
 document.getElementById('gpsbtn').onclick=startGPS;
+document.getElementById('forget').onclick=forgetDevice;
+document.getElementById('histbtn').onclick=showHistory;
+document.getElementById('histclose').onclick=()=>{document.getElementById('history').style.display='none';};
+document.getElementById('histclear').onclick=()=>{try{localStorage.removeItem(HIST_KEY);}catch(e){}renderHistory();};
 render();
+autoConnect(); // #2: silently reconnect a remembered watch on load
 </script>
 </body>
 </html>
