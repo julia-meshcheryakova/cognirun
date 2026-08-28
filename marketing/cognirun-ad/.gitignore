@@ -1,0 +1,13 @@
+node_modules/
+.remotion/
+dist/
+# Share the finished deliverables; keep disposable render/QA files local.
+out/*
+!out/cognirun-hackathon-16x9.mp4
+!out/cognirun-hackathon-9x16.mp4
+!out/cognirun-poster-landscape.jpg
+!out/cognirun-poster-portrait.jpg
+!out/render-report.json
+.env
+.env.*
+!.env.example

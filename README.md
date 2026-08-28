@@ -18,6 +18,10 @@ The repository contains a complete offline-safe hackathon app plus optional live
 - Clearly separated research-informed synthetic cohort simulator
 - Capacitor Android wrapper
 
+## Hackathon advert
+
+The [40-second Remotion advert](marketing/cognirun-ad/README.md) includes editable source, original artwork and music, research notes, and ready-to-share [widescreen](marketing/cognirun-ad/out/cognirun-hackathon-16x9.mp4) and [portrait](marketing/cognirun-ad/out/cognirun-hackathon-9x16.mp4) MP4s. Its dependencies and rendering commands are separate from the app.
+
 ## Run it
 
 ```powershell
