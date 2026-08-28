@@ -1,0 +1,23 @@
+{
+  "durationSeconds": 40,
+  "fps": 30,
+  "variants": [
+    {
+      "id": "CogniRun-Landscape",
+      "name": "landscape",
+      "filename": "cognirun-hackathon-16x9.mp4",
+      "width": 1920,
+      "height": 1080,
+      "frames": 1200
+    },
+    {
+      "id": "CogniRun-Portrait",
+      "name": "portrait",
+      "filename": "cognirun-hackathon-9x16.mp4",
+      "width": 1080,
+      "height": 1920,
+      "frames": 1200
+    }
+  ],
+  "createdAt": "2026-08-28T16:23:23.847Z"
+}
