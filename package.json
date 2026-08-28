@@ -1,1 +1,23 @@
-{"name":"cognirun","version":"0.2.0","private":true,"dependencies":{"@capacitor-community/bluetooth-le":"^8.3.0","@capacitor/android":"^8.5.0","@capacitor/cli":"^8.5.0","@capacitor/core":"^8.5.0","@capacitor/geolocation":"^8.2.2"}}
+{
+  "name": "cognirun",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A voice-first brain and body experiment built with ROXFIT and ElevenLabs.",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "verify": "npm run check && npm test",
+    "cap:sync": "npx cap sync android",
+    "android": "npm run cap:sync && cd android && gradlew.bat assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor-community/bluetooth-le": "^8.3.0",
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/geolocation": "^8.2.2"
+  }
+}

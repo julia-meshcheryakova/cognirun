@@ -1,607 +1,172 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CogniRun</title>
-<style>
-  :root{--bg:#0b0f14;--panel:#141b24;--panel2:#1c2733;--violet:#a78bfa;--lime:#d9f99d;
-    --txt:#e8eef5;--dim:#8ca0b3;--good:#34d399;--bad:#f87171;--hr:#fb7185;}
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
-    font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  .phone{max-width:430px;margin:0 auto;min-height:100vh;padding:14px 14px 24px;display:flex;flex-direction:column;gap:11px}
-  header{display:flex;align-items:center;justify-content:space-between}
-  .brand{font-weight:800;font-size:21px}.brand span{color:var(--violet)}.brand b{color:var(--lime)}
-  .badges{display:flex;gap:6px;align-items:center}
-  .badge{font-size:10px;padding:3px 8px;border-radius:999px;background:#2a2033;color:#e0b0ff}
-  .badge.on{background:#12281c;color:var(--good)}
-  .badge.gps{background:#1b2333;color:#8fb8ff}.badge.gps.on{background:#12281c;color:var(--good)}
-  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
-  .stat{background:var(--panel);border-radius:14px;padding:9px 6px;text-align:center}
-  .stat .v{font-size:18px;font-weight:800}.stat .l{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
-  .stat.hr .v{color:var(--hr)}
-  .chart{background:var(--panel);border-radius:16px;padding:11px 8px 5px}
-  .chart h4{margin:0 0 5px;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;padding-left:4px}
-  svg{width:100%;height:96px;display:block}
-  .qcard{background:linear-gradient(160deg,#1c2733,#141b24);border:1px solid #263341;border-radius:18px;padding:15px;min-height:140px;display:flex;flex-direction:column;gap:11px}
-  .qtop{display:flex;align-items:center;justify-content:space-between}
-  .qtag{font-size:11px;color:var(--violet);font-weight:700}
-  .qtype{font-size:10px;color:var(--dim);background:#0b1219;padding:3px 8px;border-radius:999px}
-  .qspeak{background:var(--panel2);border:none;color:var(--txt);border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer}
-  .qtext{font-size:16px;line-height:1.4}
-  .qidle{color:var(--dim);font-size:14px;text-align:center;padding:22px 0}
-  .choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .choice{background:#0b1219;border:1px solid #2a3a49;color:var(--txt);border-radius:12px;padding:12px;font-size:15px;cursor:pointer;text-align:center;font-weight:600}
-  .choice:active{background:#16202b}
-  .answer{display:flex;gap:8px}
-  .answer input{flex:1;background:#0b1219;border:1px solid #2a3a49;color:var(--txt);border-radius:12px;padding:12px;font-size:16px;outline:none;text-align:center}
-  .answer button{background:var(--violet);border:none;color:#12181f;font-weight:800;border-radius:12px;padding:0 16px;font-size:14px;cursor:pointer}
-  .verdict{font-weight:800;font-size:15px;text-align:center;padding:6px}
-  .verdict.good{color:var(--good)}.verdict.bad{color:var(--bad)}
-  .runbox{background:var(--panel);border-radius:16px;padding:13px}
-  .runbtns{display:flex;gap:8px}
-  .runbtns button{flex:1;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:800;cursor:pointer}
-  #run{background:var(--lime);color:#12181f}#run.running{background:var(--hr);color:#fff}
-  #hrbtn{background:#2a2033;color:#e0b0ff}#gpsbtn{background:#1b2333;color:#8fb8ff}#reset{background:var(--panel2);color:var(--txt);flex:0 0 auto;padding:13px 14px}
-  .row2{display:flex;gap:8px;margin-top:8px}
-  .log{font-size:11px;color:var(--dim);margin-top:8px;min-height:16px;text-align:center}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080b0d">
+  <meta name="description" content="CogniRun maps how you think while sitting, standing, walking, running and recovering.">
+  <title>CogniRun — Find the pace of your best thinking</title>
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-<div class="phone">
-  <header>
-    <div class="brand"><span>Cogni</span><b>Run</b></div>
-    <div class="badges">
-      <span class="badge" id="hrbadge">❤ HR: demo</span>
-      <span class="badge gps" id="gpsbadge">📍 GPS: off</span>
-      <a id="forget" style="display:none;font-size:9px;color:var(--dim);cursor:pointer;text-decoration:underline">forget</a>
-    </div>
-  </header>
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+  <div class="app-shell" id="app">
+    <header class="topbar" id="topbar">
+      <button class="wordmark" data-nav="home" aria-label="CogniRun home">
+        <svg viewBox="0 0 38 38" aria-hidden="true"><path d="M5 20h6l3-9 5 17 4-12 3 4h7"/><circle cx="19" cy="19" r="16"/></svg>
+        <span>COGNI<span>RUN</span></span>
+      </button>
+      <div class="system-status" aria-label="Connection status">
+        <span class="status-pill roxfit" id="status-roxfit"><i></i><span>ROXFIT sandbox</span></span>
+        <span class="status-pill voice" id="status-voice"><i></i><span>Voice checking</span></span>
+      </div>
+    </header>
 
-  <div class="stats">
-    <div class="stat"><div class="v" id="s-dist">0.00</div><div class="l">km</div></div>
-    <div class="stat"><div class="v" id="s-pace">6:00</div><div class="l">min/km</div></div>
-    <div class="stat hr"><div class="v" id="s-hr">—</div><div class="l">bpm</div></div>
-    <div class="stat"><div class="v" id="s-time">0:00</div><div class="l">time</div></div>
-  </div>
-
-  <div class="chart">
-    <h4>Heart rate — 0 → 3 km · avg shown</h4>
-    <svg id="svg" viewBox="0 0 400 96" preserveAspectRatio="none"></svg>
-  </div>
-
-  <div class="chart" id="mapcard">
-    <h4>Route</h4>
-    <svg id="mapsvg" viewBox="0 0 400 130" preserveAspectRatio="xMidYMid meet" style="height:130px"></svg>
-  </div>
-
-  <div class="qcard" id="qcard">
-    <div class="qidle" id="qidle">🏃 Press Run — a question after each kilometre</div>
-    <div id="qbody" style="display:none;flex-direction:column;gap:11px">
-      <div class="qtop">
-        <div class="qtag" id="qtag">Q1 · 1 km</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <span class="qtype" id="qtype">multiple choice</span>
-          <button class="qspeak" id="qspeak">🔊</button>
+    <main>
+      <section class="view active" id="view-home" data-view="home">
+        <div class="home-hero">
+          <div class="hero-copy">
+            <p class="kicker"><span class="pulse-dot"></span> BRAIN × BODY LAB</p>
+            <h1>Your brain has<br><em>zones too.</em></h1>
+            <p class="hero-lede">Discover where you create, remember and reason best—sitting, standing, walking, running or recovering.</p>
+            <div class="hero-actions">
+              <button class="button primary xl" id="start-scan">Start discovery scan <span>→</span></button>
+              <button class="button ghost xl" id="sample-study">Explore sample study</button>
+            </div>
+            <p class="hero-note">Voice-first. Eyes forward. One provisional result in under 20 minutes.</p>
+          </div>
+          <div class="hero-visual" aria-label="Example personal brain and body map">
+            <div class="visual-grid"></div>
+            <div class="visual-label">YOUR EARLY SIGNAL</div>
+            <div class="hero-orbit">
+              <div class="orbit orbit-a"></div><div class="orbit orbit-b"></div>
+              <div class="brain-core"><span>+16</span><small>IDEA INDEX</small></div>
+              <span class="orbit-label sit">SIT</span><span class="orbit-label walk">WALK</span>
+              <span class="orbit-label run">Z2</span><span class="orbit-label recover">+5</span>
+            </div>
+            <div class="visual-result"><span>Best idea zone</span><strong>Walking</strong></div>
+            <div class="visual-source"><span>BODY · ROXFIT</span><span>MIND · ELEVENLABS</span></div>
+          </div>
         </div>
-      </div>
-      <div class="qtext" id="qtext"></div>
-      <div id="qarea"></div>
-      <div class="verdict" id="qverdict" style="display:none"></div>
-    </div>
+        <div class="partner-line"><span>BUILT AROUND</span><strong>ROXFIT</strong><i>live body state</i><b>×</b><strong>ElevenLabs</strong><i>hands-free cognition</i></div>
+        <div class="section-heading compact"><div><p class="kicker">WHAT IT FINDS</p><h2>One scan. Four useful answers.</h2></div></div>
+        <div class="feature-grid">
+          <article class="feature-card movement"><span class="feature-index">01</span><h3>Best performance zone</h3><p>The state where each kind of thinking currently performs best.</p><span class="feature-tag">BODY → BRAIN</span></article>
+          <article class="feature-card cognition"><span class="feature-index">02</span><h3>Cognitive breakpoint</h3><p>The provisional intensity where speed or accuracy starts to fall.</p><span class="feature-tag">PERSONAL CURVE</span></article>
+          <article class="feature-card recovery"><span class="feature-index">03</span><h3>Recovery window</h3><p>Whether your mind rebounds immediately or several minutes later.</p><span class="feature-tag">POST-RUN</span></article>
+          <article class="feature-card heart"><span class="feature-index">04</span><h3>Motor cost of thinking</h3><p>Whether harder questions quietly change your pace or cadence.</p><span class="feature-tag">BRAIN → BODY</span></article>
+        </div>
+        <div class="method-card">
+          <div><p class="kicker">THE PROTOCOL</p><h2>Sit → Stand → Walk → Run → Recover</h2></div>
+          <div class="method-track" id="home-method-track" aria-label="Discovery protocol stages"></div>
+          <button class="text-button" id="how-it-works">See how the experiment works <span>↗</span></button>
+        </div>
+      </section>
+
+      <section class="view" id="view-setup" data-view="setup">
+        <div class="page-head">
+          <button class="icon-button" data-nav="home" aria-label="Back to home">←</button>
+          <div><p class="kicker">DISCOVERY SCAN</p><h1>Set your baseline.</h1><p>These details turn raw BPM into personal intensity zones.</p></div>
+          <span class="duration-chip">≈ 18 min</span>
+        </div>
+        <div class="setup-layout">
+          <form class="setup-form" id="setup-form">
+            <section class="form-card">
+              <div class="card-heading"><span>01</span><div><h2>What are we testing?</h2><p>Mixed gives the strongest hackathon demonstration.</p></div></div>
+              <div class="segmented focus-picker" role="radiogroup" aria-label="Cognitive focus">
+                <label><input type="radio" name="focus" value="mixed" checked><span>Mixed</span></label>
+                <label><input type="radio" name="focus" value="ideas"><span>Ideas</span></label>
+                <label><input type="radio" name="focus" value="memory"><span>Memory</span></label>
+                <label><input type="radio" name="focus" value="logic"><span>Logic</span></label>
+              </div>
+            </section>
+            <section class="form-card">
+              <div class="card-heading"><span>02</span><div><h2>Your heart-rate profile</h2><p>We use heart-rate reserve, never a universal BPM cutoff.</p></div></div>
+              <div class="field-grid">
+                <label class="field wide"><span>Name or study ID</span><input id="participant-name" name="name" value="Demo runner" maxlength="40" autocomplete="off"></label>
+                <label class="field"><span>Age</span><input id="participant-age" name="age" type="number" inputmode="numeric" min="16" max="90" value="28"></label>
+                <label class="field"><span>Resting HR</span><div class="input-unit"><input id="participant-rest" name="restingHr" type="number" inputmode="numeric" min="35" max="110" value="62"><b>BPM</b></div></label>
+                <label class="field"><span>Max HR <small>optional</small></span><div class="input-unit"><input id="participant-max" name="maxHr" type="number" inputmode="numeric" min="100" max="230" placeholder="Estimated"><b>BPM</b></div></label>
+              </div>
+              <div class="zone-preview" id="zone-preview"></div>
+            </section>
+            <section class="form-card">
+              <div class="card-heading"><span>03</span><div><h2>Signal check</h2><p>Live services upgrade the scan; the sandbox remains fully testable.</p></div></div>
+              <div class="device-grid">
+                <div class="device-row ready" id="device-roxfit"><i class="device-logo">R</i><div><strong>ROXFIT</strong><span>Sandbox activity stream</span></div><b>READY</b></div>
+                <div class="device-row" id="device-garmin"><i class="device-logo">G</i><div><strong>Garmin HR</strong><span>Bluetooth broadcast</span></div><button type="button" id="connect-hr">Connect</button></div>
+                <div class="device-row" id="device-gps"><i class="device-logo">⌖</i><div><strong>Phone GPS</strong><span>Live pace and distance</span></div><button type="button" id="connect-gps">Connect</button></div>
+                <div class="device-row" id="device-voice"><i class="device-logo">11</i><div><strong>ElevenLabs</strong><span id="voice-mode-label">Checking voice service</span></div><button type="button" id="enable-mic">Enable mic</button></div>
+              </div>
+            </section>
+            <section class="form-card consent-card">
+              <div class="card-heading"><span>04</span><div><h2>Safety and consent</h2><p>CogniRun is an exploratory wellness tool, not a medical assessment.</p></div></div>
+              <label class="check-row"><input type="checkbox" id="consent-safe"><span><b>I am on a safe route or closed track</b><small>I will pause around traffic, crossings, obstacles or discomfort.</small></span></label>
+              <label class="check-row"><input type="checkbox" id="consent-data"><span><b>I consent to this session being stored locally</b><small>Nothing leaves this device unless I explicitly export it.</small></span></label>
+            </section>
+            <section class="demo-card">
+              <div><span class="demo-label">JUDGE DEMO</span><strong>Accelerated protocol</strong><small>Research time advances faster; human response time remains real.</small></div>
+              <label class="toggle"><input type="checkbox" id="demo-mode" checked><span></span></label>
+              <label class="select-label"><span>Speed</span><select id="demo-speed"><option value="10">10×</option><option value="20">20×</option><option value="30" selected>30×</option></select></label>
+              <label class="check-inline"><input type="checkbox" id="auto-demo" checked><span>Auto-answer demo</span></label>
+            </section>
+            <button class="button primary xl full" id="begin-session" type="submit">Begin Brain × Body scan <span>→</span></button>
+          </form>
+          <aside class="protocol-aside"><div class="sticky-card"><p class="kicker">EXPLORE V1</p><h2>Your protocol</h2><p>An ascending first scan. Results are provisional until repeated.</p><div class="vertical-protocol" id="setup-protocol"></div><div class="aside-note"><strong>Why standing?</strong><span>It separates the effect of posture from the effect of locomotion.</span></div></div></aside>
+        </div>
+      </section>
+
+      <section class="view live-view" id="view-session" data-view="session">
+        <div class="session-shell">
+          <div class="session-topline"><div><span id="session-stage-count">STAGE 1 / 7</span><strong id="session-source">ROXFIT SANDBOX</strong></div><div class="live-indicator"><i></i> SESSION LIVE</div></div>
+          <div class="progress-track"><span id="session-progress"></span></div>
+          <div class="session-main">
+            <div class="physiology-panel">
+              <p class="kicker" id="stage-eyebrow">SEATED BASELINE</p><h1 id="stage-name">Seated</h1><p id="stage-instruction">Sit comfortably and keep both feet still.</p>
+              <div class="hr-dial" id="hr-dial"><svg viewBox="0 0 220 220" aria-hidden="true"><circle class="dial-track" cx="110" cy="110" r="92"/><circle class="dial-progress" id="dial-progress" cx="110" cy="110" r="92"/></svg><div class="dial-value"><strong id="live-hr">—</strong><span>BPM</span><small id="live-zone">Waiting</small></div></div>
+              <div class="target-readout"><span>TARGET</span><strong id="stage-target">Resting</strong><small id="target-state">Stabilising signal</small></div>
+              <svg class="telemetry-spark" id="telemetry-spark" role="img" aria-label="Live heart-rate trace"></svg>
+            </div>
+            <div class="cognition-panel">
+              <div class="eyes-forward" id="eyes-forward"><div class="voice-orb"><span></span><span></span><span></span><span></span></div><p class="voice-state" id="voice-state">EYES FORWARD</p><h2 id="next-task-copy">Settle into the condition.<br>Your next voice probe is coming up.</h2><div class="stage-clock"><span id="stage-clock">2:00</span><small>remaining in stage</small></div></div>
+              <article class="task-card" id="task-card" hidden>
+                <div class="task-meta"><span id="task-domain">LOGIC</span><b id="task-provider">ELEVENLABS</b></div><p class="voice-state" id="task-state">LISTEN</p><h2 id="task-prompt">Question appears here.</h2><p id="task-instruction">Answer by voice or tap.</p>
+                <div class="answer-area" id="answer-area"></div>
+                <div class="task-actions"><button class="button voice-button" id="voice-answer"><span class="mic-icon"></span> Answer by voice</button><button class="button ghost" id="repeat-prompt">Repeat</button></div>
+                <div class="transcript-box" id="transcript-box" hidden><span>HEARD</span><strong id="transcript-text"></strong><small id="transcript-confidence"></small></div><div class="task-feedback" id="task-feedback" hidden></div>
+              </article>
+            </div>
+          </div>
+          <div class="live-metrics"><div><span>DISTANCE</span><strong id="live-distance">0.00</strong><small>KM</small></div><div><span>PACE</span><strong id="live-pace">—</strong><small>/KM</small></div><div><span>CADENCE</span><strong id="live-cadence">—</strong><small>SPM</small></div><div><span>TRIALS</span><strong id="live-trials">0</strong><small>USABLE</small></div></div>
+          <div class="session-bottom"><div class="compact-protocol" id="session-protocol"></div><div class="session-controls"><button class="button ghost" id="pause-session">Pause</button><button class="button ghost" id="skip-stage">Skip stage</button><button class="button safety" id="safe-stop">Safe stop</button></div></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-results" data-view="results">
+        <div class="result-head"><p class="kicker">YOUR BRAIN × BODY MAP</p><span class="confidence-chip" id="result-confidence">EARLY SIGNAL · SESSION 1</span><h1 id="result-title">Your idea zone is walking.</h1><p id="result-summary">Creative output changed relative to your seated baseline.</p><div class="result-provenance" id="result-provenance"></div></div>
+        <div class="result-layout">
+          <section class="curve-card"><div class="curve-head"><div><span>COGNIINDEX · SEATED = 100</span><h2>Condition curve</h2></div><div class="domain-tabs" id="domain-tabs"></div></div><svg id="condition-curve" role="img" aria-label="Cognitive performance by physical condition"></svg><p class="chart-caption">A baseline-relative index, not IQ. Open raw data below for accuracy and response times.</p></section>
+          <section class="insight-grid"><article class="insight-card best"><span>BEST PERFORMANCE ZONE</span><strong id="best-zone">—</strong><p id="best-zone-copy">Complete a scan to calculate.</p></article><article class="insight-card breakpoint"><span>PROVISIONAL BREAKPOINT</span><strong id="breakpoint-zone">Not detected</strong><p id="breakpoint-copy">No clear decline across tested conditions.</p></article><article class="insight-card recovery"><span>RECOVERY WINDOW</span><strong id="recovery-window">—</strong><p id="recovery-copy">Complete both recovery probes.</p></article><article class="insight-card motor"><span>MOTOR COST OF THINKING</span><strong id="motor-cost">—</strong><p id="motor-copy">Pace change during active cognitive trials.</p></article></section>
+        </div>
+        <section class="recommendation-card"><div class="recommendation-icon">↗</div><div><span>YOUR NEXT EXPERIMENT</span><h2 id="recommendation-title">Repeat this scan twice.</h2><p id="recommendation-copy">One session is an early signal. Repetition turns it into a personal pattern.</p></div><button class="button primary" id="repeat-scan">Run it again</button></section>
+        <details class="raw-data-card"><summary><span><b>Raw session measurements</b><small>Accuracy, response time, voice confidence and telemetry source</small></span><i>＋</i></summary><div class="table-wrap"><table><thead><tr><th>Condition</th><th>Task</th><th>Result</th><th>Response</th><th>Motor cost</th></tr></thead><tbody id="raw-trials"></tbody></table></div></details>
+        <div class="result-actions"><button class="button ghost" id="export-session">Export event log</button><button class="button ghost" id="view-study-results">Open study simulator</button></div>
+      </section>
+
+      <section class="view" id="view-study" data-view="study">
+        <div class="study-banner"><strong>SYNTHETIC DATA</strong><span>Research-informed scenario—not participant findings</span></div>
+        <div class="page-head study-head"><button class="icon-button" data-nav="home" aria-label="Back to home">←</button><div><p class="kicker">STUDY SIMULATOR</p><h1>From one brainprint to a movement study.</h1><p>Different response profiles are the point—not one perfect average curve.</p></div></div>
+        <div class="study-stats"><div><span>SIMULATED PARTICIPANTS</span><strong>96</strong><small>8 responder profiles</small></div><div><span>COGNITIVE TRIALS</span><strong>1,248</strong><small>92% usable voice</small></div><div><span>DISTANCE REPRESENTED</span><strong>184</strong><small>kilometres</small></div><div><span>CONDITIONS</span><strong>7</strong><small>sit to recovery</small></div></div>
+        <div class="study-layout"><section class="study-chart-card"><div class="curve-head"><div><span>IDEA FLUENCY INDEX</span><h2>Heterogeneous responders</h2></div><span class="study-chip">SIMULATION</span></div><svg id="cohort-bars" role="img" aria-label="Synthetic responder profiles"></svg></section><aside class="research-thesis"><span class="number">01</span><h2>The average hides the product.</h2><p>A large 2024 synthesis estimates a small average effect, with results varying by task, intensity, timing and person. CogniRun is designed to map that variation.</p><a href="https://www.nature.com/articles/s44271-024-00124-2" target="_blank" rel="noreferrer">Evidence note ↗</a></aside></div>
+        <div class="cluster-grid" id="cluster-grid"></div>
+        <section class="research-loop"><div><p class="kicker">THE FLYWHEEL</p><h2>Useful alone. More valuable together.</h2></div><div class="loop-steps"><span><b>1</b>PLAY<small>A fun voice workout</small></span><i>→</i><span><b>2</b>DISCOVER<small>Your personal curve</small></span><i>→</i><span><b>3</b>APPLY<small>Use the right state</small></span><i>→</i><span><b>4</b>RESEARCH<small>Opt-in patterns at scale</small></span></div></section>
+      </section>
+    </main>
+    <nav class="bottom-nav" id="bottom-nav" aria-label="Primary navigation"><button class="active" data-nav="home"><span>⌂</span>Home</button><button data-nav="setup"><span>◎</span>Scan</button><button data-nav="results"><span>⌁</span>Insights</button><button data-nav="study"><span>∷</span>Study</button></nav>
   </div>
-
-  <div class="qcard" id="results" style="display:none">
-    <div class="qtop"><div class="qtag">🏁 Run complete</div></div>
-    <div class="stats" style="grid-template-columns:repeat(2,1fr)">
-      <div class="stat"><div class="v" id="r-dist">0.00</div><div class="l">km</div></div>
-      <div class="stat"><div class="v" id="r-time">0:00</div><div class="l">time</div></div>
-      <div class="stat hr"><div class="v" id="r-hr">—</div><div class="l">avg bpm</div></div>
-      <div class="stat"><div class="v" id="r-score">0/0</div><div class="l">correct</div></div>
-      <div class="stat"><div class="v" id="r-points" style="color:var(--lime)">0</div><div class="l">points</div></div>
-    </div>
-    <div id="r-breakdown" style="font-size:11px;color:var(--dim);margin-top:9px;line-height:1.7"></div>
-  </div>
-
-  <div class="qcard" id="history" style="display:none">
-    <div class="qtop"><div class="qtag">📜 Run history</div>
-      <div style="display:flex;gap:6px">
-        <button class="qspeak" id="histclear">clear</button>
-        <button class="qspeak" id="histclose">close</button>
-      </div>
-    </div>
-    <div id="histlist" style="font-size:12px;color:var(--dim);line-height:1.6"></div>
-  </div>
-
-  <div class="runbox">
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;font-size:12px;color:var(--dim)">
-      <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
-        <input type="checkbox" id="demo" checked style="width:16px;height:16px;accent-color:var(--violet)">
-        <span>Demo mode</span>
-      </label>
-      <select id="speed" style="flex:1;background:#0b1219;border:1px solid #2a3a49;color:var(--txt);border-radius:10px;padding:7px;font-size:13px">
-        <option value="1">x1</option>
-        <option value="10" selected>x10</option>
-        <option value="20">x20</option>
-      </select>
-    </div>
-    <div class="row2" style="margin-top:0">
-      <button id="hrbtn" style="flex:1;border:none;border-radius:12px;padding:11px;font-weight:700;cursor:pointer">❤ Connect watch</button>
-      <button id="gpsbtn" style="flex:1;border:none;border-radius:12px;padding:11px;font-weight:700;cursor:pointer">📍 Start GPS</button>
-      <button id="histbtn" style="flex:0 0 auto;border:none;border-radius:12px;padding:11px 13px;font-weight:700;cursor:pointer;background:var(--panel2);color:var(--txt)">📜</button>
-    </div>
-    <div class="runbtns" style="margin-top:8px">
-      <button id="run">▶ Run</button>
-      <button id="reset">↺</button>
-    </div>
-    <div class="log" id="log">Run imitates movement at 6:00/km · HR is real from your fēnix (Broadcast HR)</div>
-  </div>
-</div>
-
-<script>
-const TOTAL_KM=3, BASE_PACE=6.0, TOTAL_S=TOTAL_KM*BASE_PACE*60; // 1080s
-const Cap = window.Capacitor;
-const isNative = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
-// Browser prototype mode: no phone/APK. Enables simulated HR + GPS fallbacks so the
-// app is fully playable by just opening index.html. Native path stays intact.
-const isBrowserDemo = !isNative;
-
-// ---- Question POOL: 3 categories, school-level (a little thought needed). One picked
-// per km at run start (km1 MC = easiest, km2 T/F, km3 numeric = hardest) so runs vary. ----
-const QUESTION_POOL = {
-  "multiple choice": [
-    { q:"Which planet is closest to the Sun?", choices:["Mercury","Venus","Mars","Earth"], answer:"Mercury" },
-    { q:"What gas do plants absorb for photosynthesis?", choices:["Oxygen","CO₂","Nitrogen","Hydrogen"], answer:"CO₂" },
-    { q:"What is the capital of Australia?", choices:["Sydney","Melbourne","Canberra","Perth"], answer:"Canberra" },
-    { q:"Which is the largest ocean on Earth?", choices:["Atlantic","Indian","Arctic","Pacific"], answer:"Pacific" },
-  ],
-  "true / false": [
-    { q:"Lightning is hotter than the surface of the Sun.", choices:["True","False"], answer:"True" },
-    { q:"The Great Wall of China is visible from space with the naked eye.", choices:["True","False"], answer:"False" },
-    { q:"A leap year has 366 days.", choices:["True","False"], answer:"True" },
-    { q:"Sound travels faster than light.", choices:["True","False"], answer:"False" },
-  ],
-  "numeric": [
-    { q:"How many minutes are in a quarter of a day?", answer:"360" },
-    { q:"What is 15% of 200?", answer:"30" },
-    { q:"A dozen dozens — how many is that?", answer:"144" },
-    { q:"How many sides does a hexagon have?", answer:"6" },
-  ],
-};
-// Easy→hard ordering by category per km; km field is filled at selection time.
-const QUESTION_ORDER = ["multiple choice","true / false","numeric"];
-function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
-// Rebuilt each run start so different runs show different questions. Shape stays compatible
-// with showQuestion/judge: {km,type,q,choices?,answer}.
-let QUESTIONS = selectQuestions();
-function selectQuestions(){
-  return QUESTION_ORDER.map((type,i)=>{const base=pick(QUESTION_POOL[type]);return {km:i+1,type,q:base.q,choices:base.choices,answer:base.answer};});
-}
-
-function fmtTime(s){const m=Math.floor(s/60),ss=Math.floor(s%60);return m+":"+String(ss).padStart(2,"0");}
-function fmtPace(p){const m=Math.floor(p),s=Math.round((p-m)*60);return m+":"+String(s).padStart(2,"0");}
-function paceAt(t){let p=BASE_PACE-Math.min(0.2,t/9000);for(let k=1;k<=3;k++){const c=k*BASE_PACE*60;if(t>=c&&t<c+18)p+=0.9*(1-(t-c)/18);}return p;}
-function log(m){document.getElementById('log').textContent=m;}
-
-// ---- HR: real from watch (native BLE plugin, else Web Bluetooth) ----
-const HR_SVC='0000180d-0000-1000-8000-00805f9b34fb';
-const HR_CHR='00002a37-0000-1000-8000-00805f9b34fb';
-const DEV_KEY='cognirun.hrDevice';
-let liveHR=null, hrHistory=[], hrConnected=false;
-
-function savedDevice(){try{return JSON.parse(localStorage.getItem(DEV_KEY)||'null');}catch(e){return null;}}
-function rememberDevice(d){try{localStorage.setItem(DEV_KEY,JSON.stringify({deviceId:d.deviceId,name:d.name||''}));}catch(e){}
-  document.getElementById('forget').style.display='inline';}
-function forgetDevice(){try{localStorage.removeItem(DEV_KEY);}catch(e){}
-  document.getElementById('forget').style.display='none'; log("Watch forgotten — tap Connect watch to pick again.");}
-
-// Subscribe to the GATT HR Measurement notification. The raw native plugin delivers
-// value as a HEX STRING (not base64) — atob would corrupt it and yield garbage bpm.
-async function subscribeHR(BLE,deviceId){
-  const nkey='notification|'+deviceId+'|'+HR_SVC+'|'+HR_CHR;
-  await BLE.addListener(nkey,(res)=>{
-    try{ const dv=res&&res.value!=null?dataViewFromNative(res.value):null; if(dv&&dv.byteLength){liveHR=parseHR(dv);} }catch(e){}
-  });
-  await BLE.startNotifications({deviceId,service:HR_SVC,characteristic:HR_CHR});
-}
-// connect + subscribe to a known device, no scan. Used by both the scan pick and auto-connect.
-async function connectDevice(BLE,dev){
-  log("Connecting to "+(dev.name||dev.deviceId)+"…");
-  await BLE.connect({deviceId:dev.deviceId});
-  await subscribeHR(BLE,dev.deviceId);
-  rememberDevice(dev);
-  setHRon(); log("Watch connected ❤ — live bpm now.");
-}
-
-async function connectWatch(){
-  try{
-    if(isNative && Cap.Plugins && Cap.Plugins.BluetoothLe){
-      const BLE=Cap.Plugins.BluetoothLe;
-      await BLE.initialize({androidNeverForLocation:true}); // prompts BLUETOOTH_SCAN/CONNECT at runtime
-      // requestLEScan + manual pick lets us set a timeout and surface errors instead of a stuck picker.
-      // Scan is used ONLY to discover the device; live HR comes solely from the GATT notification.
-      let done=false;
-      const scanHandle=await BLE.addListener('onScanResult',(r)=>{
-        if(done||!r||!r.device)return;
-        done=true; finishScan(); connectDevice(BLE,r.device).catch(e=>log("Connect failed: "+(e.message||e)));
-      });
-      const bail=(msg)=>{ if(done)return; done=true; finishScan(); log(msg); };
-      const timer=setTimeout(()=>bail("Watch not found in 15s. On the fēnix: Broadcast HR must be ON and Bluetooth enabled, then tap Connect watch again."),15000);
-      function finishScan(){ clearTimeout(timer); try{BLE.stopLEScan();}catch(e){} try{scanHandle.remove();}catch(e){} }
-      log("Scanning for watch (Broadcast HR)…");
-      await BLE.requestLEScan({services:[HR_SVC]}); // filter by 0x180D so only HR broadcasters match
-      return;
-    }
-    // Web Bluetooth fallback
-    if(navigator.bluetooth){
-      const dev=await navigator.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});
-      const srv=await dev.gatt.connect();
-      const s=await srv.getPrimaryService('heart_rate');
-      const c=await s.getCharacteristic('heart_rate_measurement');
-      await c.startNotifications();
-      c.addEventListener('characteristicvaluechanged',e=>{liveHR=parseHR(e.target.value);});
-      setHRon(); log("Watch connected (Web BT) ❤ — live bpm now.");
-      return;
-    }
-    log("No Bluetooth API available on this device/browser.");
-  }catch(err){ log("HR connect failed: "+(err.message||err)); }
-}
-
-// On load: if we remembered a device, connect straight to it — no scan, no picker.
-async function autoConnect(){
-  const d=savedDevice(); if(!d)return;
-  document.getElementById('forget').style.display='inline';
-  if(!(isNative && Cap.Plugins && Cap.Plugins.BluetoothLe))return; // Web BT can't reconnect silently
-  try{
-    const BLE=Cap.Plugins.BluetoothLe;
-    await BLE.initialize({androidNeverForLocation:true});
-    log("Reconnecting to saved watch…");
-    await connectDevice(BLE,d);
-  }catch(e){ log("Auto-connect failed — tap Connect watch. ("+(e.message||e)+")"); }
-}
-
-function parseHR(dv){const flags=dv.getUint8(0);return (flags&1)?dv.getUint16(1,true):dv.getUint8(1);}
-// Native plugin value is a hex string ("004b"); tolerate a DataView too. Never atob().
-function dataViewFromNative(v){
-  if(v&&typeof v==='object'&&v.buffer)return v; // already a DataView/typed
-  const hex=String(v).replace(/[^0-9a-fA-F]/g,'');const n=hex.length>>1;const u=new Uint8Array(n);
-  for(let i=0;i<n;i++)u[i]=parseInt(hex.substr(i*2,2),16);return new DataView(u.buffer);
-}
-function setHRon(){hrConnected=true;const b=document.getElementById('hrbadge');b.textContent='❤ HR: live';b.classList.add('on');updateSetupUI();}
-
-// ---- browser fallback: simulated HR ----
-// Activates only in browser mode with no real HR source (hrConnected stays false).
-// Feeds the SAME liveHR pipeline so the BPM stat + chart look alive. Base ~120-140bpm
-// during the run, drifting up with effort near km markers, gentle noise; ~70 at rest.
-function simHR(tt,isRunning){
-  if(!isRunning) return Math.round(70 + 2*Math.sin(tt/6) + (Math.random()*3-1.5)); // resting
-  let hr=125 + Math.min(20,(tt/(BASE_PACE*60))*8);            // warms up as run progresses
-  for(let k=1;k<=TOTAL_KM;k++){const c=k*BASE_PACE*60;         // spike near each km marker (harder effort)
-    if(tt>=c-30&&tt<c+10) hr+=9*(1-Math.abs(tt-c)/30);}
-  hr+=1.5*Math.sin(tt/12) + (Math.random()*4-2);              // gentle noise/breathing
-  return Math.round(Math.max(60,Math.min(190,hr)));
-}
-let simHRon=false; // true once the simulator has started feeding liveHR
-
-// ---- GPS: native Geolocation plugin, else browser ----
-let gpsWatchId=null, gpsPoints=0, gpsActive=false;
-async function startGPS(){
-  try{
-    if(isNative && Cap.Plugins && Cap.Plugins.Geolocation){
-      const Geo=Cap.Plugins.Geolocation;
-      const perm=await Geo.requestPermissions();
-      log("Location permission: "+(perm.location||'?'));
-      gpsWatchId=await Geo.watchPosition({enableHighAccuracy:true},(pos)=>{
-        if(pos){gpsPoints++;document.getElementById('gpsbadge').textContent='📍 GPS: '+gpsPoints+' pts';}
-      });
-      setGPSon();
-      return;
-    }
-    if(navigator.geolocation){
-      gpsWatchId=navigator.geolocation.watchPosition(p=>{gpsPoints++;document.getElementById('gpsbadge').textContent='📍 GPS: '+gpsPoints+' pts';setGPSon();},
-        err=>{ log("GPS error: "+err.message); startSimGPS(); },{enableHighAccuracy:true});
-      log("Requesting location permission…");
-      return;
-    }
-    log("No Geolocation API available."); startSimGPS();
-  }catch(err){ log("GPS failed: "+(err.message||err)); startSimGPS(); }
-}
-// Browser fallback: simulate an advancing position stream (~1 pt/s) with no real geolocation.
-// Only used when the real APIs are absent or denied; native/real GPS above takes priority.
-let simGPStimer=null;
-function startSimGPS(){
-  if(!isBrowserDemo || gpsActive || simGPStimer) return;
-  const b=document.getElementById('gpsbadge');
-  simGPStimer=setInterval(()=>{gpsPoints++;b.textContent='📍 GPS: '+gpsPoints+' pts (sim)';},1000);
-  setGPSon(); log("GPS simulated (browser demo) 📍");
-}
-function setGPSon(){gpsActive=true;const b=document.getElementById('gpsbadge');b.classList.add('on');updateSetupUI();}
-
-// #3: hide setup buttons once that channel is live; reveal again if it drops.
-function updateSetupUI(){
-  document.getElementById('hrbtn').style.display=hrConnected?'none':'';
-  document.getElementById('gpsbtn').style.display=gpsActive?'none':'';
-}
-
-// ---- chart (live HR trace; falls back to a demo curve until real HR arrives) ----
-const svg=document.getElementById('svg');
-const mapsvg=document.getElementById('mapsvg');
-function demoHR(t){let hr=120+Math.min(45,(t/(BASE_PACE*60))*9)+3*Math.sin(t/40);for(let k=1;k<=3;k++){const c=k*BASE_PACE*60;if(t>=c&&t<c+18)hr-=6*(1-(t-c)/18);}return Math.round(hr);}
-
-// Population-average HR zones (Garmin-style). PLACEHOLDER bands, NOT individual — a real
-// app would derive these from max HR / LTHR. Drawn as coloured blocks behind the line.
-const HR_ZONES=[
-  {name:'Z1',lo:0,hi:115,col:'#3b4a5a'},
-  {name:'Z2',lo:115,hi:135,col:'#2f6f5b'},
-  {name:'Z3',lo:135,hi:155,col:'#7a7a2f'},
-  {name:'Z4',lo:155,hi:170,col:'#8a5a2f'},
-  {name:'Z5',lo:170,hi:220,col:'#8a2f3a'},
-];
-const HR_MIN=90, HR_MAX=190; // fixed chart scale so zone bands line up with the trace
-
-// Downsample + moving-average smooth so the trace reads as one clean trend, not spikes.
-function smoothResample(src,n){
-  if(src.length<2) return src.slice();
-  const out=[];
-  for(let i=0;i<n;i++){
-    const p=i/(n-1)*(src.length-1);const idx=Math.round(p);
-    let sum=0,c=0;for(let j=idx-2;j<=idx+2;j++){if(j>=0&&j<src.length){sum+=src[j];c++;}}
-    out.push(sum/c);
-  }
-  return out;
-}
-function drawChart(){
-  const W=400,H=96,pad=6;
-  const yFor=v=>H-pad-((v-HR_MIN)/(HR_MAX-HR_MIN))*(H-2*pad);
-  // X axis is the full planned run: 0 → TOTAL_KM. The trace grows left→right with real
-  // distance covered (it does NOT stretch to fill the width), so the chart reads as
-  // "how far in" not "how many samples".
-  const xForKm=km=>pad+(Math.max(0,Math.min(TOTAL_KM,km))/TOTAL_KM)*(W-2*pad);
-  // zone bands (behind), clipped to chart area
-  let bands='';
-  for(const z of HR_ZONES){
-    const y2=yFor(Math.max(z.lo,HR_MIN)), y1=yFor(Math.min(z.hi,HR_MAX));
-    const top=Math.min(y1,y2), h=Math.abs(y2-y1); if(h<=0)continue;
-    bands+=`<rect x="0" y="${top.toFixed(1)}" width="${W}" height="${h.toFixed(1)}" fill="${z.col}" opacity="0.35"/>`;
-    if(h>10)bands+=`<text x="${W-4}" y="${(top+11).toFixed(1)}" fill="#c8d4df" font-size="8" text-anchor="end" opacity="0.8">${z.name}</text>`;
-  }
-  // km gridlines at 1 and 2 km
-  let km=[];for(let k=1;k<=TOTAL_KM-1;k++){const x=xForKm(k);km.push(`<line x1="${x.toFixed(1)}" y1="0" x2="${x.toFixed(1)}" y2="${H}" stroke="#26333f" stroke-dasharray="3 4"/>`);}
-  let poly='', avgLine='';
-  if(hrHistory.length>1){
-    // Each sample is ~1 sim-second apart; map sample i -> distance covered at that time.
-    // Full run = TOTAL_S samples, so km(i) = (i/TOTAL_S)*TOTAL_KM. Trace ends at current dist.
-    const sm=smoothResample(hrHistory,Math.min(120,hrHistory.length));
-    const nFull=TOTAL_S; // samples in a complete run
-    poly=sm.map((v,i)=>{const kmAt=( (i/(sm.length-1)) * (hrHistory.length/nFull) )*TOTAL_KM;return xForKm(kmAt).toFixed(1)+","+yFor(v).toFixed(1);}).join(' ');
-    // averaged HR (dashed horizontal line across the covered portion)
-    const avg=hrHistory.reduce((a,b)=>a+b,0)/hrHistory.length;
-    const curKm=(hrHistory.length/nFull)*TOTAL_KM;
-    avgLine=`<line x1="${xForKm(0).toFixed(1)}" y1="${yFor(avg).toFixed(1)}" x2="${xForKm(curKm).toFixed(1)}" y2="${yFor(avg).toFixed(1)}" stroke="#e8eef5" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>`
-      +`<text x="${(xForKm(curKm)+2).toFixed(1)}" y="${(yFor(avg)-3).toFixed(1)}" fill="#e8eef5" font-size="8" opacity="0.85">avg ${Math.round(avg)}</text>`;
-  }else{
-    // idle preview: faint demo curve across the full 0→TOTAL_KM axis
-    let a=[];for(let t=0;t<=TOTAL_S;t+=20){const kmAt=(t/TOTAL_S)*TOTAL_KM;a.push(xForKm(kmAt).toFixed(1)+","+yFor(demoHR(t)).toFixed(1));}poly=a.join(' ');
-  }
-  svg.innerHTML=bands+km.join("")+avgLine+`<polyline points="${poly}" fill="none" stroke="#fb7185" stroke-width="2"/>`;
-}
-drawChart();
-
-// ---- Route map: self-drawn SVG (offline-safe, no CDN). Deterministic looping path
-// generated from a seed so a run keeps the same shape; polyline grows with progress. ----
-function routePoint(u){ // u in [0,1] along a pleasing loop; returns {x,y} in 0..1
-  const a=u*2*Math.PI;
-  const x=0.5+0.34*Math.sin(a)+0.06*Math.sin(3*a+0.7);
-  const y=0.5-0.30*Math.cos(a)-0.07*Math.sin(2*a+0.3);
-  return {x,y};
-}
-function drawMap(){
-  const W=400,H=130,pad=10;
-  const dist=t/(BASE_PACE*60), frac=Math.max(0,Math.min(1,dist/TOTAL_KM));
-  const px=p=>pad+p.x*(W-2*pad), py=p=>pad+p.y*(H-2*pad);
-  // subtle park-like grid backdrop
-  let grid='';
-  for(let gx=0;gx<=W;gx+=40)grid+=`<line x1="${gx}" y1="0" x2="${gx}" y2="${H}" stroke="#1c2733" stroke-width="1"/>`;
-  for(let gy=0;gy<=H;gy+=40)grid+=`<line x1="0" y1="${gy}" x2="${W}" y2="${gy}" stroke="#1c2733" stroke-width="1"/>`;
-  // faint full loop (planned route)
-  let full=[];for(let i=0;i<=120;i++){const p=routePoint(i/120);full.push(px(p).toFixed(1)+","+py(p).toFixed(1));}
-  // travelled portion (grows with progress)
-  const N=Math.max(1,Math.round(frac*120));
-  let done=[];for(let i=0;i<=N;i++){const p=routePoint(i/120);done.push(px(p).toFixed(1)+","+py(p).toFixed(1));}
-  const head=routePoint(N/120);
-  const start=routePoint(0);
-  mapsvg.innerHTML=grid
-    +`<polyline points="${full.join(' ')}" fill="none" stroke="#2a3a49" stroke-width="2" stroke-dasharray="4 5"/>`
-    +`<polyline points="${done.join(' ')}" fill="none" stroke="#a78bfa" stroke-width="3" stroke-linecap="round"/>`
-    +`<circle cx="${px(start).toFixed(1)}" cy="${py(start).toFixed(1)}" r="4" fill="#d9f99d"/>`
-    +`<circle cx="${px(head).toFixed(1)}" cy="${py(head).toFixed(1)}" r="5" fill="#fb7185"/>`;
-}
-// ---- run + question state (declared before any draw call that reads `t` to avoid TDZ) ----
-let t=0,qt=0,running=false,timer=null,answered={},correctCount=0;
-// qt: sim-clock for QUESTION timing; tracks t but keeps ticking after distance is capped so
-// the last question's 90s window/countdown still runs while we wait for its answer.
-let simSpeed=6; // demo multiplier: sim advances 1s per (1000/simSpeed)ms of wall time
-// Scoring: T=90s window from when each question APPEARS, measured in SIM seconds so it
-// stays in sync with the accelerated run. qStart[k]=sim-t at appearance; qBeeped[k]=Set of
-// countdown seconds already sounded; qPoints[k]=awarded points.
-const SCORE_WINDOW=90; let totalScore=0, qStart={}, qBeeped={}, qPoints={};
-
-drawMap();
-
-// ---- run loop ----
-
-// WebAudio beep. freq lets us differentiate the milestone (880) from countdown warnings (1320).
-function beep(freq){
-  try{const AC=window.AudioContext||window.webkitAudioContext;const ac=new AC();
-    const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=freq;o.connect(g);g.connect(ac.destination);
-    g.gain.setValueAtTime(0.001,ac.currentTime);g.gain.exponentialRampToValueAtTime(0.3,ac.currentTime+0.02);
-    g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.35);o.start();o.stop(ac.currentTime+0.35);
-  }catch(e){}
-}
-// #6: alert the runner when a new question unlocks — beep + vibrate (guarded).
-function milestoneAlert(){
-  beep(880);
-  try{if(navigator.vibrate)navigator.vibrate([120,60,120]);}catch(e){}
-}
-// #countdown: 5 warning beeps at sim-elapsed 85..89s before the 90s deadline. Driven from
-// the sim clock in tick() so at high demo speed they don't stretch over 5s of real time.
-function cancelCountdown(k){ qBeeped[k]=new Set([0,1,2,3,4]); } // mark all as fired => none pending
-function render(){
-  const dist=t/(BASE_PACE*60);
-  document.getElementById('s-dist').textContent=dist.toFixed(2);
-  document.getElementById('s-pace').textContent=fmtPace(paceAt(t));
-  document.getElementById('s-hr').textContent=liveHR!=null?liveHR:'—';
-  document.getElementById('s-time').textContent=fmtTime(t);
-  const kmInt=Math.floor(dist+1e-6);
-  if(kmInt>=1&&kmInt<=3&&Math.abs(dist-kmInt)<0.02&&!answered[kmInt]&&qStart[kmInt]==null)showQuestion(kmInt);
-}
-// sim-time countdown beeps: fire once per sim-second 85..89 while a question is open+unanswered.
-function pumpCountdown(){
-  for(const k in qStart){
-    if(answered[k])continue;
-    const el=qt-qStart[k];
-    for(let s=85;s<=89;s++){
-      if(el>=s){ if(!qBeeped[k].has(s)){ qBeeped[k].add(s); beep(1320); } }
-    }
-  }
-}
-// #3 finish: complete only when full distance covered AND all questions answered (AND).
-function allAnswered(){ return QUESTIONS.every(Q=>answered[Q.km]); }
-function tick(){
-  // hold the run at the target distance until the last question is answered; keep it on screen.
-  if(t>=TOTAL_S){
-    t=TOTAL_S;
-    if(allAnswered())return stopRun();
-    qt+=1; render(); pumpCountdown(); // keep question clock + countdown running past distance cap
-    return;
-  }
-  t+=1; qt=t; if(t>TOTAL_S)t=TOTAL_S;
-  // Browser fallback: if no real HR source, drive liveHR from the simulator so the BPM
-  // stat + chart are alive. Real BLE/Web-BT sets liveHR + hrConnected and takes over.
-  if(isBrowserDemo && !hrConnected){
-    liveHR=simHR(t,true);
-    if(!simHRon){simHRon=true;const b=document.getElementById('hrbadge');b.textContent='❤ HR: sim';b.classList.add('on');}
-  }
-  const hr=liveHR!=null?liveHR:demoHR(t); hrHistory.push(hr); if(hrHistory.length>200)hrHistory.shift();
-  render(); pumpCountdown(); if(t%5===0){drawChart();drawMap();}
-}
-// Effective sim multiplier: real time (x1) unless Demo mode is on, then the selected speed.
-function effSpeed(){ return document.getElementById('demo').checked ? (parseFloat(document.getElementById('speed').value)||10) : 1; }
-function syncDemoUI(){ document.getElementById('speed').disabled=!document.getElementById('demo').checked; }
-function startRun(){running=true;if(t===0)QUESTIONS=selectQuestions();simSpeed=effSpeed();document.getElementById('run').textContent='⏸ Pause';document.getElementById('run').classList.add('running');timer=setInterval(tick,1000/simSpeed);}
-// Apply a speed/demo change mid-run: restart the interval so the new rate takes effect immediately
-// (otherwise the selector only mattered at Run press).
-function applySpeed(){simSpeed=effSpeed();if(running){clearInterval(timer);timer=setInterval(tick,1000/simSpeed);}}
-document.getElementById('speed').onchange=applySpeed;
-document.getElementById('demo').onchange=()=>{syncDemoUI();applySpeed();};
-syncDemoUI();
-function stopRun(){running=false;document.getElementById('run').textContent='▶ Run';document.getElementById('run').classList.remove('running');clearInterval(timer);
-  if(t>=TOTAL_S&&allAnswered())showResults();}
-
-// #4: summarise the finished run.
-function showResults(){
-  const dist=t/(BASE_PACE*60);
-  document.getElementById('r-dist').textContent=dist.toFixed(2);
-  document.getElementById('r-time').textContent=fmtTime(t);
-  const avg=hrHistory.length?Math.round(hrHistory.reduce((a,b)=>a+b,0)/hrHistory.length):null;
-  document.getElementById('r-hr').textContent=avg!=null?avg:'—';
-  document.getElementById('r-score').textContent=correctCount+'/'+QUESTIONS.length;
-  document.getElementById('r-points').textContent=totalScore;
-  // per-question breakdown: km, correct/wrong, points awarded
-  document.getElementById('r-breakdown').innerHTML=QUESTIONS.map(Q=>{
-    const p=qPoints[Q.km]; const done=(p!=null);
-    return `${Q.km} km · ${done?(p>0?'✓':'✗'):'—'} <b style="color:var(--lime)">${done?p:0} pts</b>`;
-  }).join('<br>');
-  document.getElementById('qcard').style.display='none';
-  document.getElementById('results').style.display='flex';
-  saveRun({dist,avg});
-}
-
-// ---- Run history (localStorage, no backend) ----
-const HIST_KEY='cognirun.history';
-function loadHistory(){try{return JSON.parse(localStorage.getItem(HIST_KEY)||'[]');}catch(e){return [];}}
-function saveRun({dist,avg}){
-  try{
-    const runs=loadHistory();
-    runs.unshift({
-      ts:Date.now(), dist:+dist.toFixed(2), time:t,
-      correct:correctCount, total:QUESTIONS.length, points:totalScore,
-      avgHR:avg, perKm:QUESTIONS.map(Q=>({km:Q.km,pts:qPoints[Q.km]!=null?qPoints[Q.km]:0}))
-    });
-    localStorage.setItem(HIST_KEY,JSON.stringify(runs.slice(0,50)));
-  }catch(e){}
-}
-function renderHistory(){
-  const runs=loadHistory().slice(0,10);
-  const el=document.getElementById('histlist');
-  if(!runs.length){el.innerHTML='No runs yet — finish a run to see it here.';return;}
-  el.innerHTML=runs.map(r=>{
-    const d=new Date(r.ts);
-    const date=d.toLocaleDateString(undefined,{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
-    return `<div style="padding:6px 0;border-bottom:1px solid #1c2733">`+
-      `<b style="color:var(--txt)">${date}</b> · ${r.dist.toFixed(2)} km · `+
-      `<b style="color:var(--lime)">${r.points} pts</b> · ${r.correct}/${r.total} · ❤ ${r.avgHR!=null?r.avgHR:'—'}</div>`;
-  }).join('');
-}
-function showHistory(){renderHistory();document.getElementById('history').style.display='flex';}
-function showQuestion(k){
-  const Q=QUESTIONS.find(q=>q.km===k);if(!Q)return;
-  document.getElementById('qidle').style.display='none';
-  document.getElementById('qbody').style.display='flex';
-  document.getElementById('qtag').textContent=`Q${k} · ${k} km`;
-  document.getElementById('qtype').textContent=Q.type;
-  document.getElementById('qtext').textContent=Q.q;
-  document.getElementById('qverdict').style.display='none';
-  qStart[k]=qt; // t0 for scoring, in SIM seconds (question clock) from appearance
-  qBeeped[k]=new Set();
-  const area=document.getElementById('qarea');
-  if(Q.choices){
-    area.innerHTML=`<div class="choices">`+Q.choices.map(c=>`<button class="choice" data-v="${c}">${c}</button>`).join('')+`</div>`;
-    area.querySelectorAll('.choice').forEach(b=>b.onclick=()=>judge(k,b.dataset.v));
-  }else{
-    area.innerHTML=`<div class="answer"><input id="qinput" inputmode="numeric" placeholder="Type answer…"><button id="qsub">Send</button></div>`;
-    document.getElementById('qsub').onclick=()=>judge(k,document.getElementById('qinput').value.trim());
-    document.getElementById('qinput').addEventListener('keydown',e=>{if(e.key==='Enter')judge(k,e.target.value.trim());});
-  }
-  speak(Q.q);
-  milestoneAlert();
-}
-function judge(k,val){
-  const Q=QUESTIONS.find(q=>q.km===k);if(!Q||answered[k])return;
-  const ok=String(val).toLowerCase()===String(Q.answer).toLowerCase();answered[k]=true;
-  cancelCountdown(k); // no more warning beeps once locked
-  // Kahoot-style score: t=0→100, t=45→75, t=90→50, floor 50 beyond 90s; wrong→0. Sim-seconds.
-  const elapsed=qt-(qStart[k]!=null?qStart[k]:qt);
-  const pts=ok?Math.round((1-Math.min(elapsed,90)/90/2)*100):0;
-  qPoints[k]=pts; totalScore+=pts;
-  if(ok)correctCount++;
-  // #5: lock the answer UI — disable inputs, highlight the picked choice.
-  const area=document.getElementById('qarea');
-  area.querySelectorAll('.choice').forEach(b=>{b.disabled=true;b.style.opacity='.45';b.style.cursor='default';
-    if(String(b.dataset.v).toLowerCase()===String(val).toLowerCase()){b.style.opacity='1';b.style.borderColor=ok?'var(--good)':'var(--bad)';}});
-  const inp=area.querySelector('#qinput'),sub=area.querySelector('#qsub');
-  if(inp){inp.disabled=true;inp.style.opacity='.6';}if(sub){sub.disabled=true;sub.style.opacity='.45';sub.style.cursor='default';}
-  const v=document.getElementById('qverdict');v.style.display='block';v.className='verdict '+(ok?'good':'bad');
-  v.textContent=ok?'✓ Correct — keep moving!':('✗ Not quite — '+Q.answer);
-  speak(ok?'Correct':'Not quite');
-  // if distance already done and this was the last outstanding question, finish now.
-  if(t>=TOTAL_S&&allAnswered()){stopRun();}
-}
-function speak(txt){try{const u=new SpeechSynthesisUtterance(txt);u.rate=1;u.lang='en-GB';speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
-document.getElementById('qspeak').onclick=()=>speak(document.getElementById('qtext').textContent);
-document.getElementById('run').onclick=()=>{running?stopRun():startRun();};
-document.getElementById('reset').onclick=()=>{stopRun();t=0;qt=0;answered={};correctCount=0;totalScore=0;qStart={};qBeeped={};qPoints={};hrHistory=[];
-  if(isBrowserDemo && !hrConnected){liveHR=null;simHRon=false;const b=document.getElementById('hrbadge');b.textContent='❤ HR: demo';b.classList.remove('on');} // reset sim HR badge
-  document.getElementById('qbody').style.display='none';document.getElementById('qidle').style.display='block';document.getElementById('qcard').style.display='flex';document.getElementById('results').style.display='none';drawChart();drawMap();render();};
-document.getElementById('hrbtn').onclick=connectWatch;
-document.getElementById('gpsbtn').onclick=startGPS;
-document.getElementById('forget').onclick=forgetDevice;
-document.getElementById('histbtn').onclick=showHistory;
-document.getElementById('histclose').onclick=()=>{document.getElementById('history').style.display='none';};
-document.getElementById('histclear').onclick=()=>{try{localStorage.removeItem(HIST_KEY);}catch(e){}renderHistory();};
-render();
-autoConnect(); // #2: silently reconnect a remembered watch on load
-</script>
+  <div class="transition-overlay" id="transition-overlay" hidden><p>UP NEXT</p><strong id="transition-stage">Standing</strong><span id="transition-instruction">Stand naturally.</span></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./js/app.js"></script>
 </body>
 </html>
