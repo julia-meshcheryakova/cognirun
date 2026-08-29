@@ -1,5 +1,5 @@
 import './style.css';
-import { QUESTIONS } from './questions.js';
+import { loadLibrary, selectRunQuestions } from './questions.js';
 import { createRun } from './run.js';
 import { renderLive } from './ui/live.js';
 import { renderResults } from './ui/results.js';
@@ -20,7 +20,12 @@ function showSetup() {
   });
 }
 
-function startRun() {
+async function startRun() {
+  // One question per category (km1 trivia, km2 logic, km3 maths), from the question
+  // server when it is up and from the bundled library otherwise.
+  const { library } = await loadLibrary();
+  const runQuestions = selectRunQuestions(library);
+
   const answers = [];
   const pendingKilometers = [];
   let questionOpen = false;
@@ -62,7 +67,7 @@ function startRun() {
     questionOpen = true;
     run.setAnswering(true);
     askQuestion(live.questionSlot, {
-      question: QUESTIONS[km - 1],
+      question: runQuestions[km - 1],
       kilometer: km,
       now: run.answerNow,
       onAnswered(answer) {
