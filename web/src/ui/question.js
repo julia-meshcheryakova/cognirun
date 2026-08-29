@@ -11,11 +11,10 @@ const TRANSCRIBE_BOUND_MS = STT_TIMEOUT_MS;
 
 const MIC_LABELS = {
   waiting: '🎤 Mic opens as the question is read',
-  ready: '🎤 Speak your answer',
   opening: '🎤 Opening the mic…',
-  recording: '■ Stop &amp; submit',
+  recording: '🔴 Listening… ■ stop &amp; submit',
   transcribing: '… Transcribing',
-  unavailable: '🎤 Microphone unavailable',
+  unavailable: '🎤 Microphone unavailable — type instead',
 };
 
 /**
@@ -41,11 +40,16 @@ export function askQuestion(
 ) {
   const startedAt = now();
   const category = CATEGORY_LABELS[question.category] ?? question.category;
-  // Beep first as the milestone cue, then read the question over the screen text.
-  const voiceTimer = setTimeout(() => {
+  // Beep first as the milestone cue, then read the question over the screen text
+  // and open the mic automatically — no tap required.
+  const voiceTimer = setTimeout(async () => {
+    // Read the question, then auto-start listening the moment reading begins.
     speak(question.prompt);
-    // The mic is available from the moment the reading starts.
-    setMicState(mode === 'none' ? 'unavailable' : 'ready');
+    if (mode === 'none') {
+      setMicState('unavailable', 'Microphone unavailable — type your answer instead.');
+      return;
+    }
+    await autoStartMic();
   }, beep());
 
   const input = question.options
@@ -63,7 +67,7 @@ export function askQuestion(
       ${input}
       <div class="voice">
         <button class="mic" id="mic" disabled>${MIC_LABELS.waiting}</button>
-        <span class="hint" id="mic-status">Or type your answer below.</span>
+        <span class="hint" id="mic-status">Listening starts automatically — or type below.</span>
       </div>
       <textarea id="answer" rows="2" placeholder="Your answer..."></textarea>
       <div class="row">
@@ -88,10 +92,29 @@ export function askQuestion(
   function setMicState(state, status) {
     micState = state;
     if (!mic) return;
-    mic.innerHTML = MIC_LABELS[state] ?? MIC_LABELS.ready;
-    mic.disabled = state !== 'ready' && state !== 'recording';
+    mic.innerHTML = MIC_LABELS[state] ?? MIC_LABELS.waiting;
+    // Only the recording state is tappable now (to stop & submit early).
+    mic.disabled = state !== 'recording';
     mic.classList.toggle('recording', state === 'recording');
     if (status) micStatus.textContent = status;
+  }
+
+  // Opens the mic without a tap; permission denial falls back to typing, never dead-ends.
+  async function autoStartMic() {
+    if (submitted) return;
+    setMicState('opening', 'Opening the microphone…');
+    try {
+      const opened = await listen({ mode });
+      if (submitted || micState !== 'opening') {
+        opened.cancel();
+        return;
+      }
+      session = opened;
+      setMicState('recording', 'Listening… tap to stop &amp; submit early.');
+    } catch (err) {
+      console.warn('microphone unavailable', err);
+      setMicState('unavailable', 'Microphone blocked — type your answer instead.');
+    }
   }
 
   const timer = setInterval(() => {
@@ -102,23 +125,6 @@ export function askQuestion(
   }, 200);
 
   async function toggleMic() {
-    if (micState === 'ready') {
-      setMicState('opening', 'Waiting for microphone permission…');
-      try {
-        const opened = await listen({ mode });
-        // The permission prompt can outlive the question; never leave it recording.
-        if (submitted || micState !== 'opening') {
-          opened.cancel();
-          return;
-        }
-        session = opened;
-        setMicState('recording', 'Listening… tap again when you are done.');
-      } catch (err) {
-        console.warn('microphone unavailable', err);
-        setMicState('unavailable', 'Microphone unavailable — type your answer instead.');
-      }
-      return;
-    }
     if (micState !== 'recording') return;
 
     // Elapsed is taken here, before transcription latency, so speaking fast pays.
@@ -139,12 +145,15 @@ export function askQuestion(
       console.warn('transcription failed', err);
       active.cancel();
       transcribing = false;
-      setMicState('ready', 'Could not transcribe that — try again or type your answer.');
+      setMicState('unavailable', 'Could not transcribe that — type your answer, or retry the mic.');
+      await autoStartMic();
       return;
     }
     if (!transcript) {
       transcribing = false;
-      setMicState('ready', 'Nothing was heard — try again or type your answer.');
+      // No transcript from an auto-opened mic: retry listening once, keep typing open.
+      setMicState('unavailable', 'Nothing was heard — type your answer, or retry the mic.');
+      await autoStartMic();
       return;
     }
     submit({ text: transcript, elapsedSeconds, spoken: true });
