@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "A 40-second CogniRun advert: discover your own thinking ritual.",
+  "description": "A 60-second CogniRun advert: discover your own thinking ritual.",
   "scripts": {
     "studio": "remotion studio src/index.ts --no-open --port=3100",
     "typecheck": "tsc --noEmit",
