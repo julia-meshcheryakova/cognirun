@@ -6,12 +6,10 @@ const START = { lat: 52.3702, lng: 4.8952 };
 const METERS_PER_DEG_LAT = 111_320;
 
 /**
- * Simulated GPS + heart rate. One tick == one simulated second; the real
- * interval between ticks is shortened by the speed multiplier.
+ * Simulated GPS + heart rate. `step` advances the simulation by one simulated
+ * second; the clock decides how often that happens.
  */
-export function createDemoSensors({ multiplier = 1, onPosition, onHeartRate }) {
-  let timer = null;
-  let speedMultiplier = multiplier;
+export function createDemoSensors({ onPosition, onHeartRate }) {
   let t = 0; // simulated seconds
   let distance = 0;
   let lat = START.lat;
@@ -32,46 +30,29 @@ export function createDemoSensors({ multiplier = 1, onPosition, onHeartRate }) {
     return wobble;
   }
 
-  function tick() {
-    t += 1;
-    const speed = BASE_SPEED * paceFactor();
-    distance += speed;
-
-    bearing += Math.sin(t / 30) * 3;
-    const rad = (bearing * Math.PI) / 180;
-    lat += (speed * Math.cos(rad)) / METERS_PER_DEG_LAT;
-    lng +=
-      (speed * Math.sin(rad)) / (METERS_PER_DEG_LAT * Math.cos((lat * Math.PI) / 180));
-
-    const km = Math.floor(distance / 1000);
-    if (km > kmDone) {
-      kmDone = km;
-      slowdownStart = t;
-    }
-
-    const targetHr = 118 + Math.min(30, t / 18) + (speed / BASE_SPEED - 1) * 40;
-    hr += (targetHr - hr) * 0.2 + (Math.random() - 0.5);
-
-    onPosition({ lat, lng, t: t * 1000 });
-    onHeartRate(Math.round(hr));
-  }
-
-  function schedule() {
-    clearInterval(timer);
-    timer = setInterval(tick, 1000 / speedMultiplier);
-  }
-
   return {
-    start() {
-      schedule();
-    },
-    stop() {
-      clearInterval(timer);
-      timer = null;
-    },
-    setMultiplier(value) {
-      speedMultiplier = value;
-      if (timer) schedule();
+    step(simMs) {
+      t += 1;
+      const speed = BASE_SPEED * paceFactor();
+      distance += speed;
+
+      bearing += Math.sin(t / 30) * 3;
+      const rad = (bearing * Math.PI) / 180;
+      lat += (speed * Math.cos(rad)) / METERS_PER_DEG_LAT;
+      lng +=
+        (speed * Math.sin(rad)) / (METERS_PER_DEG_LAT * Math.cos((lat * Math.PI) / 180));
+
+      const km = Math.floor(distance / 1000);
+      if (km > kmDone) {
+        kmDone = km;
+        slowdownStart = t;
+      }
+
+      const targetHr = 118 + Math.min(30, t / 18) + (speed / BASE_SPEED - 1) * 40;
+      hr += (targetHr - hr) * 0.2 + (Math.random() - 0.5);
+
+      onPosition({ lat, lng, t: simMs });
+      onHeartRate(Math.round(hr));
     },
   };
 }

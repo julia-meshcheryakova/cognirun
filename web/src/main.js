@@ -60,11 +60,14 @@ function startRun() {
     if (questionOpen || pendingKilometers.length === 0) return;
     const km = pendingKilometers.shift();
     questionOpen = true;
+    run.setAnswering(true);
     askQuestion(live.questionSlot, {
       question: QUESTIONS[km - 1],
       kilometer: km,
+      now: run.now,
       onAnswered(answer) {
         answers.push(answer);
+        run.setAnswering(false);
         if (latest) {
           live.update(latest, {
             points: answers.reduce((sum, a) => sum + a.points, 0),

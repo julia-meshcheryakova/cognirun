@@ -3,11 +3,11 @@ import { beep } from '../beep.js';
 import { escapeHtml } from '../format.js';
 
 /**
- * Shows a question with a 60 second (real time) answer window and resolves with
- * the elapsed time and the points earned.
+ * Shows a question with a 60 second answer window measured on the run's
+ * simulated clock, and reports the elapsed time and the points earned.
  */
-export function askQuestion(slot, { question, kilometer, onAnswered, onClosed }) {
-  const startedAt = Date.now();
+export function askQuestion(slot, { question, kilometer, now, onAnswered, onClosed }) {
+  const startedAt = now();
   beep();
 
   slot.innerHTML = `
@@ -28,7 +28,7 @@ export function askQuestion(slot, { question, kilometer, onAnswered, onClosed })
   slot.querySelector('#answer').focus();
 
   const timer = setInterval(() => {
-    const elapsed = (Date.now() - startedAt) / 1000;
+    const elapsed = (now() - startedAt) / 1000;
     countdown.textContent = Math.max(0, Math.ceil(ANSWER_WINDOW_SECONDS - elapsed));
     potential.textContent = scoreForElapsed(elapsed);
     if (elapsed >= ANSWER_WINDOW_SECONDS) submit();
@@ -36,7 +36,7 @@ export function askQuestion(slot, { question, kilometer, onAnswered, onClosed })
 
   function submit() {
     clearInterval(timer);
-    const elapsedSeconds = (Date.now() - startedAt) / 1000;
+    const elapsedSeconds = (now() - startedAt) / 1000;
     const points = scoreForElapsed(elapsedSeconds);
     const text = slot.querySelector('#answer').value.trim();
     onAnswered({ questionId: question.id, kilometer, elapsedSeconds, points, text });

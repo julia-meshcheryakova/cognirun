@@ -16,7 +16,8 @@ npm install
 npm run dev
 ```
 
-Open the printed URL (default http://localhost:5173).
+Open the printed URL (default http://localhost:5173). `npm test` runs the headless
+flow tests (a full x1000 demo run, pace model and scoring).
 
 ## Demo mode
 
@@ -25,9 +26,14 @@ without a watch or leaving your desk. It simulates GPS and heart rate: 6:00/km p
 with natural variation, slowing down for a while after each kilometer (the runner is
 thinking about the question) and then recovering.
 
-Pick a speed multiplier — **x1, x10 or x20** — on the start screen or during the run
-to fast-forward through the full 3 km → 3 questions → results flow. At x20 a full run
-takes about a minute. The 60 second answer window is always real time.
+Pick a speed multiplier — **x1, x10, x100 or x1000** — on the start screen or during
+the run to fast-forward through the full 3 km → 3 questions → results flow. At x1000
+the running part of a 3 km run takes a couple of seconds.
+
+Kilometer detection, the beep and the answer countdown all read one simulated clock,
+never wall-clock time. The multiplier scales running time only: while a question is
+open the clock drops to real-time rate, so the 60 second answer window stays
+answerable (and scores stay correct) at every multiplier.
 
 Turn demo mode off to use the real sensors: browser Geolocation (`watchPosition`) for
 distance/route and Web Bluetooth for a Garmin watch (or any strap) broadcasting the

@@ -1,3 +1,4 @@
+import { createClock } from './clock.js';
 import { createDemoSensors } from './sensors/demo.js';
 import { createRealSensors } from './sensors/real.js';
 
@@ -65,12 +66,17 @@ export function createRun({ demo, multiplier, onUpdate, onKilometer, onFinish, o
   }
 
   const sensors = demo
-    ? createDemoSensors({ multiplier, onPosition: handlePosition, onHeartRate: handleHeartRate })
+    ? createDemoSensors({ onPosition: handlePosition, onHeartRate: handleHeartRate })
     : createRealSensors({
         onPosition: handlePosition,
         onHeartRate: handleHeartRate,
         onError,
       });
+
+  const clock = createClock({
+    multiplier: demo ? multiplier : 1,
+    onSecond: demo ? (simMs) => sensors.step(simMs) : undefined,
+  });
 
   function snapshot() {
     return {
@@ -86,17 +92,27 @@ export function createRun({ demo, multiplier, onUpdate, onKilometer, onFinish, o
     if (finished) return;
     if (distance >= RUN_DISTANCE_METERS && answered >= QUESTION_COUNT) {
       finished = true;
-      sensors.stop();
+      stop();
       onFinish(snapshot());
     }
   }
 
+  function stop() {
+    clock.stop();
+    sensors.stop?.();
+  }
+
   return {
     sensors,
-    start: () => sensors.start(),
-    stop: () => sensors.stop(),
+    start() {
+      sensors.start?.();
+      clock.start();
+    },
+    stop,
     snapshot,
-    setMultiplier: (value) => sensors.setMultiplier?.(value),
+    now: clock.now,
+    setMultiplier: clock.setMultiplier,
+    setAnswering: clock.setAnswering,
     noteAnswered() {
       answered += 1;
       maybeFinish();
