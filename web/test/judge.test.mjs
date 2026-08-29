@@ -71,7 +71,7 @@ test('a semantically correct answer is accepted by the LLM judge', async () => {
   assert.equal(requests[0].options.headers.Authorization, 'Bearer gsk-test');
   const body = JSON.parse(requests[0].options.body);
   assert.match(body.messages[1].content, /Expected answer: Monopoly/);
-  assert.match(body.messages[1].content, /Runner's answer: he is playing Monopoly/);
+  assert.match(body.messages[1].content, /<<<ANSWER\nhe is playing Monopoly\nANSWER>>>/);
 });
 
 test('a wrong answer is rejected by the LLM judge', async () => {

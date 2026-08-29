@@ -120,7 +120,10 @@ test('the transcript flows into the judge, which grades it semantically', async 
 
   assert.equal(verdict.correct, true);
   assert.equal(verdict.method, 'llm');
-  assert.match(judgeCalls[0].messages[1].content, /Runner's answer: I think he is playing Monopoly/);
+  assert.match(
+    judgeCalls[0].messages[1].content,
+    /<<<ANSWER\nI think he is playing Monopoly\nANSWER>>>/,
+  );
 });
 
 test('with no ElevenLabs key the browser recogniser is used', async () => {

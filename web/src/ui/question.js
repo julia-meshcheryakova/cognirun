@@ -9,6 +9,7 @@ import { sttMode, startListening } from '../stt.js';
 const MIC_LABELS = {
   waiting: '🎤 Mic opens as the question is read',
   ready: '🎤 Speak your answer',
+  opening: '🎤 Opening the mic…',
   recording: '■ Stop &amp; submit',
   transcribing: '… Transcribing',
   unavailable: '🎤 Microphone unavailable',
@@ -77,12 +78,15 @@ export function askQuestion(
   let micState = 'waiting';
   let session = null;
   let submitted = false;
+  // While a recording is being transcribed the deadline must not submit an empty
+  // answer: the runner did speak in time, only the transcript is still on its way.
+  let transcribing = false;
 
   function setMicState(state, status) {
     micState = state;
     if (!mic) return;
     mic.innerHTML = MIC_LABELS[state] ?? MIC_LABELS.ready;
-    mic.disabled = state === 'waiting' || state === 'transcribing' || state === 'unavailable';
+    mic.disabled = state !== 'ready' && state !== 'recording';
     mic.classList.toggle('recording', state === 'recording');
     if (status) micStatus.textContent = status;
   }
@@ -91,13 +95,20 @@ export function askQuestion(
     const elapsed = (now() - startedAt) / 1000;
     countdown.textContent = Math.max(0, Math.ceil(ANSWER_WINDOW_SECONDS - elapsed));
     potential.textContent = scoreForElapsed(elapsed);
-    if (elapsed >= ANSWER_WINDOW_SECONDS) submit();
+    if (elapsed >= ANSWER_WINDOW_SECONDS && !transcribing) submit();
   }, 200);
 
   async function toggleMic() {
     if (micState === 'ready') {
+      setMicState('opening', 'Waiting for microphone permission…');
       try {
-        session = await listen({ mode });
+        const opened = await listen({ mode });
+        // The permission prompt can outlive the question; never leave it recording.
+        if (submitted || micState !== 'opening') {
+          opened.cancel();
+          return;
+        }
+        session = opened;
         setMicState('recording', 'Listening… tap again when you are done.');
       } catch (err) {
         console.warn('microphone unavailable', err);
@@ -109,6 +120,7 @@ export function askQuestion(
 
     // Elapsed is taken here, before transcription latency, so speaking fast pays.
     const elapsedSeconds = (now() - startedAt) / 1000;
+    transcribing = true;
     setMicState('transcribing', 'Transcribing your answer…');
     const active = session;
     session = null;
@@ -117,10 +129,12 @@ export function askQuestion(
       transcript = await active.stop();
     } catch (err) {
       console.warn('transcription failed', err);
+      transcribing = false;
       setMicState('ready', 'Could not transcribe that — try again or type your answer.');
       return;
     }
     if (!transcript) {
+      transcribing = false;
       setMicState('ready', 'Nothing was heard — try again or type your answer.');
       return;
     }
@@ -135,6 +149,7 @@ export function askQuestion(
     cancelSpeech();
     session?.cancel();
     session = null;
+    transcribing = false;
 
     const elapsed = elapsedSeconds ?? (now() - startedAt) / 1000;
     const answerText = (text ?? slot.querySelector('#answer')?.value ?? '').trim();

@@ -52,20 +52,30 @@ export async function transcribeWithElevenLabs(
 
 async function startRecorderSession({ key, fetchImpl }) {
   const stream = await globalThis.navigator.mediaDevices.getUserMedia({ audio: true });
-  const mimeType = MIME_CANDIDATES.find((type) =>
-    globalThis.MediaRecorder.isTypeSupported?.(type),
-  );
-  const recorder = new globalThis.MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+  const stopTracks = () => stream.getTracks?.().forEach((track) => track.stop());
+
+  let recorder;
   const chunks = [];
-  recorder.addEventListener('dataavailable', (event) => {
-    if (event.data?.size) chunks.push(event.data);
-  });
-  const stopped = new Promise((resolve) => recorder.addEventListener('stop', resolve));
-  recorder.start();
+  let stopped;
+  try {
+    const mimeType = MIME_CANDIDATES.find((type) =>
+      globalThis.MediaRecorder.isTypeSupported?.(type),
+    );
+    recorder = new globalThis.MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    recorder.addEventListener('dataavailable', (event) => {
+      if (event.data?.size) chunks.push(event.data);
+    });
+    stopped = new Promise((resolve) => recorder.addEventListener('stop', resolve));
+    recorder.start();
+  } catch (err) {
+    // Never hold the microphone open when the session failed to start.
+    stopTracks();
+    throw err;
+  }
 
   const release = () => {
     if (recorder.state !== 'inactive') recorder.stop();
-    stream.getTracks?.().forEach((track) => track.stop());
+    stopTracks();
   };
 
   return {
