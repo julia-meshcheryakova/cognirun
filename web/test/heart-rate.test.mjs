@@ -5,7 +5,7 @@ import { createHeartRateMonitor, parseHeartRate } from '../src/sensors/heartRate
 import { createRun } from '../src/run.js';
 
 /** Minimal stand-in for the BLE stack: one HR service with a notifying 0x2A37. */
-function fakeBluetooth({ name = 'Forerunner 265', failOn } = {}) {
+function fakeBluetooth({ name = 'Forerunner 265', failOn, gate } = {}) {
   const listeners = new Map();
   const characteristic = {
     listeners: [],
@@ -17,6 +17,7 @@ function fakeBluetooth({ name = 'Forerunner 265', failOn } = {}) {
       this.listeners = this.listeners.filter((l) => l !== fn);
     },
     async startNotifications() {
+      if (gate) await gate;
       this.notifying = true;
     },
     async stopNotifications() {
@@ -63,6 +64,7 @@ function fakeBluetooth({ name = 'Forerunner 265', failOn } = {}) {
   return {
     device,
     characteristic,
+    deviceListeners: listeners,
     bluetooth: {
       async requestDevice() {
         if (failOn === 'requestDevice') throw new Error('User cancelled the requestDevice() chooser.');
@@ -158,6 +160,61 @@ test('a mid-run disconnect reconnects and keeps streaming', async () => {
   ble.characteristic.notify(133);
   assert.deepEqual(beats, [120, 133]);
   monitor.stop();
+});
+
+test('a real run without a status callback still streams heart rate', async () => {
+  const ble = fakeBluetooth();
+  const run = createRun({
+    demo: false,
+    multiplier: 1,
+    onUpdate() {},
+    onKilometer() {},
+    onFinish() {},
+    onError() {},
+    bluetooth: ble.bluetooth,
+  });
+
+  assert.equal(await run.sensors.connectHeartRate(), 'Forerunner 265');
+  ble.characteristic.notify(144);
+  assert.equal(run.snapshot().heartRate, 144);
+  run.stop();
+});
+
+test('a subscribe failure after GATT connects leaves nothing attached', async () => {
+  const ble = fakeBluetooth({ failOn: 'service' });
+  const monitor = createHeartRateMonitor({
+    onHeartRate() {},
+    onStatus() {},
+    bluetooth: ble.bluetooth,
+  });
+
+  assert.equal(await monitor.connect(), null);
+  assert.equal(ble.device.gatt.connected, false, 'GATT should be disconnected again');
+  assert.equal(ble.deviceListeners.has('gattserverdisconnected'), false);
+});
+
+test('stopping mid-connect does not report a connection or keep notifying', async () => {
+  let openGate = null;
+  const ble = fakeBluetooth({ gate: new Promise((resolve) => (openGate = resolve)) });
+  const statuses = [];
+  const monitor = createHeartRateMonitor({
+    onHeartRate: () => assert.fail('no beats after stop()'),
+    onStatus: (status) => statuses.push(status),
+    bluetooth: ble.bluetooth,
+  });
+
+  const connecting = monitor.connect();
+  monitor.stop();
+  openGate();
+
+  assert.equal(await connecting, null);
+  assert.deepEqual(
+    statuses.map((s) => s.state),
+    ['connecting'],
+  );
+  assert.equal(ble.characteristic.listeners.length, 0);
+  assert.equal(ble.device.gatt.connected, false);
+  ble.characteristic.notify(150); // no listeners left, so this is a no-op
 });
 
 test('demo runs never touch Bluetooth', () => {

@@ -50,12 +50,33 @@ export function createHeartRateMonitor({
     characteristic = null;
   }
 
+  /** Drop the device and everything attached to it; never throws. */
+  function release() {
+    detachCharacteristic();
+    if (device) {
+      device.removeEventListener?.('gattserverdisconnected', handleDisconnected);
+      if (device.gatt?.connected) {
+        try {
+          device.gatt.disconnect();
+        } catch {
+          /* already gone */
+        }
+      }
+    }
+    device = null;
+  }
+
   async function subscribe() {
     const server = await device.gatt.connect();
     const service = await server.getPrimaryService(HEART_RATE_SERVICE);
     characteristic = await service.getCharacteristic(HEART_RATE_MEASUREMENT);
     characteristic.addEventListener('characteristicvaluechanged', handleValueChanged);
     await characteristic.startNotifications();
+    // stop() may have landed while the GATT round trips were in flight.
+    if (stopped) {
+      release();
+      throw new Error('stopped');
+    }
   }
 
   function handleDisconnected() {
@@ -84,6 +105,7 @@ export function createHeartRateMonitor({
       reconnectTimer = null;
       subscribe()
         .then(() => {
+          if (stopped) return;
           reconnectAttempt = 0;
           onStatus({ state: 'connected', name: deviceName(), message: `${deviceName()} connected` });
         })
@@ -119,12 +141,17 @@ export function createHeartRateMonitor({
           optionalServices: [HEART_RATE_SERVICE],
         });
         device.addEventListener?.('gattserverdisconnected', handleDisconnected);
+        if (stopped) {
+          release();
+          return null;
+        }
         await subscribe();
         reconnectAttempt = 0;
         onStatus({ state: 'connected', name: deviceName(), message: `${deviceName()} connected` });
         return deviceName();
       } catch (err) {
-        device = null;
+        release();
+        if (stopped) return null;
         onStatus({
           state: 'failed',
           message: `Heart rate unavailable (${err?.message || err}) — continuing without it.`,
@@ -138,18 +165,7 @@ export function createHeartRateMonitor({
       if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = null;
       reconnectAttempt = 0;
-      detachCharacteristic();
-      if (device) {
-        device.removeEventListener?.('gattserverdisconnected', handleDisconnected);
-        if (device.gatt?.connected) {
-          try {
-            device.gatt.disconnect();
-          } catch {
-            /* already gone */
-          }
-        }
-      }
-      device = null;
+      release();
     },
   };
 }
