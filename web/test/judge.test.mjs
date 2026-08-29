@@ -89,3 +89,15 @@ test('a negative expected answer still grades as correct', async () => {
   assert.equal((await judgeAnswer({ question, text: 'No' })).correct, true);
   assert.equal(containsAnswer('no, it does not follow', question), true);
 });
+
+test('a negation aimed at another option leaves the answer correct', () => {
+  assert.equal(containsAnswer('Tokyo, not Kyoto', QUESTION), true);
+  assert.equal(containsAnswer('not Kyoto, Tokyo', QUESTION), true);
+  assert.equal(containsAnswer('Tokyo is not wrong', QUESTION), true);
+});
+
+test('a rejected negative answer is wrong', () => {
+  const question = { prompt: 'Does it follow?', answer: 'No' };
+
+  assert.equal(containsAnswer('No is wrong', question), false);
+});
