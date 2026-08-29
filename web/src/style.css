@@ -186,6 +186,23 @@ button {
   color: #f87171;
 }
 
+.device-value {
+  flex: none;
+  color: #4ade80;
+  font-size: 18px;
+}
+
+.device-status[data-state='connecting'] {
+  color: #facc15;
+}
+
+.device-status[data-state='failed'],
+.device-status[data-state='denied'],
+.device-status[data-state='lost'],
+.device-status[data-state='unavailable'] {
+  color: #f87171;
+}
+
 .grid {
   display: grid;
   /* minmax(0,…) so a long value like "6:05/km" wraps instead of widening the row. */

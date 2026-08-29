@@ -1,5 +1,6 @@
 import { createClock } from './clock.js';
 import { createDemoSensors } from './sensors/demo.js';
+import { createDevices } from './sensors/devices.js';
 import { createRealSensors } from './sensors/real.js';
 
 export const RUN_DISTANCE_METERS = 3000;
@@ -34,6 +35,7 @@ export function createRun({
   onError,
   onHeartRateStatus,
   onGpsStatus,
+  devices,
   bluetooth,
   geolocation,
 }) {
@@ -87,16 +89,20 @@ export function createRun({
     onUpdate(snapshot());
   }
 
+  // A live run normally reuses the devices connected on the setup screen; a run
+  // given none owns the ones it makes, connecting and closing them itself.
+  const ownDevices =
+    demo || devices
+      ? null
+      : createDevices({ onError, bluetooth, ...(geolocation ? { geolocation } : {}) });
   const sensors = demo
     ? createDemoSensors({ onPosition: handlePosition, onHeartRate: handleHeartRate })
     : createRealSensors({
+        devices: devices ?? ownDevices,
         onPosition: handlePosition,
         onHeartRate: handleHeartRate,
-        onError,
         onHeartRateStatus,
         onGpsStatus,
-        bluetooth,
-        ...(geolocation ? { geolocation } : {}),
       });
 
   // A real run ticks on the wall clock so time and pace stay honest between GPS
@@ -138,6 +144,7 @@ export function createRun({
   function stop() {
     clock.stop();
     sensors.stop?.();
+    ownDevices?.stop();
   }
 
   return {
@@ -145,6 +152,7 @@ export function createRun({
     start() {
       startedAtMs = Date.now();
       sensors.start?.();
+      ownDevices?.connectGps();
       clock.start();
     },
     stop,

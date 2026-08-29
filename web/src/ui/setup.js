@@ -1,7 +1,60 @@
 import { MULTIPLIERS } from '../config.js';
+import { IDLE_DEVICES } from '../sensors/devices.js';
+
+/** Device names and messages come from the browser, so they are never trusted here. */
+function escapeHtml(text) {
+  return String(text).replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+  );
+}
+
+/** Watch panel: the live heart rate once paired, a connect button otherwise. */
+function watchPanel(heartRate) {
+  const connected = heartRate.state === 'connected';
+  return `
+    <div class="row">
+      <span>Watch <small>heart rate over Bluetooth</small></span>
+      ${
+        connected
+          ? `<strong class="device-value" id="watch-value">❤️ ${heartRate.bpm ?? '--'} bpm</strong>`
+          : '<button class="chip" id="connect-watch">Connect Watch</button>'
+      }
+    </div>
+    <p class="hint device-status" id="watch-status" data-state="${heartRate.state}">${escapeHtml(
+      connected
+        ? `${heartRate.name || 'Heart rate monitor'} connected`
+        : heartRate.message ||
+            'On a Garmin watch start Broadcast heart rate first (Menu → Sensors & accessories → Wrist heart rate → Broadcast heart rate). Any BLE chest strap works too.',
+    )}</p>
+  `;
+}
+
+/** GPS panel: tracking status once the watch is running, a connect button otherwise. */
+function gpsPanel(gps) {
+  const tracking = gps.state === 'live';
+  // The watch is already running in these states, so there is nothing left to
+  // connect — only a fix to wait for.
+  const waiting = gps.state === 'waiting' || gps.state === 'no-signal';
+  return `
+    <div class="row">
+      <span>GPS <small>distance from your location</small></span>
+      ${
+        tracking || waiting
+          ? `<strong class="device-value" id="gps-value">${tracking ? '📍 GPS on' : '📍 …'}</strong>`
+          : '<button class="chip" id="connect-gps">Connect GPS</button>'
+      }
+    </div>
+    <p class="hint device-status" id="gps-status" data-state="${gps.state}">${escapeHtml(
+      tracking
+        ? `Location tracked · ${gps.message}`
+        : gps.message || 'Grant location access to track the route.',
+    )}</p>
+  `;
+}
 
 /** Markup of the setup screen; exported so its mode-dependent parts can be tested. */
-export function setupMarkup({ settings }) {
+export function setupMarkup({ settings, devices = IDLE_DEVICES }) {
   return `
     <main class="screen">
       <h1>CogniRun</h1>
@@ -18,9 +71,14 @@ export function setupMarkup({ settings }) {
         </div>
         <p class="hint">${
           settings.demo
-            ? 'Demo simulates the run — no watch or GPS needed, and you can speed it up.'
-            : 'Live run: GPS tracks the distance and the browser asks for a Bluetooth heart rate monitor when the run starts.'
+            ? 'Demo simulates the run — connecting a watch or GPS below is optional, and you can speed it up.'
+            : 'Live run: connect your watch and GPS below. Both are optional, and nothing is asked for again once the run starts.'
         }</p>
+      </section>
+
+      <section class="card" id="devices-card">
+        ${watchPanel(devices.heartRate)}
+        ${gpsPanel(devices.gps)}
       </section>
 
       <section class="card" id="speed-card" ${settings.demo ? '' : 'hidden'}>
@@ -43,11 +101,6 @@ export function setupMarkup({ settings }) {
         <p class="hint">Answer by speaking: the microphone opens as soon as the question starts
           being read aloud. Your browser transcribes what you said and it is graded against the
           expected answer — typing still works if the mic is unavailable.</p>
-        <p class="hint" id="hr-status" ${settings.demo ? 'hidden' : ''}>Real mode uses GPS and asks you to
-          pick a Bluetooth heart rate monitor when the run starts. On a Garmin watch start
-          <em>Broadcast heart rate</em> first (Menu → Sensors &amp; accessories → Wrist heart rate →
-          Broadcast heart rate), then press Start here and choose the watch in the browser's
-          Bluetooth dialog. Any BLE chest strap works too.</p>
       </section>
 
       <button class="primary" id="start">Start run</button>
@@ -55,8 +108,11 @@ export function setupMarkup({ settings }) {
   `;
 }
 
-export function renderSetup(root, { settings, onChange, onStart }) {
-  root.innerHTML = setupMarkup({ settings });
+export function renderSetup(
+  root,
+  { settings, devices = IDLE_DEVICES, onChange, onStart, onConnectWatch, onConnectGps },
+) {
+  root.innerHTML = setupMarkup({ settings, devices });
 
   root.querySelectorAll('[data-mode]').forEach((btn) =>
     btn.addEventListener('click', () => onChange({ demo: btn.dataset.mode === 'demo' })),
@@ -67,4 +123,20 @@ export function renderSetup(root, { settings, onChange, onStart }) {
   const voiceToggle = root.querySelector('#voice-toggle');
   voiceToggle.addEventListener('change', () => onChange({ voice: voiceToggle.checked }));
   root.querySelector('#start').addEventListener('click', onStart);
+
+  const card = root.querySelector('#devices-card');
+  function bindConnects() {
+    // Both connections need the click's user activation.
+    card.querySelector('#connect-watch')?.addEventListener('click', onConnectWatch);
+    card.querySelector('#connect-gps')?.addEventListener('click', onConnectGps);
+  }
+  bindConnects();
+
+  return {
+    /** Repaint the device panels as connections come and go, and on every beat. */
+    updateDevices(deviceState) {
+      card.innerHTML = `${watchPanel(deviceState.heartRate)}${gpsPanel(deviceState.gps)}`;
+      bindConnects();
+    },
+  };
 }
