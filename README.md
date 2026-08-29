@@ -43,31 +43,9 @@ same simulated-clock milestone event as the question itself, so they stay in syn
 every demo multiplier. The audio context is created on the "Start run" click so the
 first beep is not blocked by the browser autoplay policy.
 
-Read-aloud can be turned off with the **Read questions aloud** switch on the start
-screen, and it is fully optional: if no ElevenLabs key is configured — or the request
-fails — the app falls back to the browser's built-in SpeechSynthesis, and if that is
-missing too it stays silent.
-
-### Enabling the ElevenLabs voice
-
-```bash
-cp web/.env.example web/.env.local
-# then set VITE_ELEVENLABS_API_KEY=sk_... (and optionally VITE_ELEVENLABS_VOICE_ID)
-npm run dev   # restart Vite so it picks up the env file
-```
-
-`web/.env.local` is git-ignored. `VITE_*` vars are inlined into the client bundle, so
-for a public deployment proxy the ElevenLabs call through a small backend instead. For
-a quick test without rebuilding you can set the key at runtime in the browser console:
-
-```js
-localStorage.setItem('cognirun.elevenLabsApiKey', 'sk_...'); // or window.COGNIRUN_ELEVENLABS_API_KEY = 'sk_...'
-```
-
-Request used (see `web/src/tts.js`): `POST https://api.elevenlabs.io/v1/text-to-speech/<voiceId>`
-with the `xi-api-key` header, `model_id: eleven_turbo_v2_5` and
-`voice_settings: { stability: 0.4, similarity_boost: 0.8 }`; the returned MP3 is played
-via an `Audio` element. Default voice id `21m00Tcm4TlvDq8ikWAM` ("Rachel").
+Read-aloud uses the browser's built-in SpeechSynthesis (`web/src/tts.js`) — no API key
+and no external service. It can be turned off with the **Read questions aloud** switch
+on the start screen, and a browser without speech synthesis simply stays silent.
 
 ## Voice answering
 

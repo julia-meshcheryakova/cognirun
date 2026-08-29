@@ -22,8 +22,7 @@ export function renderSetup(root, { settings, onChange, onStart }) {
           </span>
         </label>
         <label class="row">
-          <span>Read questions aloud <small>ElevenLabs voice when a key is configured,
-            otherwise your browser's voice</small></span>
+          <span>Read questions aloud <small>your browser's built-in voice</small></span>
           <input type="checkbox" id="voice-toggle" ${settings.voice ? 'checked' : ''} />
         </label>
         <p class="hint">Answer by speaking: the microphone opens as soon as the question starts
