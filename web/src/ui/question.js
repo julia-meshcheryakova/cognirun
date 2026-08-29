@@ -1,4 +1,4 @@
-import { ANSWER_WINDOW_SECONDS, scoreForElapsed } from '../scoring.js';
+import { ANSWER_WINDOW_SECONDS, scoreForAnswer, scoreForElapsed } from '../scoring.js';
 import { beep } from '../beep.js';
 import { cancelSpeech, speak } from '../tts.js';
 import { escapeHtml } from '../format.js';
@@ -29,7 +29,7 @@ export function askQuestion(slot, { question, kilometer, now, onAnswered, onClos
       ${input}
       <div class="row">
         <span class="hint"><span id="countdown">${ANSWER_WINDOW_SECONDS}</span>s left ·
-          <span id="potential">100</span> pts</span>
+          <span id="potential">100</span> pts if correct</span>
         <button class="primary" id="submit">Submit</button>
       </div>
     </div>
@@ -52,10 +52,10 @@ export function askQuestion(slot, { question, kilometer, now, onAnswered, onClos
     clearTimeout(voiceTimer);
     cancelSpeech();
     const elapsedSeconds = (now() - startedAt) / 1000;
-    const points = scoreForElapsed(elapsedSeconds);
     const text = (slot.querySelector('#answer')?.value ?? chosen).trim();
     // Free-text answers are not graded; multiple choice is.
     const correct = question.options ? text === question.answer : null;
+    const points = scoreForAnswer({ elapsedSeconds, correct });
     onAnswered({
       questionId: question.id,
       category: question.category,

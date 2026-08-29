@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { QUESTION_COUNT, RUN_DISTANCE_METERS, createRun } from '../src/run.js';
-import { scoreForElapsed } from '../src/scoring.js';
+import { scoreForAnswer, scoreForElapsed } from '../src/scoring.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -155,4 +155,16 @@ test('scoring decays linearly from 100 to 50 within the answer window', () => {
   assert.equal(scoreForElapsed(30), 75);
   assert.equal(scoreForElapsed(60), 50);
   assert.equal(scoreForElapsed(60.5), 0);
+});
+
+test('only correct answers score points', () => {
+  assert.equal(scoreForAnswer({ elapsedSeconds: 0, correct: true }), 100);
+  assert.equal(scoreForAnswer({ elapsedSeconds: 30, correct: true }), 75);
+  assert.ok(scoreForAnswer({ elapsedSeconds: 59, correct: true }) > 0);
+
+  assert.equal(scoreForAnswer({ elapsedSeconds: 0, correct: false }), 0);
+  assert.equal(scoreForAnswer({ elapsedSeconds: 30, correct: false }), 0);
+
+  // Free text stays ungraded for now and keeps the time-decay score.
+  assert.equal(scoreForAnswer({ elapsedSeconds: 30, correct: null }), 75);
 });
