@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { QUESTION_LIBRARY } from '../../question-server/questions.js';
 import { containsAnswer, exactMatch, judgeAnswer, normalizeAnswer } from '../src/judge.js';
 
 const QUESTION = {
@@ -110,4 +111,20 @@ test('a rejection in its own clause still rejects the answer', () => {
 
 test('a rejection naming another option leaves the answer correct', () => {
   assert.equal(containsAnswer('Tokyo; Kyoto is incorrect', QUESTION), true);
+});
+
+test('a negation trailing the match rejects it', () => {
+  assert.equal(containsAnswer('Tokyo is not the answer', QUESTION), false);
+  assert.equal(containsAnswer("Tokyo isn't it", QUESTION), false);
+});
+
+test('a free-text logic question accepts the bare verdict', async () => {
+  const question = QUESTION_LIBRARY.questions.find((q) => q.id === 'logic-1');
+
+  assert.equal((await judgeAnswer({ question, text: 'No' })).correct, true);
+  assert.equal(
+    (await judgeAnswer({ question, text: 'No, the flowers need not be roses' })).correct,
+    true,
+  );
+  assert.equal((await judgeAnswer({ question, text: 'Yes' })).correct, false);
 });

@@ -79,7 +79,11 @@ export function containsAnswer(text, question) {
       return words.some((_, i) => {
         if (!target.every((word, j) => words[i + j] === word)) return false;
         if (negatable && words.slice(0, i).some((word) => NEGATOR.test(word))) return false;
-        const after = words.slice(i + target.length, i + target.length + NEGATION_RANGE);
+        const rest = words.slice(i + target.length);
+        // "Tokyo is not the answer": with the fillers gone the negator closes the
+        // clause, so it has nothing but the match itself to negate.
+        if (negatable && NEGATOR.test(rest[rest.length - 1] ?? '')) return false;
+        const after = rest.slice(0, NEGATION_RANGE);
         // "not wrong" rejects nothing.
         return !after.some((word, j) => REJECTION.test(word) && !NEGATOR.test(after[j - 1] ?? ''));
       });
