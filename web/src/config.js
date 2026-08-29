@@ -6,6 +6,7 @@ export const MULTIPLIERS = [1, 10, 100, 1000];
  */
 export const COURSES = {
   '3k': { label: '3K', segment: 1000, total: 3000 },
+  '300m': { label: '300 m', segment: 100, total: 300 },
   '60m': { label: '60 m', segment: 20, total: 60 },
 };
 export const DEFAULT_COURSE = '3k';
