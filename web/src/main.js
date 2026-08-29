@@ -1,6 +1,9 @@
 import './style.css';
 import { loadLibrary, selectRunQuestions } from './questions.js';
 import { createRun } from './run.js';
+import { createCalibrationSession } from './calibrationSession.js';
+import { createClock } from './clock.js';
+import { renderCalibration } from './ui/calibration.js';
 import { renderLive } from './ui/live.js';
 import { renderResults } from './ui/results.js';
 import { renderSetup } from './ui/setup.js';
@@ -9,7 +12,7 @@ import { primeAudio } from './beep.js';
 import { setVoiceEnabled } from './tts.js';
 
 const root = document.querySelector('#app');
-const settings = { demo: true, multiplier: 1, voice: true };
+const settings = { demo: true, multiplier: 1, voice: true, calibrate: true };
 let starting = false;
 
 function showSetup() {
@@ -19,17 +22,65 @@ function showSetup() {
       Object.assign(settings, patch);
       showSetup();
     },
-    onStart: startRun,
+    onStart: start,
   });
 }
 
-async function startRun() {
+async function start() {
   if (starting) return;
   starting = true;
 
   primeAudio(); // still inside the click gesture that started the run
   setVoiceEnabled(settings.voice);
 
+  // Real runs skip calibration for now: Web Bluetooth pairing needs the Start
+  // click's user activation, which awaiting the protocol would spend.
+  if (settings.demo && settings.calibrate) await runCalibration();
+  await startRun();
+}
+
+/**
+ * Walk the calibration protocol before the run: one simulated second per clock
+ * tick, so demo multipliers accelerate it exactly like they accelerate the run.
+ */
+function runCalibration() {
+  return new Promise((resolve) => {
+    let session = null;
+
+    const screen = renderCalibration(root, {
+      settings,
+      onMultiplier(value) {
+        settings.multiplier = value;
+        clock.setMultiplier(value);
+      },
+      onSkip() {
+        session.skip();
+      },
+    });
+
+    const clock = createClock({
+      multiplier: settings.multiplier,
+      onSecond() {
+        session.tick();
+      },
+    });
+
+    session = createCalibrationSession({
+      onUpdate(state) {
+        screen.update(state);
+      },
+      onComplete() {
+        clock.stop();
+        resolve();
+      },
+    });
+
+    screen.update(session.state());
+    clock.start();
+  });
+}
+
+async function startRun() {
   // One question per category (km1 trivia, km2 logic, km3 maths), from the question
   // server when it is up and from the bundled library otherwise. Started, not
   // awaited, so pairing below still runs inside the Start click.
