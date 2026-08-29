@@ -26,12 +26,14 @@ export function renderResults(root, { snapshot, answers, onRestart }) {
       <section class="card">
         <h2>Questions</h2>
         <table class="breakdown">
-          <thead><tr><th>Km</th><th>Category</th><th>Time</th><th>Points</th></tr></thead>
+          <thead><tr><th>Km</th><th>Category</th><th>Time</th><th>Result</th><th>Points</th></tr></thead>
           <tbody>
             ${answers
               .map(
                 (a) =>
-                  `<tr><td>${a.kilometer}</td><td>${CATEGORY_LABELS[a.category] ?? '—'}</td><td>${a.elapsedSeconds.toFixed(1)}s</td><td>${a.points}</td></tr>`,
+                  `<tr><td>${a.kilometer}</td><td>${CATEGORY_LABELS[a.category] ?? '—'}</td><td>${a.elapsedSeconds.toFixed(1)}s</td><td>${
+                    a.correct === null || a.correct === undefined ? 'ungraded' : a.correct ? 'correct' : 'wrong'
+                  }</td><td>${a.points}</td></tr>`,
               )
               .join('')}
           </tbody>
