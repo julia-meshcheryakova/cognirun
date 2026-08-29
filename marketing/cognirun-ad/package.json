@@ -1,0 +1,39 @@
+{
+  "name": "cognirun-hackathon-ad",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A 40-second CogniRun advert: discover your own thinking ritual.",
+  "scripts": {
+    "studio": "remotion studio src/index.ts --no-open --port=3100",
+    "typecheck": "tsc --noEmit",
+    "verify:qr": "node scripts/verify-qr.mjs",
+    "assets": "node scripts/generate-audio.mjs && node scripts/generate-qr.mjs",
+    "stills": "node scripts/render.mjs --stills",
+    "render": "node scripts/render.mjs",
+    "render:landscape": "node scripts/render.mjs --landscape",
+    "render:portrait": "node scripts/render.mjs --portrait"
+    ,"render:pitch": "node scripts/render-pitch.mjs"
+  },
+  "dependencies": {
+    "@fontsource/anton": "5.2.5",
+    "@fontsource/inter": "5.2.5",
+    "@remotion/bundler": "4.0.518",
+    "@remotion/cli": "4.0.518",
+    "@remotion/fonts": "4.0.518",
+    "@remotion/media": "4.0.518",
+    "@remotion/renderer": "4.0.518",
+    "@remotion/transitions": "4.0.518",
+    "qrcode": "1.5.4",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "remotion": "4.0.518"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.2",
+    "@types/react-dom": "19.1.2",
+    "jsqr": "1.4.0",
+    "pngjs": "7.0.0",
+    "typescript": "5.8.3"
+  }
+}

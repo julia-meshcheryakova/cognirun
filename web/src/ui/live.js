@@ -1,11 +1,13 @@
 import { drawRoute } from '../charts.js';
-import { MULTIPLIERS } from '../config.js';
+import { MULTIPLIERS, courseOf } from '../config.js';
 import { formatClock, formatKm, formatPace, formatSpeed } from '../format.js';
 import { hrZone } from '../hrZones.js';
-import { QUESTION_COUNT, RUN_DISTANCE_METERS } from '../run.js';
 
 /** Markup of the run screen; exported so its demo-only parts can be tested. */
 export function liveMarkup({ settings }) {
+  const course = courseOf(settings.course);
+  const total = course.total;
+  const count = Math.round(total / course.segment);
   return `
     <main class="screen live">
       <div class="metric hero">
@@ -19,11 +21,11 @@ export function liveMarkup({ settings }) {
       <div class="metric hero points">
         <span class="label">Points</span>
         <strong id="points">0</strong>
-        <span class="unit" id="answered">0 / ${QUESTION_COUNT} questions</span>
+        <span class="unit" id="answered">0 / ${count} questions</span>
       </div>
 
       <div class="grid">
-        <div class="metric"><span class="label">Distance</span><strong id="distance">0.00</strong><span class="unit">km of ${RUN_DISTANCE_METERS / 1000}</span></div>
+        <div class="metric"><span class="label">Distance</span><strong id="distance">0.00</strong><span class="unit">km of ${(total / 1000).toFixed(total % 1000 ? 2 : 0)}</span></div>
         <div class="metric"><span class="label">Pace</span><strong id="pace">--:--</strong><span class="unit" id="speed">0.0 km/h</span></div>
         <div class="metric"><span class="label">Time</span><strong id="time">0:00</strong></div>
       </div>
@@ -55,9 +57,9 @@ export function liveMarkup({ settings }) {
           <span>Demo timeline</span>
           <strong id="scrub-value">0.00 km</strong>
         </div>
-        <input id="scrub" type="range" min="0" max="${RUN_DISTANCE_METERS}" step="10" value="0" disabled />
+        <input id="scrub" type="range" min="0" max="${total}" step="${Math.max(1, Math.round(course.segment / 100))}" value="0" disabled />
         <div class="scrubber-ticks">
-          ${[0, 1, 2, 3].map((km) => `<span>${km} km</span>`).join('')}
+          ${Array.from({ length: count + 1 }, (_, i) => `<span>${formatKm(i * course.segment)} km</span>`).join('')}
         </div>
       </div>`
           : ''
@@ -73,6 +75,9 @@ export function liveMarkup({ settings }) {
 
 export function renderLive(root, { settings, onMultiplier, onScrub }) {
   root.innerHTML = liveMarkup({ settings });
+  const course = courseOf(settings.course);
+  const total = course.total;
+  const count = Math.round(total / course.segment);
 
   root.querySelectorAll('[data-mult]').forEach((btn) =>
     btn.addEventListener('click', () => {
@@ -124,12 +129,12 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
       el('hr').textContent = snapshot.heartRate || '--';
       el('zone').textContent = snapshot.heartRate ? `Zone ${zone.zone} · ${zone.name}` : '--';
       el('points').textContent = points;
-      el('answered').textContent = `${answered} / ${QUESTION_COUNT} questions`;
+      el('answered').textContent = `${answered} / ${count} questions`;
       el('distance').textContent = formatKm(snapshot.distance);
       el('pace').textContent = formatPace(snapshot.speed);
       el('time').textContent = formatClock(snapshot.elapsedSeconds);
       el('speed').textContent = formatSpeed(snapshot.speed);
-      el('progress').style.width = `${Math.min(100, (snapshot.distance / RUN_DISTANCE_METERS) * 100)}%`;
+      el('progress').style.width = `${Math.min(100, (snapshot.distance / total) * 100)}%`;
       drawRoute(el('live-route'), snapshot.samples);
       if (scrub && !dragging) {
         scrub.value = snapshot.distance;

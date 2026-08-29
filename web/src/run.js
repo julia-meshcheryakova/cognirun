@@ -2,7 +2,10 @@ import { createClock } from './clock.js';
 import { createDemoSensors } from './sensors/demo.js';
 import { createDevices } from './sensors/devices.js';
 import { createRealSensors } from './sensors/real.js';
+import { courseOf } from './config.js';
 
+// Defaults describe the standard 3K course; a run derives its real segment,
+// total and question count from the selected course instead.
 export const RUN_DISTANCE_METERS = 3000;
 export const QUESTION_COUNT = 3;
 
@@ -29,6 +32,7 @@ function haversine(a, b) {
 export function createRun({
   demo,
   multiplier,
+  course,
   onUpdate,
   onKilometer,
   onFinish,
@@ -39,6 +43,11 @@ export function createRun({
   bluetooth,
   geolocation,
 }) {
+  // Segment length and total distance come from the course; question count is
+  // just how many segments fit (3 for both the 3K and the 60 m test course).
+  const { segment: SEGMENT_METERS, total: TOTAL_METERS } = courseOf(course);
+  const questionCount = Math.round(TOTAL_METERS / SEGMENT_METERS);
+
   const samples = [];
   let last = null;
   let firstT = null;
@@ -75,7 +84,7 @@ export function createRun({
     last = point;
     samples.push({ ...point, distance, speed, heartRate });
 
-    const km = Math.min(QUESTION_COUNT, Math.floor(distance / 1000));
+    const km = Math.min(questionCount, Math.floor(distance / SEGMENT_METERS));
     while (kmReached < km) {
       kmReached += 1;
       onKilometer(kmReached);
@@ -134,7 +143,7 @@ export function createRun({
 
   function maybeFinish() {
     if (finished) return;
-    if (distance >= RUN_DISTANCE_METERS && answered >= QUESTION_COUNT) {
+    if (distance >= TOTAL_METERS && answered >= questionCount) {
       finished = true;
       stop();
       onFinish(snapshot());
@@ -169,7 +178,7 @@ export function createRun({
      */
     scrubTo(meters) {
       if (!demo || finished) return;
-      const target = Math.min(meters, RUN_DISTANCE_METERS);
+      const target = Math.min(meters, TOTAL_METERS);
       let guard = SCRUB_MAX_SECONDS;
       while (distance < target && !finished && !clock.answering() && guard-- > 0) {
         clock.advanceSecond();
