@@ -100,3 +100,16 @@ test('with no recogniser at all the mic cannot be opened', async () => {
   assert.equal(sttMode(), 'none');
   await assert.rejects(startListening(), /no speech input available/);
 });
+
+test('a recogniser that ends on its own still returns what it heard', async () => {
+  const state = stubSessionRecognition();
+  globalThis.SpeechRecognition.prototype.stop = () => {
+    throw new Error('InvalidStateError');
+  };
+
+  const session = await startListening();
+  state.instance.speak('Tokyo');
+  state.instance.emit('end', {}); // silence ended the session before the stop tap
+
+  assert.equal(await session.stop(), 'Tokyo');
+});

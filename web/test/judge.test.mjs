@@ -73,3 +73,19 @@ test('grading needs no network access at all', async () => {
     globalThis.fetch = fetchImpl;
   }
 });
+
+test('a sentence that negates the answer is wrong', async () => {
+  const question = { prompt: 'What game is he playing?', answer: 'Monopoly' };
+
+  assert.equal(containsAnswer('it is not Tokyo', QUESTION), false);
+  assert.equal(containsAnswer('Tokyo is wrong', QUESTION), false);
+  assert.equal(containsAnswer("I don't think he is playing Monopoly", question), false);
+  assert.equal((await judgeAnswer({ question: QUESTION, text: 'not Tokyo' })).method, 'no-match');
+});
+
+test('a negative expected answer still grades as correct', async () => {
+  const question = { prompt: 'Does it follow?', answer: 'No', acceptedAnswers: ['it does not follow'] };
+
+  assert.equal((await judgeAnswer({ question, text: 'No' })).correct, true);
+  assert.equal(containsAnswer('no, it does not follow', question), true);
+});

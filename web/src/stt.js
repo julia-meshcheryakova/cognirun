@@ -41,16 +41,29 @@ function startRecognitionSession() {
       .map((result) => result[0]?.transcript ?? '')
       .join(' ');
   });
+  // The recogniser can end on its own (silence, an error) before the runner taps
+  // stop; calling `stop()` on it again throws and would lose what was heard.
+  let ended = false;
   const settled = new Promise((resolve) => {
-    recognition.addEventListener('end', resolve);
-    recognition.addEventListener('error', resolve);
+    const finish = () => {
+      ended = true;
+      resolve();
+    };
+    recognition.addEventListener('end', finish);
+    recognition.addEventListener('error', finish);
   });
   recognition.start();
 
   return {
     mode: 'browser',
     async stop() {
-      recognition.stop();
+      if (ended) return transcript.trim();
+      try {
+        recognition.stop();
+      } catch (err) {
+        console.warn('stopping speech recognition failed', err);
+        return transcript.trim();
+      }
       await Promise.race([settled, deadline(RECOGNITION_FLUSH_MS)]);
       return transcript.trim();
     },

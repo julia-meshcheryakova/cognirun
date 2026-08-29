@@ -4,6 +4,11 @@
  * casing, punctuation, filler words — so "It's Tokyo!" grades the same as "Tokyo".
  */
 
+/** Words that reject the answer they surround: "not Tokyo", "Tokyo is wrong". */
+const NEGATION = /^(not|no|nope|never|isnt|arent|wasnt|dont|doesnt|didnt|cant|wouldnt|except|wrong|incorrect|opposite)$/;
+/** How many words either side of a match are checked for such a rejection. */
+const NEGATION_RANGE = 2;
+
 const FILLER = /\b(a|an|the|is|are|am|was|were|be|being|been|it|its|he|she|they|i|of|to|that|this|think|answer)\b/g;
 
 /** Lowercase, drop punctuation and filler words so "It's Tokyo!" matches "Tokyo". */
@@ -29,7 +34,8 @@ export function exactMatch(text, question) {
 /**
  * True when the expected answer is contained in a longer spoken sentence, so
  * "he is playing monopoly" grades as "monopoly". Only whole-word runs count, and
- * one-word expected answers still need to appear as their own word.
+ * one-word expected answers still need to appear as their own word. A sentence that
+ * negates or rejects the answer ("not Tokyo", "Tokyo is wrong") does not count.
  */
 export function containsAnswer(text, question) {
   const user = normalizeAnswer(text);
@@ -40,7 +46,15 @@ export function containsAnswer(text, question) {
   const words = user.split(' ');
   return expected.some((answer) => {
     const target = answer.split(' ');
-    return words.some((_, i) => target.every((word, j) => words[i + j] === word));
+    // A negation next to the match rejects it, unless the answer itself is negative.
+    const negatable = target.every((word) => !NEGATION.test(word));
+    return words.some((_, i) => {
+      if (!target.every((word, j) => words[i + j] === word)) return false;
+      if (!negatable) return true;
+      const around = [...words.slice(Math.max(0, i - NEGATION_RANGE), i),
+        ...words.slice(i + target.length, i + target.length + NEGATION_RANGE)];
+      return !around.some((word) => NEGATION.test(word));
+    });
   });
 }
 
