@@ -113,6 +113,7 @@ async function startRun() {
   const { library } = await libraryLoad;
   runQuestions = selectRunQuestions(library);
   starting = false;
+  live.enableScrub();
   run.start();
 }
 

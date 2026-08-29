@@ -44,7 +44,7 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
           <span>Demo timeline</span>
           <strong id="scrub-value">0.00 km</strong>
         </div>
-        <input id="scrub" type="range" min="0" max="${RUN_DISTANCE_METERS}" step="10" value="0" />
+        <input id="scrub" type="range" min="0" max="${RUN_DISTANCE_METERS}" step="10" value="0" disabled />
         <div class="scrubber-ticks">
           ${[0, 1, 2, 3].map((km) => `<span>${km} km</span>`).join('')}
         </div>
@@ -79,6 +79,10 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
 
   return {
     questionSlot: el('question-slot'),
+    /** The scrubber can only fast-forward once the run (and its questions) are ready. */
+    enableScrub() {
+      scrub.disabled = false;
+    },
     update(snapshot, { points, answered }) {
       const zone = hrZone(snapshot.heartRate || 0);
       el('hr').textContent = snapshot.heartRate || '--';
