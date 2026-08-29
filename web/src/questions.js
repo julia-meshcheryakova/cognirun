@@ -22,7 +22,10 @@ export async function loadLibrary({ url = QUESTION_SERVER_URL, fetchImpl = fetch
     });
     if (!response.ok) throw new Error(`question server returned ${response.status}`);
     const library = await response.json();
-    if (!library.questions?.length) throw new Error('question server returned an empty library');
+    const missing = RUN_CATEGORIES.filter(
+      (category) => !library.questions?.some((q) => q.category === category),
+    );
+    if (missing.length) throw new Error(`question server is missing ${missing.join(', ')}`);
     return { library, source: 'server' };
   } catch (err) {
     console.warn('using bundled questions:', err.message);

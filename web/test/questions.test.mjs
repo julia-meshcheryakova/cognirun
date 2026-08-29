@@ -58,6 +58,15 @@ test('questions load from the server and fall back to the bundled library', asyn
       }),
   });
   assert.equal(hanging.source, 'bundled', 'a server that never answers must not block the run');
+
+  const partial = await loadLibrary({
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({ ...served, questions: served.questions.filter((q) => q.category === 'trivia') }),
+    }),
+  });
+  assert.equal(partial.source, 'bundled', 'a library missing a category must not reach the run');
+  assert.deepEqual(selectRunQuestions(partial.library).map((q) => q.category), RUN_CATEGORIES);
 });
 
 test('percentiles rise with the score and stay within 1-99%', () => {
