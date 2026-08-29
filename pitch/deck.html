@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>CogniRun — Pitch</title>
+<style>
+  :root { --ink:#0f0e1a; --purple:#6c5ce7; --purple2:#a29bfe; --muted:#6b6a7c; --bg:#faf9ff; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif; color: var(--ink); background:#222; }
+  .slide {
+    width: 1280px; height: 720px; background: var(--bg);
+    padding: 76px 92px; display: flex; flex-direction: column;
+    position: relative; overflow: hidden; page-break-after: always;
+    margin: 0 auto 24px;
+  }
+  .slide::before {
+    content:""; position:absolute; top:-180px; right:-140px; width:560px; height:560px;
+    background: radial-gradient(closest-side, rgba(108,92,231,.20), transparent); border-radius:50%;
+  }
+  .kicker { color: var(--purple); font-weight: 800; letter-spacing:.16em; text-transform: uppercase; font-size: 19px; }
+  .spacer { flex: 1; }
+  .em { color: var(--purple); font-weight: 800; }
+  .foot { font-size: 20px; color: var(--muted); font-weight:700; }
+
+  /* SLIDE 1 — single-idea hook */
+  .s1 h1 { font-size: 108px; line-height: .98; letter-spacing:-.03em; margin: 14px 0 26px; }
+  .s1 .hero { font-size: 46px; line-height: 1.18; letter-spacing:-.02em; max-width: 20ch; font-weight:600; }
+  .s1 .hero .em { white-space: nowrap; }
+  .s1 .punch { font-size: 28px; color: var(--muted); font-weight:700; margin-top: 8px; }
+
+  /* SLIDE 2 — markets, tight */
+  .s2 h2 { font-size: 56px; line-height: 1.02; letter-spacing:-.02em; margin-bottom: 40px; }
+  .markets { display: grid; grid-template-columns: repeat(3,1fr); gap: 28px; }
+  .card { background:#fff; border:1px solid #ece9ff; border-radius:24px; padding:36px 32px;
+          box-shadow: 0 12px 34px rgba(108,92,231,.10); display:flex; flex-direction:column; }
+  .card .ico { font-size: 50px; margin-bottom: 18px; }
+  .card h3 { font-size: 30px; margin-bottom: 12px; }
+  .card p { font-size: 22px; line-height:1.4; color: var(--muted); font-weight:600; }
+  .card .tag { margin-top:auto; padding-top:18px; font-size:19px; color:var(--purple); font-weight:800; }
+
+  /* SLIDE 3 — close */
+  .two { display:flex; gap:64px; align-items:center; height:100%; }
+  .phone { border-radius: 28px; box-shadow: 0 26px 64px rgba(0,0,0,.30); max-height: 88%; width:auto; object-fit: contain; border:1px solid #eee; flex: 0 0 auto; }
+  .two > div { flex: 1; }
+  .oneliner { font-size: 44px; line-height: 1.24; letter-spacing:-.02em; font-weight:600; }
+  .cta { margin-top: 34px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .chip { display:inline-block; background:var(--purple); color:#fff; padding:14px 26px; border-radius:999px; font-size:22px; font-weight:800; }
+  .url { font-size:21px; color:var(--muted); font-weight:700; }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1 — HOOK (one idea) -->
+<section class="slide s1">
+  <div class="kicker">Think while you run</div>
+  <h1>CogniRun</h1>
+  <div class="spacer"></div>
+  <p class="hero">We measure your <span class="em">cognitive heart-rate threshold</span> — how sharp you stay when body and brain are both maxed.</p>
+  <p class="punch">Fastest legs don't win. Fastest thinking under load does.</p>
+  <div class="spacer"></div>
+  <div class="foot">Working Android app · voice questions · live GPS &amp; heart-rate</div>
+</section>
+
+<!-- SLIDE 2 — GO TO MARKET (tight) -->
+<section class="slide s2">
+  <div class="kicker">Who it's for</div>
+  <h2>One platform, three markets</h2>
+  <div class="markets">
+    <div class="card">
+      <div class="ico">🏃</div>
+      <h3>You</h3>
+      <p>Train body &amp; brain under real pressure — interviews, driving theory, memory.</p>
+      <div class="tag">Sharper, measurably</div>
+    </div>
+    <div class="card">
+      <div class="ico">🔬</div>
+      <h3>Scientists</h3>
+      <p>Cognition-under-exertion studies at scale. Enrollment = joining a run.</p>
+      <div class="tag">Recruits itself</div>
+    </div>
+    <div class="card">
+      <div class="ico">💼</div>
+      <h3>Business</h3>
+      <p>Sponsored question packs reach an engaged audience mid-race.</p>
+      <div class="tag">Pays for itself</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+</section>
+
+<!-- SLIDE 3 — CLOSE -->
+<section class="slide">
+  <div class="two">
+    <img class="phone" src="shot-run-clean.jpg" alt="CogniRun mid-run screen" />
+    <div>
+      <div class="kicker">Live now</div>
+      <p class="oneliner"><span class="em">Strava for your mind.</span><br/>A run that makes you smarter — and recruits and funds itself.</p>
+      <div class="cta">
+        <span class="chip">Try it → cognirun.app</span>
+        <span class="url">+ Android app, one tap</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
