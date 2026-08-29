@@ -78,7 +78,12 @@ function runCalibration() {
       },
     });
 
-    const paint = (state) => screen.update(state, { bpm: devices.state().heartRate.bpm });
+    const paint = (state) => {
+      const heartRate = devices.state().heartRate;
+      screen.update(state, {
+        bpm: heartRate.state === 'connected' ? heartRate.bpm : undefined,
+      });
+    };
 
     const clock = createClock({
       multiplier: settings.demo ? settings.multiplier : 1,
