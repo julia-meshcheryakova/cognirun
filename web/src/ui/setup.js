@@ -1,4 +1,6 @@
+import { CALIBRATION_CONDITIONS, calibrationDurationSec } from '../calibration.js';
 import { MULTIPLIERS } from '../config.js';
+import { formatClock } from '../format.js';
 
 export function renderSetup(root, { settings, onChange, onStart }) {
   root.innerHTML = `
@@ -21,6 +23,17 @@ export function renderSetup(root, { settings, onChange, onStart }) {
             ).join('')}
           </span>
         </label>
+        <label class="row" id="calibrate-row" ${settings.demo ? '' : 'hidden'}>
+          <span>Calibrate first <small>hold ${CALIBRATION_CONDITIONS.length} conditions
+            (${formatClock(calibrationDurationSec())}, accelerated by the demo speed)</small></span>
+          <input type="checkbox" id="calibrate-toggle" ${settings.calibrate ? 'checked' : ''} />
+        </label>
+        <ol class="condition-list" id="calibrate-preview" ${settings.demo && settings.calibrate ? '' : 'hidden'}>
+          ${CALIBRATION_CONDITIONS.map(
+            (condition) =>
+              `<li><span class="condition-name">${condition.label}</span><span class="condition-hold">${condition.holdSec}s</span></li>`,
+          ).join('')}
+        </ol>
         <label class="row">
           <span>Read questions aloud <small>ElevenLabs voice when a key is configured,
             otherwise your browser's voice</small></span>
@@ -42,6 +55,8 @@ export function renderSetup(root, { settings, onChange, onStart }) {
 
   const demoToggle = root.querySelector('#demo-toggle');
   demoToggle.addEventListener('change', () => onChange({ demo: demoToggle.checked }));
+  const calibrateToggle = root.querySelector('#calibrate-toggle');
+  calibrateToggle.addEventListener('change', () => onChange({ calibrate: calibrateToggle.checked }));
   const voiceToggle = root.querySelector('#voice-toggle');
   voiceToggle.addEventListener('change', () => onChange({ voice: voiceToggle.checked }));
   root.querySelectorAll('[data-mult]').forEach((btn) =>
