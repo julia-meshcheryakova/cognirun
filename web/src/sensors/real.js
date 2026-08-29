@@ -1,49 +1,22 @@
-import { createHeartRateMonitor } from './heartRate.js';
-
 /**
- * Real sensors: Geolocation for the route, and the standard BLE Heart Rate
- * Profile (see heartRate.js) for a watch broadcasting heart rate, e.g. a Garmin.
+ * Real sensors: the GPS and BLE heart rate connections the user made on the setup
+ * screen (see devices.js). Nothing is connected from here, so a live run never
+ * raises a permission prompt; whatever is connected drives the run.
  */
 export function createRealSensors({
+  devices,
   onPosition,
   onHeartRate,
-  onError,
-  onHeartRateStatus,
-  bluetooth,
+  onHeartRateStatus = () => {},
 }) {
-  let watchId = null;
-  const heartRate = createHeartRateMonitor({
-    onHeartRate,
-    onStatus: onHeartRateStatus,
-    ...(bluetooth ? { bluetooth } : {}),
-  });
+  devices.attach({ onPosition, onHeartRate, onHeartRateStatus });
 
   return {
-    start() {
-      if (!navigator.geolocation) {
-        onError('Geolocation is not available in this browser.');
-        return;
-      }
-      watchId = navigator.geolocation.watchPosition(
-        (pos) =>
-          onPosition({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            accuracy: pos.coords.accuracy,
-            t: pos.timestamp,
-          }),
-        (err) => onError(`GPS error: ${err.message}`),
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 },
-      );
-    },
-
     stop() {
-      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      watchId = null;
-      heartRate.stop();
+      devices.detach();
     },
 
     /** Must be called from a user gesture (Web Bluetooth requirement). */
-    connectHeartRate: heartRate.connect,
+    connectHeartRate: devices.connectHeartRate,
   };
 }

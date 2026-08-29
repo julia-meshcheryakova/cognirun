@@ -1,5 +1,6 @@
 import { createClock } from './clock.js';
 import { createDemoSensors } from './sensors/demo.js';
+import { createDevices } from './sensors/devices.js';
 import { createRealSensors } from './sensors/real.js';
 
 export const RUN_DISTANCE_METERS = 3000;
@@ -30,8 +31,8 @@ export function createRun({
   onUpdate,
   onKilometer,
   onFinish,
-  onError,
   onHeartRateStatus,
+  devices,
   bluetooth,
 }) {
   const samples = [];
@@ -75,14 +76,16 @@ export function createRun({
     onUpdate(snapshot());
   }
 
+  // Live runs normally reuse the devices connected on the setup screen; a run given
+  // none owns the ones it makes, and closes them when it stops.
+  const ownDevices = demo || devices ? null : createDevices({ bluetooth });
   const sensors = demo
     ? createDemoSensors({ onPosition: handlePosition, onHeartRate: handleHeartRate })
     : createRealSensors({
+        devices: devices ?? ownDevices,
         onPosition: handlePosition,
         onHeartRate: handleHeartRate,
-        onError,
         onHeartRateStatus,
-        bluetooth,
       });
 
   const clock = createClock({
@@ -112,6 +115,7 @@ export function createRun({
   function stop() {
     clock.stop();
     sensors.stop?.();
+    ownDevices?.stop();
   }
 
   return {

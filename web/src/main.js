@@ -7,17 +7,34 @@ import { renderSetup } from './ui/setup.js';
 import { askQuestion } from './ui/question.js';
 import { primeAudio } from './beep.js';
 import { setVoiceEnabled } from './tts.js';
+import { createDevices } from './sensors/devices.js';
 
 const root = document.querySelector('#app');
 const settings = { demo: true, multiplier: 1, voice: true };
 let starting = false;
+let setup = null;
+
+// Watch and GPS live for the whole session: they are connected on the setup screen
+// and a run then just reads them, so nothing is asked for once the run is going.
+const devices = createDevices({
+  onChange(state) {
+    setup?.updateDevices(state);
+  },
+});
 
 function showSetup() {
-  renderSetup(root, {
+  setup = renderSetup(root, {
     settings,
+    devices: devices.state(),
     onChange(patch) {
       Object.assign(settings, patch);
       showSetup();
+    },
+    onConnectWatch() {
+      devices.connectHeartRate();
+    },
+    onConnectGps() {
+      devices.connectGps();
     },
     onStart: startRun,
   });
@@ -27,12 +44,12 @@ async function startRun() {
   if (starting) return;
   starting = true;
 
+  setup = null;
   primeAudio(); // still inside the click gesture that started the run
   setVoiceEnabled(settings.voice);
 
   // One question per category (km1 trivia, km2 logic, km3 maths), from the question
-  // server when it is up and from the bundled library otherwise. Started, not
-  // awaited, so pairing below still runs inside the Start click.
+  // server when it is up and from the bundled library otherwise.
   const libraryLoad = loadLibrary();
   let runQuestions = [];
 
@@ -55,6 +72,7 @@ async function startRun() {
   const run = createRun({
     demo: settings.demo,
     multiplier: settings.multiplier,
+    devices,
     onUpdate(snapshot) {
       latest = snapshot;
       live.update(snapshot, {
@@ -68,9 +86,6 @@ async function startRun() {
     },
     onFinish(snapshot) {
       showResults(snapshot, answers);
-    },
-    onError(message) {
-      alert(message);
     },
     // Real runs only: connection state of the BLE heart rate device. Never fatal —
     // the run keeps going with whatever the last reading was.
@@ -105,14 +120,6 @@ async function startRun() {
         run.noteAnswered();
         askNext();
       },
-    });
-  }
-
-  // Web Bluetooth needs the Start click's user activation, so pair before awaiting.
-  // Demo runs never touch Bluetooth: their heart rate comes from the simulator.
-  if (!settings.demo) {
-    run.sensors.connectHeartRate().catch((err) => {
-      console.warn('heart rate unavailable', err);
     });
   }
 
