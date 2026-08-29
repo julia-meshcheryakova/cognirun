@@ -3,6 +3,51 @@ import { createHeartRateMonitor } from './heartRate.js';
 const GPS_OPTIONS = { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 };
 const NO_FIX_WARNING_MS = 15_000;
 
+/**
+ * On native Android (Capacitor) the WebView's navigator.geolocation is unreliable
+ * for background tracking, so wrap the Geolocation plugin in the navigator.geolocation
+ * shape (watchPosition/clearWatch/getCurrentPosition) the rest of this module expects.
+ * Returns null on the web or when a test injects its own geolocation.
+ */
+function nativeGeolocation() {
+  const cap = typeof window === 'undefined' ? undefined : window.Capacitor;
+  if (!cap?.isNativePlatform?.()) return null;
+  const geo = cap.Plugins?.Geolocation;
+  if (!geo) return null;
+  const watches = new Map();
+  let nextId = 1;
+  return {
+    watchPosition(onPosition, onError, options = {}) {
+      const id = nextId++;
+      geo.requestPermissions()
+        .then(() => geo.watchPosition(
+          { enableHighAccuracy: options.enableHighAccuracy !== false, timeout: options.timeout ?? 10000 },
+          (position, err) => {
+            if (err) onError?.({ code: 2, message: err.message || String(err) });
+            else if (position) onPosition(position);
+          },
+        ))
+        .then((watchId) => watches.set(id, watchId))
+        .catch((err) => onError?.({ code: 1, message: err?.message || String(err) }));
+      return id;
+    },
+    clearWatch(id) {
+      const watchId = watches.get(id);
+      if (watchId != null) geo.clearWatch({ id: watchId }).catch(() => {});
+      watches.delete(id);
+    },
+    getCurrentPosition(onPosition, onError, options = {}) {
+      geo.requestPermissions()
+        .then(() => geo.getCurrentPosition({
+          enableHighAccuracy: options.enableHighAccuracy !== false,
+          timeout: options.timeout ?? 20000,
+        }))
+        .then((position) => onPosition(position))
+        .catch((err) => onError?.({ code: 1, message: err?.message || String(err) }));
+    },
+  };
+}
+
 /** Device state before anything has been connected. */
 export const IDLE_DEVICES = { heartRate: { state: 'idle' }, gps: { state: 'idle' } };
 
@@ -39,6 +84,11 @@ export function createDevices({
   bluetooth,
   geolocation = typeof navigator === 'undefined' ? undefined : navigator.geolocation,
 } = {}) {
+  // Native Android WebView: swap in the plugin-backed geolocation unless a test
+  // injected its own (injected value is kept so the existing paths stay tested).
+  if (geolocation === (typeof navigator === 'undefined' ? undefined : navigator.geolocation)) {
+    geolocation = nativeGeolocation() ?? geolocation;
+  }
   let heartRateState = { ...IDLE_DEVICES.heartRate };
   let gpsState = { ...IDLE_DEVICES.gps };
   let watchId = null;
