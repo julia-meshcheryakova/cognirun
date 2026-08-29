@@ -8,6 +8,7 @@ export const QUESTION_COUNT = 3;
 
 const EARTH_RADIUS = 6_371_000;
 const MAX_ACCURACY_METERS = 30;
+const STALE_FIX_MS = 10_000; // no fix for this long: the last pace is meaningless
 const SCRUB_MAX_SECONDS = 3600; // safety net so a scrub can never loop forever
 
 function haversine(a, b) {
@@ -31,9 +32,12 @@ export function createRun({
   onUpdate,
   onKilometer,
   onFinish,
+  onError,
   onHeartRateStatus,
+  onGpsStatus,
   devices,
   bluetooth,
+  geolocation,
 }) {
   const samples = [];
   let last = null;
@@ -45,13 +49,22 @@ export function createRun({
   let kmReached = 0;
   let answered = 0;
   let finished = false;
+  let startedAtMs = null;
+  let lastFixMs = null;
 
   function handlePosition(point) {
     // The clock runs on every fix, even ones rejected below for distance.
     if (firstT === null) firstT = point.t;
     lastT = point.t;
 
-    if (point.accuracy > MAX_ACCURACY_METERS) return;
+    if (point.accuracy > MAX_ACCURACY_METERS) {
+      onGpsStatus?.({
+        state: 'weak',
+        message: `Weak GPS (±${Math.round(point.accuracy)} m) — skipping fixes until it sharpens.`,
+      });
+      return;
+    }
+    lastFixMs = Date.now(); // only usable fixes keep the shown pace alive
     if (last) {
       const meters = haversine(last, point);
       if (meters <= (point.accuracy ?? 0) / 2) return; // GPS jitter, not movement
@@ -76,9 +89,12 @@ export function createRun({
     onUpdate(snapshot());
   }
 
-  // Live runs normally reuse the devices connected on the setup screen; a run given
-  // none owns the ones it makes, and closes them when it stops.
-  const ownDevices = demo || devices ? null : createDevices({ bluetooth });
+  // A live run normally reuses the devices connected on the setup screen; a run
+  // given none owns the ones it makes, connecting and closing them itself.
+  const ownDevices =
+    demo || devices
+      ? null
+      : createDevices({ onError, bluetooth, ...(geolocation ? { geolocation } : {}) });
   const sensors = demo
     ? createDemoSensors({ onPosition: handlePosition, onHeartRate: handleHeartRate })
     : createRealSensors({
@@ -86,11 +102,19 @@ export function createRun({
         onPosition: handlePosition,
         onHeartRate: handleHeartRate,
         onHeartRateStatus,
+        onGpsStatus,
       });
 
+  // A real run ticks on the wall clock so time and pace stay honest between GPS
+  // fixes; a demo run ticks the simulator instead.
   const clock = createClock({
     multiplier: demo ? multiplier : 1,
-    onSecond: demo ? (simMs) => sensors.step(simMs) : undefined,
+    onSecond: demo
+      ? (simMs) => sensors.step(simMs)
+      : () => {
+          if (lastFixMs !== null && Date.now() - lastFixMs > STALE_FIX_MS) speed = 0;
+          onUpdate(snapshot());
+        },
   });
 
   function snapshot() {
@@ -98,9 +122,14 @@ export function createRun({
       distance,
       speed,
       heartRate,
-      elapsedSeconds: firstT === null ? 0 : (lastT - firstT) / 1000,
+      elapsedSeconds: elapsedSeconds(),
       samples,
     };
+  }
+
+  function elapsedSeconds() {
+    if (!demo) return startedAtMs === null ? 0 : (Date.now() - startedAtMs) / 1000;
+    return firstT === null ? 0 : (lastT - firstT) / 1000;
   }
 
   function maybeFinish() {
@@ -121,7 +150,9 @@ export function createRun({
   return {
     sensors,
     start() {
+      startedAtMs = Date.now();
       sensors.start?.();
+      ownDevices?.connectGps();
       clock.start();
     },
     stop,

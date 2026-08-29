@@ -7,16 +7,36 @@ export function createRealSensors({
   devices,
   onPosition,
   onHeartRate,
-  onHeartRateStatus = () => {},
+  onHeartRateStatus,
+  onGpsStatus,
 }) {
-  devices.attach({ onPosition, onHeartRate, onHeartRateStatus });
+  // Fixes that land before the run starts (the setup screen keeps GPS warm while
+  // the questions load) must not add distance or fire a kilometer.
+  let running = false;
+
+  devices.attach({
+    onPosition: (point) => {
+      if (running) onPosition(point);
+    },
+    onHeartRate,
+    onHeartRateStatus,
+    onGpsStatus,
+  });
 
   return {
+    start() {
+      running = true;
+    },
+
     stop() {
+      running = false;
       devices.detach();
     },
 
     /** Must be called from a user gesture (Web Bluetooth requirement). */
     connectHeartRate: devices.connectHeartRate,
+
+    /** Must be called from a user gesture (it raises the location prompt). */
+    requestPermission: devices.requestGpsPermission,
   };
 }

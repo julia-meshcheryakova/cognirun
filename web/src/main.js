@@ -14,8 +14,8 @@ const settings = { demo: true, multiplier: 1, voice: true };
 let starting = false;
 let setup = null;
 
-// Watch and GPS live for the whole session: they are connected on the setup screen
-// and a run then just reads them, so nothing is asked for once the run is going.
+// The watch and GPS live for the whole session: they are connected on the setup
+// screen and a run only reads them, so nothing is asked for once it starts.
 const devices = createDevices({
   onChange(state) {
     setup?.updateDevices(state);
@@ -91,6 +91,10 @@ async function startRun() {
     // the run keeps going with whatever the last reading was.
     onHeartRateStatus(status) {
       live.setHeartRateStatus(status);
+    },
+    // Real runs only: GPS is what makes distance move, so its state is always visible.
+    onGpsStatus(status) {
+      live.setGpsStatus(status);
     },
   });
 

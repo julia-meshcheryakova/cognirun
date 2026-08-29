@@ -1,6 +1,14 @@
 import { MULTIPLIERS } from '../config.js';
 import { IDLE_DEVICES } from '../sensors/devices.js';
 
+/** Device names and messages come from the browser, so they are never trusted here. */
+function escapeHtml(text) {
+  return String(text).replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+  );
+}
+
 /** Watch panel: the live heart rate once paired, a connect button otherwise. */
 function watchPanel(heartRate) {
   const connected = heartRate.state === 'connected';
@@ -13,30 +21,35 @@ function watchPanel(heartRate) {
           : '<button class="chip" id="connect-watch">Connect Watch</button>'
       }
     </div>
-    <p class="hint device-status" id="watch-status" data-state="${heartRate.state}">${
+    <p class="hint device-status" id="watch-status" data-state="${heartRate.state}">${escapeHtml(
       connected
         ? `${heartRate.name || 'Heart rate monitor'} connected`
         : heartRate.message ||
-          'On a Garmin watch start Broadcast heart rate first (Menu → Sensors & accessories → Wrist heart rate → Broadcast heart rate). Any BLE chest strap works too.'
-    }</p>
+            'On a Garmin watch start Broadcast heart rate first (Menu → Sensors & accessories → Wrist heart rate → Broadcast heart rate). Any BLE chest strap works too.',
+    )}</p>
   `;
 }
 
-/** GPS panel: tracking status once granted, a connect button otherwise. */
+/** GPS panel: tracking status once the watch is running, a connect button otherwise. */
 function gpsPanel(gps) {
-  const connected = gps.state === 'connected';
+  const tracking = gps.state === 'live';
+  // The watch is already running in these states, so there is nothing left to
+  // connect — only a fix to wait for.
+  const waiting = gps.state === 'waiting' || gps.state === 'no-signal';
   return `
     <div class="row">
       <span>GPS <small>distance from your location</small></span>
       ${
-        connected
-          ? '<strong class="device-value" id="gps-value">📍 GPS on</strong>'
+        tracking || waiting
+          ? `<strong class="device-value" id="gps-value">${tracking ? '📍 GPS on' : '📍 …'}</strong>`
           : '<button class="chip" id="connect-gps">Connect GPS</button>'
       }
     </div>
-    <p class="hint device-status" id="gps-status" data-state="${gps.state}">${
-      connected ? 'Location tracked' : gps.message || 'Grant location access to track the route.'
-    }</p>
+    <p class="hint device-status" id="gps-status" data-state="${gps.state}">${escapeHtml(
+      tracking
+        ? `Location tracked · ${gps.message}`
+        : gps.message || 'Grant location access to track the route.',
+    )}</p>
   `;
 }
 
