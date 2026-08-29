@@ -1,20 +1,26 @@
-# CogniRun Android (skeleton)
+# CogniRun Android (Capacitor)
 
-Placeholder for the Android APK wrapper. Nothing here is functional yet — the plan is
-to wrap the `/web` app so the phone build is the same app.
+Native Android wrapper around the `/web` app, built with Capacitor.
 
-Intended approach (Capacitor):
+- App id: `com.cognirun.app`, name: `CogniRun`
+- `webDir` (in root `capacitor.config.json`) points at `web/dist` — the Vite production build.
+- Capacitor plugins: `@capacitor/geolocation`, `@capacitor-community/bluetooth-le`.
+
+## Build a debug APK locally
 
 ```bash
-cd web
-npm install @capacitor/core @capacitor/cli @capacitor/android
-npx cap init CogniRun com.cognirun.app --web-dir=dist
-npm run build && npx cap add android && npx cap sync
+# from repo root
+npm install                 # Capacitor CLI + plugins
+npm run build:web           # builds web/ -> web/dist
+npx cap sync android        # copies web assets + plugins into android/
+cd android
+./gradlew assembleDebug     # needs Android SDK + JDK 17
+# output: android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-`capacitor.config.json` in this folder holds the intended app id/name for that step.
-A plain `WebView` activity pointing at the built web bundle is the fallback if we
-prefer not to depend on Capacitor.
+## CI
 
-Permissions the wrapper will need: `INTERNET`, `ACCESS_FINE_LOCATION`,
-`BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`.
+`.github/workflows/android-build.yml` builds the debug APK on every push/PR and
+uploads it as the `cognirun-debug-apk` artifact (download from the Actions run).
+
+Release signing is not set up — this produces a **debug** APK only.
