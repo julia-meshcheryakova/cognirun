@@ -88,6 +88,7 @@ export const QUESTION_LIBRARY = {
       category: 'logic',
       prompt: 'All roses are flowers. Some flowers fade quickly. Does it follow that some roses fade quickly?',
       answer: 'No — the flowers that fade quickly need not be roses.',
+      acceptedAnswers: ['No'],
       difficulty: 'medium',
     },
     {
@@ -95,6 +96,7 @@ export const QUESTION_LIBRARY = {
       category: 'logic',
       prompt: 'If it rains, the match is cancelled. The match was not cancelled. Did it rain?',
       answer: 'No — if it had rained the match would have been cancelled.',
+      acceptedAnswers: ['No'],
       difficulty: 'easy',
     },
     {
@@ -126,6 +128,7 @@ export const QUESTION_LIBRARY = {
       category: 'logic',
       prompt: 'If the alarm rings, everyone leaves the building. Everyone left. Did the alarm necessarily ring?',
       answer: 'No — they could have left for another reason.',
+      acceptedAnswers: ['No'],
       difficulty: 'medium',
     },
     {
@@ -133,6 +136,7 @@ export const QUESTION_LIBRARY = {
       category: 'logic',
       prompt: 'Some birds cannot fly. Penguins are birds. Does it follow that penguins cannot fly?',
       answer: 'No — the premises do not say which birds cannot fly.',
+      acceptedAnswers: ['No'],
       difficulty: 'hard',
     },
     {

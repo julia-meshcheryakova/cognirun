@@ -3,93 +3,64 @@ import test, { afterEach } from 'node:test';
 
 import { cancelSpeech, setVoiceEnabled, speak } from '../src/tts.js';
 
-/** Minimal stand-ins for the browser speech/audio APIs used by the TTS module. */
-function stubBrowser({ fetchImpl } = {}) {
+/** Minimal stand-in for the browser speech API used by the TTS module. */
+function stubBrowser() {
   const spoken = [];
-  globalThis.speechSynthesis = { speak: (u) => spoken.push(u.text), cancel() {} };
+  const cancelled = [];
+  globalThis.speechSynthesis = {
+    speak: (u) => spoken.push(u.text),
+    cancel: () => cancelled.push(true),
+  };
   globalThis.SpeechSynthesisUtterance = class {
     constructor(text) {
       this.text = text;
     }
   };
-  const requests = [];
-  globalThis.fetch = async (url, options) => {
-    requests.push({ url, options });
-    return fetchImpl ? fetchImpl() : { ok: false, status: 401 };
-  };
-  globalThis.URL.createObjectURL = () => 'blob:audio';
-  globalThis.URL.revokeObjectURL = () => {};
-  const played = [];
-  globalThis.Audio = class {
-    play() {
-      played.push(true);
-      return Promise.resolve();
-    }
-    addEventListener() {}
-    pause() {}
-  };
-  return { spoken, requests, played };
+  return { spoken, cancelled };
 }
 
 afterEach(() => {
-  delete globalThis.COGNIRUN_ELEVENLABS_API_KEY;
   setVoiceEnabled(true);
 });
 
-test('without an ElevenLabs key the browser voice reads the question', async () => {
-  const { spoken, requests } = stubBrowser();
+test('the browser voice reads the question', () => {
+  const { spoken } = stubBrowser();
 
-  await speak('Why is the man bankrupt?');
+  speak('Why is the man bankrupt?');
 
   assert.deepEqual(spoken, ['Why is the man bankrupt?']);
-  assert.equal(requests.length, 0);
 });
 
-test('with a key configured at runtime it calls the ElevenLabs API and plays the audio', async () => {
-  const { spoken, requests, played } = stubBrowser({
-    fetchImpl: () => ({ ok: true, blob: async () => 'mp3' }),
-  });
-  globalThis.COGNIRUN_ELEVENLABS_API_KEY = 'test-key';
+test('a new question cancels whatever was being read', () => {
+  const { spoken, cancelled } = stubBrowser();
 
-  await speak('Two guards stand at two doors.');
+  speak('First question.');
+  speak('Second question.');
 
-  assert.equal(requests.length, 1);
-  assert.match(requests[0].url, /^https:\/\/api\.elevenlabs\.io\/v1\/text-to-speech\/.+/);
-  assert.equal(requests[0].options.headers['xi-api-key'], 'test-key');
-  assert.equal(JSON.parse(requests[0].options.body).text, 'Two guards stand at two doors.');
-  assert.deepEqual(played, [true]);
-  assert.deepEqual(spoken, []);
+  assert.deepEqual(spoken, ['First question.', 'Second question.']);
+  assert.equal(cancelled.length, 2);
 });
 
-test('a failing ElevenLabs request falls back to the browser voice', async () => {
-  const { spoken } = stubBrowser({ fetchImpl: () => ({ ok: false, status: 429 }) });
-  globalThis.COGNIRUN_ELEVENLABS_API_KEY = 'test-key';
+test('cancelling silences the browser voice', () => {
+  const { cancelled } = stubBrowser();
 
-  await speak('Rate limited question.');
-
-  assert.deepEqual(spoken, ['Rate limited question.']);
-});
-
-test('speech cancelled while the request is in flight never plays', async () => {
-  const { spoken, played } = stubBrowser({
-    fetchImpl: () => ({ ok: true, blob: async () => 'mp3' }),
-  });
-  globalThis.COGNIRUN_ELEVENLABS_API_KEY = 'test-key';
-
-  const pending = speak('Question the runner already answered.');
   cancelSpeech();
-  await pending;
 
-  assert.deepEqual(played, []);
-  assert.deepEqual(spoken, []);
+  assert.equal(cancelled.length, 1);
 });
 
-test('the voice toggle silences both paths', async () => {
-  const { spoken, requests } = stubBrowser();
+test('the voice toggle silences read-aloud', () => {
+  const { spoken } = stubBrowser();
   setVoiceEnabled(false);
 
-  await speak('Should stay silent.');
+  speak('Should stay silent.');
 
   assert.deepEqual(spoken, []);
-  assert.equal(requests.length, 0);
+});
+
+test('a browser without speech synthesis stays silent instead of throwing', () => {
+  stubBrowser();
+  delete globalThis.SpeechSynthesisUtterance;
+
+  assert.doesNotThrow(() => speak('No voice available.'));
 });

@@ -43,86 +43,40 @@ same simulated-clock milestone event as the question itself, so they stay in syn
 every demo multiplier. The audio context is created on the "Start run" click so the
 first beep is not blocked by the browser autoplay policy.
 
-Read-aloud can be turned off with the **Read questions aloud** switch on the start
-screen, and it is fully optional: if no ElevenLabs key is configured — or the request
-fails — the app falls back to the browser's built-in SpeechSynthesis, and if that is
-missing too it stays silent.
-
-### Enabling the ElevenLabs voice
-
-```bash
-cp web/.env.example web/.env.local
-# then set VITE_ELEVENLABS_API_KEY=sk_... (and optionally VITE_ELEVENLABS_VOICE_ID)
-npm run dev   # restart Vite so it picks up the env file
-```
-
-`web/.env.local` is git-ignored. `VITE_*` vars are inlined into the client bundle, so
-for a public deployment proxy the ElevenLabs call through a small backend instead. For
-a quick test without rebuilding you can set the key at runtime in the browser console:
-
-```js
-localStorage.setItem('cognirun.elevenLabsApiKey', 'sk_...'); // or window.COGNIRUN_ELEVENLABS_API_KEY = 'sk_...'
-```
-
-Request used (see `web/src/tts.js`): `POST https://api.elevenlabs.io/v1/text-to-speech/<voiceId>`
-with the `xi-api-key` header, `model_id: eleven_turbo_v2_5` and
-`voice_settings: { stability: 0.4, similarity_boost: 0.8 }`; the returned MP3 is played
-via an `Audio` element. Default voice id `21m00Tcm4TlvDq8ikWAM` ("Rachel").
+Read-aloud uses the browser's built-in SpeechSynthesis (`web/src/tts.js`) — no API key
+and no external service. It can be turned off with the **Read questions aloud** switch
+on the start screen, and a browser without speech synthesis simply stays silent.
 
 ## Voice answering
 
-You answer by speaking. The flow per question:
+You can answer out loud. Everything runs in the browser: **no API key and no external
+service** are needed or used for answering. The flow per question:
 
 1. The question appears and is read aloud (see **Sound** above).
 2. The microphone becomes available the moment the reading *starts* — the mic button
    unlocks then, so you can answer while the question is still being read.
 3. Tap the mic, speak, tap again. The answer time (and therefore the score) is taken
-   at that second tap, so transcription and judging latency never cost you points.
-4. The recording is transcribed by **ElevenLabs Speech-to-Text ("Scribe")**
-   (`web/src/stt.js`).
-5. The transcript is graded by `web/src/judge.js`: **exact match first** (free and
-   instant, after normalizing case, punctuation and filler words — "It's Tokyo!"
-   matches "Tokyo"), and if that fails an **LLM-as-a-judge** call decides semantic
-   correctness ("he is playing Monopoly" counts for "Monopoly").
+   at that second tap, so transcription latency never costs you points.
+4. What you said is transcribed by the browser's built-in **Web Speech API**
+   (`SpeechRecognition` / `webkitSpeechRecognition`, Chromium only — see
+   `web/src/stt.js`). `stop()` is bounded, so a recogniser that never ends cannot
+   block the question.
+5. The transcript is graded locally by `web/src/judge.js`: case, punctuation and
+   filler words are normalized away ("It's Tokyo!" matches "Tokyo"), and a spoken
+   sentence that contains the expected answer counts too ("he is playing Monopoly"
+   is correct for "Monopoly").
 6. Correct answers earn the time-decay points (100 → 50 over 60 s), wrong answers 0.
-   The result card shows the verdict, the transcript and which path judged it.
+   The result card shows the transcript, the verdict and which rule decided it
+   (`exact`, `contains`, `no-match`).
 
 Typing stays available at all times (the text box under the mic button), so the run is
-still playable if the mic is denied or unavailable, and multiple-choice questions can
-still be answered by tapping an option. Voice answering works in demo mode too.
+still playable when the mic is denied or the browser has no recogniser — the mic button
+is then disabled and typing is the only input. Multiple-choice questions can still be
+answered by tapping an option. Voice answering works in demo mode too.
 
-### Speech-to-text key
-
-The STT calls use the same ElevenLabs key as the read-aloud voice
-(`VITE_ELEVENLABS_API_KEY`, see above; the runtime `localStorage` override works too).
-Request used: `POST https://api.elevenlabs.io/v1/speech-to-text` with the
-`xi-api-key` header, `model_id: scribe_v1` and the recorded audio as multipart `file`
-(captured with `getUserMedia` + `MediaRecorder`).
-
-With no ElevenLabs key the app degrades to the browser's built-in **Web Speech API**
-(`SpeechRecognition`, Chromium only), so voice answering still works. With neither, the
-mic button is disabled and typing is the only input.
-
-### LLM judge key
-
-```bash
-# in web/.env.local
-VITE_GROQ_API_KEY=gsk_...   # free tier, https://console.groq.com/keys
-```
-
-The judge calls Groq's OpenAI-compatible endpoint
-`POST https://api.groq.com/openai/v1/chat/completions` with `llama-3.3-70b-versatile`,
-`temperature: 0` and `response_format: json_object`; the model is given the question,
-the expected answer and the transcript and replies `{"correct": bool, "reason": "…"}`.
-It is bounded by a 6 s timeout. Runtime override for a quick test:
-
-```js
-localStorage.setItem('cognirun.groqApiKey', 'gsk_...'); // or window.COGNIRUN_GROQ_API_KEY = 'gsk_...'
-```
-
-If no Groq key is configured — or the call fails or times out — grading falls back to
-**exact match only**, and the result card says so (`judged by exact-only`), which means
-a correct-but-differently-phrased answer will be marked wrong.
+Because grading is a local string comparison, a correct answer phrased entirely
+differently from the expected one ("the Japanese capital") is marked wrong. That is the
+deliberate trade-off for a demo with no external dependencies.
 
 ## Demo mode
 
