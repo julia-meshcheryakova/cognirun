@@ -70,6 +70,8 @@ test('recorded audio is sent to ElevenLabs Scribe and comes back as a transcript
   assert.equal(requests[0].options.headers['xi-api-key'], 'sk-test');
   assert.equal(requests[0].options.body.get('model_id'), 'scribe_v1');
   assert.ok(requests[0].options.body.get('file'));
+  // Bounded so a hung Scribe request cannot freeze the answer window.
+  assert.ok(requests[0].options.signal instanceof AbortSignal);
 });
 
 test('a failing STT request rejects so the UI can offer typing instead', async () => {

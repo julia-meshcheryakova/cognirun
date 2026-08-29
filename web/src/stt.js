@@ -5,6 +5,10 @@ const MODEL_ID = 'scribe_v1'; // ElevenLabs "Scribe"
 const MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
 /** How long we wait for the browser recogniser to flush its last result. */
 const RECOGNITION_FLUSH_MS = 1500;
+/** Bounds every step of `stop()`, so a hung mic or API never freezes the question. */
+export const STT_TIMEOUT_MS = 10000;
+
+const deadline = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function recognitionCtor() {
   return globalThis.SpeechRecognition || globalThis.webkitSpeechRecognition;
@@ -33,7 +37,7 @@ export function sttAvailable() {
 /** POSTs recorded audio to ElevenLabs Scribe and returns the transcript. */
 export async function transcribeWithElevenLabs(
   blob,
-  { key = elevenLabsApiKey(), fetchImpl = globalThis.fetch } = {},
+  { key = elevenLabsApiKey(), fetchImpl = globalThis.fetch, timeoutMs = STT_TIMEOUT_MS } = {},
 ) {
   if (!key) throw new Error('no ElevenLabs API key');
   const form = new FormData();
@@ -44,6 +48,7 @@ export async function transcribeWithElevenLabs(
     method: 'POST',
     headers: { 'xi-api-key': key },
     body: form,
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) throw new Error(`ElevenLabs STT responded ${response.status}`);
   const data = await response.json();
@@ -82,7 +87,8 @@ async function startRecorderSession({ key, fetchImpl }) {
     mode: 'elevenlabs',
     async stop() {
       release();
-      await stopped;
+      // A recorder that never fires `stop` must not hold the answer window open.
+      await Promise.race([stopped, deadline(STT_TIMEOUT_MS)]);
       const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
       if (!blob.size) return '';
       return transcribeWithElevenLabs(blob, { key, fetchImpl });
@@ -120,10 +126,7 @@ function startRecognitionSession() {
     mode: 'browser',
     async stop() {
       recognition.stop();
-      await Promise.race([
-        settled,
-        new Promise((resolve) => setTimeout(resolve, RECOGNITION_FLUSH_MS)),
-      ]);
+      await Promise.race([settled, deadline(RECOGNITION_FLUSH_MS)]);
       return transcript.trim();
     },
     cancel() {

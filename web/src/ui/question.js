@@ -4,7 +4,10 @@ import { cancelSpeech, speak } from '../tts.js';
 import { escapeHtml } from '../format.js';
 import { CATEGORY_LABELS } from '../questions.js';
 import { judgeAnswer } from '../judge.js';
-import { sttMode, startListening } from '../stt.js';
+import { STT_TIMEOUT_MS, sttMode, startListening } from '../stt.js';
+
+/** Slack on top of the STT module's own bound, after which the answer counts as lost. */
+const TRANSCRIBE_BOUND_MS = STT_TIMEOUT_MS + 2000;
 
 const MIC_LABELS = {
   waiting: '🎤 Mic opens as the question is read',
@@ -126,9 +129,15 @@ export function askQuestion(
     session = null;
     let transcript = '';
     try {
-      transcript = await active.stop();
+      transcript = await Promise.race([
+        active.stop(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('transcription timed out')), TRANSCRIBE_BOUND_MS),
+        ),
+      ]);
     } catch (err) {
       console.warn('transcription failed', err);
+      active.cancel();
       transcribing = false;
       setMicState('ready', 'Could not transcribe that — try again or type your answer.');
       return;
