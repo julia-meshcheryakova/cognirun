@@ -107,3 +107,7 @@ test('a rejection in its own clause still rejects the answer', () => {
   assert.equal(containsAnswer('Tokyo; that is incorrect', QUESTION), false);
   assert.equal(containsAnswer('every city except Tokyo', QUESTION), false);
 });
+
+test('a rejection naming another option leaves the answer correct', () => {
+  assert.equal(containsAnswer('Tokyo; Kyoto is incorrect', QUESTION), true);
+});

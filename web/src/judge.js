@@ -8,6 +8,8 @@
 const NEGATOR = /^(not|no|nope|never|isnt|arent|wasnt|dont|doesnt|didnt|cant|wouldnt|except)$/;
 /** Rejects what precedes it: "Tokyo is wrong". */
 const REJECTION = /^(wrong|incorrect|false|opposite)$/;
+/** Points back at the previous clause: "Tokyo, which is wrong". */
+const REFERENT = /^(which|one|so|too|also)$/;
 /** How many words after a match are checked for a rejection. */
 const NEGATION_RANGE = 2;
 
@@ -35,15 +37,17 @@ export function exactMatch(text, question) {
 
 /**
  * Splits a sentence into clauses graded on their own, so "Tokyo, not Kyoto" is judged
- * on "Tokyo". A clause that rejects ("..., which is wrong") stays joined to the clause
- * it rejects, since that is what it talks about.
+ * on "Tokyo". A clause that only rejects what came before ("..., which is wrong") stays
+ * joined to it; one naming something else ("..., Kyoto is wrong") stands on its own.
  */
 function clausesOf(text) {
   const parts = String(text ?? '').split(/[,;]|\bbut\b/i).map(normalizeAnswer);
   return parts
     .reduce((clauses, part) => {
-      const rejects = part.split(' ').some((word) => REJECTION.test(word));
-      if (rejects && clauses.length) clauses[clauses.length - 1] += ` ${part}`;
+      const words = part.split(' ');
+      const refersBack = words.some((word) => REJECTION.test(word))
+        && words.every((word) => REJECTION.test(word) || NEGATOR.test(word) || REFERENT.test(word));
+      if (refersBack && clauses.length) clauses[clauses.length - 1] += ` ${part}`;
       else clauses.push(part);
       return clauses;
     }, [])
