@@ -110,7 +110,7 @@ export function askQuestion(
         return;
       }
       session = opened;
-      setMicState('recording', 'Listening… tap to stop &amp; submit early.');
+      setMicState('recording', 'Listening… tap to stop & submit early.');
     } catch (err) {
       console.warn('microphone unavailable', err);
       setMicState('unavailable', 'Microphone blocked — type your answer instead.');
