@@ -64,7 +64,7 @@ function startRun() {
     askQuestion(live.questionSlot, {
       question: QUESTIONS[km - 1],
       kilometer: km,
-      now: run.now,
+      now: run.answerNow,
       onAnswered(answer) {
         answers.push(answer);
         run.setAnswering(false);

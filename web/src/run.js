@@ -111,6 +111,7 @@ export function createRun({ demo, multiplier, onUpdate, onKilometer, onFinish, o
     stop,
     snapshot,
     now: clock.now,
+    answerNow: clock.answerNow,
     setMultiplier: clock.setMultiplier,
     setAnswering: clock.setAnswering,
     noteAnswered() {
