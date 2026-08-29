@@ -30,6 +30,9 @@ jobs:
         run: npm install
 
       - name: Build web app + sync Capacitor
+        env:
+          # Vite inlines this into the bundle at build time (web/src/keys.js).
+          VITE_GROQ_API_KEY: ${{ secrets.VITE_GROQ_API_KEY }}
         run: |
           npm run build:web
           npx cap sync android
