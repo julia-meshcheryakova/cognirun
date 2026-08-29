@@ -1,0 +1,96 @@
+import { createDemoSensors } from './sensors/demo.js';
+import { createRealSensors } from './sensors/real.js';
+
+export const RUN_DISTANCE_METERS = 3000;
+export const QUESTION_COUNT = 3;
+
+const EARTH_RADIUS = 6_371_000;
+
+function haversine(a, b) {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_RADIUS * Math.asin(Math.sqrt(h));
+}
+
+/**
+ * Turns a position/heart-rate stream into run metrics, emitting a milestone
+ * every completed kilometer and finishing once the distance and all questions
+ * are done.
+ */
+export function createRun({ demo, multiplier, onUpdate, onKilometer, onFinish, onError }) {
+  const samples = [];
+  let last = null;
+  let distance = 0;
+  let speed = 0;
+  let heartRate = 0;
+  let kmReached = 0;
+  let answered = 0;
+  let finished = false;
+
+  function handlePosition(point) {
+    if (last) {
+      const meters = haversine(last, point);
+      const seconds = (point.t - last.t) / 1000;
+      if (seconds > 0) speed = speed ? speed * 0.7 + (meters / seconds) * 0.3 : meters / seconds;
+      distance += meters;
+    }
+    last = point;
+    samples.push({ ...point, distance, speed, heartRate });
+
+    const km = Math.min(QUESTION_COUNT, Math.floor(distance / 1000));
+    if (km > kmReached) {
+      kmReached = km;
+      onKilometer(km);
+    }
+    onUpdate(snapshot());
+    maybeFinish();
+  }
+
+  function handleHeartRate(bpm) {
+    heartRate = bpm;
+    onUpdate(snapshot());
+  }
+
+  const sensors = demo
+    ? createDemoSensors({ multiplier, onPosition: handlePosition, onHeartRate: handleHeartRate })
+    : createRealSensors({
+        onPosition: handlePosition,
+        onHeartRate: handleHeartRate,
+        onError,
+      });
+
+  function snapshot() {
+    return {
+      distance,
+      speed,
+      heartRate,
+      elapsedSeconds: samples.length ? (samples[samples.length - 1].t - samples[0].t) / 1000 : 0,
+      samples,
+    };
+  }
+
+  function maybeFinish() {
+    if (finished) return;
+    if (distance >= RUN_DISTANCE_METERS && answered >= QUESTION_COUNT) {
+      finished = true;
+      sensors.stop();
+      onFinish(snapshot());
+    }
+  }
+
+  return {
+    sensors,
+    start: () => sensors.start(),
+    stop: () => sensors.stop(),
+    snapshot,
+    setMultiplier: (value) => sensors.setMultiplier?.(value),
+    noteAnswered() {
+      answered += 1;
+      maybeFinish();
+    },
+  };
+}
