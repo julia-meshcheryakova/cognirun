@@ -1,3 +1,4 @@
+import { CALIBRATION_CONDITIONS } from '../calibration.js';
 import { COURSES, DEFAULT_COURSE, MULTIPLIERS, courseOf } from '../config.js';
 import { IDLE_DEVICES } from '../sensors/devices.js';
 
@@ -118,6 +119,11 @@ export function setupMarkup({ settings, devices = IDLE_DEVICES }) {
           being read aloud. Your browser transcribes what you said and it is graded against the
           expected answer — typing still works if the mic is unavailable.</p>
       </section>
+
+      <p class="hint" id="calibration-hint">Start begins with the ${CALIBRATION_CONDITIONS.length}-stage
+        calibration (${CALIBRATION_CONDITIONS.map((c) => c.label).join(' → ')}), then the ${
+          course.label
+        } run.</p>
 
       <button class="primary" id="start">Start run</button>
     </main>

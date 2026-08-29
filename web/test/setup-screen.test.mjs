@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { CALIBRATION_CONDITIONS } from '../src/calibration.js';
 import { MULTIPLIERS } from '../src/config.js';
 import { setupMarkup } from '../src/ui/setup.js';
 import { liveMarkup } from '../src/ui/live.js';
@@ -13,6 +14,14 @@ test('the setup screen offers both modes', () => {
   assert.match(markup, /data-mode="demo"/);
   assert.match(markup, /data-mode="live"/);
   assert.match(markup, /id="start"/);
+});
+
+test('the setup screen says the run starts with calibration', () => {
+  const markup = setupMarkup({ settings: demo });
+  assert.match(markup, /id="calibration-hint"/);
+  CALIBRATION_CONDITIONS.forEach((condition) =>
+    assert.ok(markup.includes(condition.label), `${condition.id} listed`),
+  );
 });
 
 test('the setup screen shows the speed selector in demo mode only', () => {

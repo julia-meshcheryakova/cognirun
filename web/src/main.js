@@ -1,6 +1,9 @@
 import './style.css';
 import { loadLibrary, selectRunQuestions } from './questions.js';
 import { createRun } from './run.js';
+import { createCalibrationSession } from './calibrationSession.js';
+import { createClock } from './clock.js';
+import { renderCalibration } from './ui/calibration.js';
 import { renderLive } from './ui/live.js';
 import { renderResults } from './ui/results.js';
 import { renderSetup } from './ui/setup.js';
@@ -36,11 +39,11 @@ function showSetup() {
     onConnectGps() {
       devices.connectGps();
     },
-    onStart: startRun,
+    onStart: start,
   });
 }
 
-async function startRun() {
+async function start() {
   if (starting) return;
   starting = true;
 
@@ -48,6 +51,61 @@ async function startRun() {
   primeAudio(); // still inside the click gesture that started the run
   setVoiceEnabled(settings.voice);
 
+  // The watch and GPS are already paired on the setup screen, so calibration can
+  // await here without spending the click's user activation.
+  await runCalibration();
+  await startRun();
+}
+
+/**
+ * Walk the seven calibration stages before the run: one simulated second per clock
+ * tick, so the demo speed accelerates the protocol exactly like it does the run.
+ * Heart rate comes from the watch when one is connected and from the stage's
+ * synthetic value otherwise, so a no-key demo still shows a response.
+ */
+function runCalibration() {
+  return new Promise((resolve) => {
+    let session = null;
+
+    const screen = renderCalibration(root, {
+      settings,
+      onMultiplier(value) {
+        settings.multiplier = value;
+        clock.setMultiplier(value);
+      },
+      onSkip() {
+        session.skip();
+      },
+    });
+
+    const paint = (state) => {
+      const heartRate = devices.state().heartRate;
+      screen.update(state, {
+        bpm: heartRate.state === 'connected' ? heartRate.bpm : undefined,
+      });
+    };
+
+    const clock = createClock({
+      multiplier: settings.demo ? settings.multiplier : 1,
+      onSecond() {
+        session.tick();
+      },
+    });
+
+    session = createCalibrationSession({
+      onUpdate: paint,
+      onComplete() {
+        clock.stop();
+        resolve();
+      },
+    });
+
+    paint(session.state());
+    clock.start();
+  });
+}
+
+async function startRun() {
   // One question per category (km1 trivia, km2 logic, km3 maths), from the question
   // server when it is up and from the bundled library otherwise.
   const libraryLoad = loadLibrary();
