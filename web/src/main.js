@@ -10,7 +10,7 @@ import { setVoiceEnabled } from './tts.js';
 import { createDevices } from './sensors/devices.js';
 
 const root = document.querySelector('#app');
-const settings = { demo: true, multiplier: 1, voice: true };
+const settings = { demo: true, multiplier: 1, voice: true, course: '3k' };
 let starting = false;
 let setup = null;
 
@@ -72,6 +72,7 @@ async function startRun() {
   const run = createRun({
     demo: settings.demo,
     multiplier: settings.multiplier,
+    course: settings.course,
     devices,
     onUpdate(snapshot) {
       latest = snapshot;

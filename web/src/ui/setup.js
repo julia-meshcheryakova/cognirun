@@ -1,4 +1,4 @@
-import { MULTIPLIERS } from '../config.js';
+import { COURSES, DEFAULT_COURSE, MULTIPLIERS, courseOf } from '../config.js';
 import { IDLE_DEVICES } from '../sensors/devices.js';
 
 /** Device names and messages come from the browser, so they are never trusted here. */
@@ -55,10 +55,11 @@ function gpsPanel(gps) {
 
 /** Markup of the setup screen; exported so its mode-dependent parts can be tested. */
 export function setupMarkup({ settings, devices = IDLE_DEVICES }) {
+  const course = courseOf(settings.course);
   return `
     <main class="screen">
       <h1>CogniRun</h1>
-      <p class="lede">Run 3 km. After every kilometer a lateral-thinking question pops up —
+      <p class="lede">Run ${course.label}. After every ${course.segment} m a lateral-thinking question pops up —
         answer fast for more points.</p>
 
       <section class="card">
@@ -74,6 +75,21 @@ export function setupMarkup({ settings, devices = IDLE_DEVICES }) {
             ? 'Demo simulates the run — connecting a watch or GPS below is optional, and you can speed it up.'
             : 'Live run: connect your watch and GPS below. Both are optional, and nothing is asked for again once the run starts.'
         }</p>
+      </section>
+
+      <section class="card" id="course-card" ${settings.demo ? 'hidden' : ''}>
+        <div class="row">
+          <span>Course</span>
+          <span class="courses">
+            ${Object.entries(COURSES)
+              .map(
+                ([id, c]) =>
+                  `<button class="chip ${(settings.course ?? DEFAULT_COURSE) === id ? 'active' : ''}" data-course="${id}">${c.label}</button>`,
+              )
+              .join('')}
+          </span>
+        </div>
+        <p class="hint">60 m is a walkable test course — a question every 20 m so you can finish a full run on foot.</p>
       </section>
 
       <section class="card" id="devices-card">
@@ -119,6 +135,9 @@ export function renderSetup(
   );
   root.querySelectorAll('[data-mult]').forEach((btn) =>
     btn.addEventListener('click', () => onChange({ multiplier: Number(btn.dataset.mult) })),
+  );
+  root.querySelectorAll('[data-course]').forEach((btn) =>
+    btn.addEventListener('click', () => onChange({ course: btn.dataset.course })),
   );
   const voiceToggle = root.querySelector('#voice-toggle');
   voiceToggle.addEventListener('change', () => onChange({ voice: voiceToggle.checked }));

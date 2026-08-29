@@ -36,7 +36,7 @@ function instantRun() {
 }
 
 /** Plays a full demo run, answering every question after `answerDelayMs`. */
-function playRun({ multiplier, answerDelayMs, scrubToMeters }) {
+function playRun({ multiplier, answerDelayMs, scrubToMeters, course }) {
   return new Promise((resolve, reject) => {
     const kilometers = [];
     const answers = [];
@@ -45,6 +45,7 @@ function playRun({ multiplier, answerDelayMs, scrubToMeters }) {
     const run = createRun({
       demo: true,
       multiplier,
+      course,
       onUpdate() {},
       async onKilometer(km) {
         kilometers.push(km);
@@ -72,8 +73,7 @@ function playRun({ multiplier, answerDelayMs, scrubToMeters }) {
   });
 }
 
-test('demo run at x1000 completes 3 km, asks 3 questions and scores them', async () => {
-  const startedAt = Date.now();
+test('demo run at x1000 completes 3 km, asks 3 questions and scores them', async () => {  const startedAt = Date.now();
   const { kilometers, answers, snapshot } = await playRun({
     multiplier: 1000,
     answerDelayMs: 300,
@@ -167,4 +167,16 @@ test('only correct answers score points', () => {
 
   // Free text stays ungraded for now and keeps the time-decay score.
   assert.equal(scoreForAnswer({ elapsedSeconds: 30, correct: null }), 75);
+});
+
+test('the 60 m test course finishes at 60 m and still asks 3 questions', async () => {
+  const { kilometers, answers, snapshot } = await playRun({
+    multiplier: 1000,
+    answerDelayMs: 50,
+    course: '60m',
+  });
+  assert.deepEqual(kilometers, [1, 2, 3]);
+  assert.equal(answers.length, 3);
+  assert.ok(snapshot.distance >= 60, `distance ${snapshot.distance}`);
+  assert.ok(snapshot.distance < 200, `overshoot ${snapshot.distance}`);
 });
