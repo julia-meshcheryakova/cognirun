@@ -11,6 +11,11 @@
   box-sizing: border-box;
 }
 
+/* Layout rules below set `display`, which would otherwise beat [hidden]. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background: var(--bg);
