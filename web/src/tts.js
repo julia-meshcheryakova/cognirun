@@ -9,17 +9,24 @@ const ENV_VOICE_ID = import.meta.env?.VITE_ELEVENLABS_VOICE_ID || '';
 
 let enabled = true;
 let playing = null;
+let playingUrl = null;
+let generation = 0;
 
 /**
  * The key is never hardcoded: it comes from the Vite env (`VITE_ELEVENLABS_API_KEY`
  * in `web/.env.local`) or from a runtime override, so the app can ship without one.
  */
 function apiKey() {
-  return (
-    globalThis.COGNIRUN_ELEVENLABS_API_KEY ||
-    globalThis.localStorage?.getItem('cognirun.elevenLabsApiKey') ||
-    ENV_API_KEY
-  );
+  try {
+    return (
+      globalThis.COGNIRUN_ELEVENLABS_API_KEY ||
+      globalThis.localStorage?.getItem('cognirun.elevenLabsApiKey') ||
+      ENV_API_KEY
+    );
+  } catch (err) {
+    // localStorage throws when site data is blocked.
+    return globalThis.COGNIRUN_ELEVENLABS_API_KEY || ENV_API_KEY;
+  }
 }
 
 function voiceId() {
@@ -31,13 +38,17 @@ export function setVoiceEnabled(value) {
   if (!enabled) cancelSpeech();
 }
 
+/** Invalidates any in-flight or playing speech; see `generation` in `speak`. */
 export function cancelSpeech() {
+  generation += 1;
   playing?.pause?.();
   playing = null;
+  if (playingUrl) URL.revokeObjectURL(playingUrl);
+  playingUrl = null;
   globalThis.speechSynthesis?.cancel();
 }
 
-async function speakWithElevenLabs(text, key) {
+async function speakWithElevenLabs(text, key, mine) {
   const response = await fetch(`${ELEVENLABS_ENDPOINT}/${voiceId()}`, {
     method: 'POST',
     headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
@@ -45,11 +56,26 @@ async function speakWithElevenLabs(text, key) {
   });
   if (!response.ok) throw new Error(`ElevenLabs responded ${response.status}`);
 
-  const url = URL.createObjectURL(await response.blob());
+  const blob = await response.blob();
+  if (!mine()) return;
+
+  const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
   playing = audio;
-  audio.addEventListener('ended', () => URL.revokeObjectURL(url));
-  await audio.play();
+  playingUrl = url;
+  const release = () => {
+    if (playingUrl !== url) return;
+    URL.revokeObjectURL(url);
+    playingUrl = null;
+    playing = null;
+  };
+  audio.addEventListener('ended', release);
+  try {
+    await audio.play();
+  } catch (err) {
+    release();
+    throw err;
+  }
 }
 
 function speakWithBrowser(text) {
@@ -69,14 +95,18 @@ export async function speak(text) {
   if (!enabled || !text) return;
   cancelSpeech();
 
+  // A later cancel/speak bumps the generation, so this call stops being "current".
+  const ours = generation;
+  const mine = () => enabled && generation === ours;
+
   const key = apiKey();
   if (key) {
     try {
-      await speakWithElevenLabs(text, key);
+      await speakWithElevenLabs(text, key, mine);
       return;
     } catch (err) {
       console.warn('ElevenLabs TTS failed, using browser voice', err);
     }
   }
-  speakWithBrowser(text);
+  if (mine()) speakWithBrowser(text);
 }

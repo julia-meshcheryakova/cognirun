@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test, { afterEach } from 'node:test';
 
-import { setVoiceEnabled, speak } from '../src/tts.js';
+import { cancelSpeech, setVoiceEnabled, speak } from '../src/tts.js';
 
 /** Minimal stand-ins for the browser speech/audio APIs used by the TTS module. */
 function stubBrowser({ fetchImpl } = {}) {
@@ -68,6 +68,20 @@ test('a failing ElevenLabs request falls back to the browser voice', async () =>
   await speak('Rate limited question.');
 
   assert.deepEqual(spoken, ['Rate limited question.']);
+});
+
+test('speech cancelled while the request is in flight never plays', async () => {
+  const { spoken, played } = stubBrowser({
+    fetchImpl: () => ({ ok: true, blob: async () => 'mp3' }),
+  });
+  globalThis.COGNIRUN_ELEVENLABS_API_KEY = 'test-key';
+
+  const pending = speak('Question the runner already answered.');
+  cancelSpeech();
+  await pending;
+
+  assert.deepEqual(played, []);
+  assert.deepEqual(spoken, []);
 });
 
 test('the voice toggle silences both paths', async () => {
