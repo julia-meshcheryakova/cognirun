@@ -12,7 +12,7 @@ const TRANSCRIBE_BOUND_MS = STT_TIMEOUT_MS;
 const MIC_LABELS = {
   waiting: '🎤 Mic opens as the question is read',
   opening: '🎤 Opening the mic…',
-  recording: '🔴 Listening… ■ stop &amp; submit',
+  recording: '🔴 Listening… ■ stop & submit',
   transcribing: '… Transcribing',
   unavailable: '🎤 Microphone unavailable — type instead',
 };
@@ -110,7 +110,7 @@ export function askQuestion(
         return;
       }
       session = opened;
-      setMicState('recording', 'Listening… tap to stop &amp; submit early.');
+      setMicState('recording', 'Listening… tap to stop & submit early.');
     } catch (err) {
       console.warn('microphone unavailable', err);
       setMicState('unavailable', 'Microphone blocked — type your answer instead.');
