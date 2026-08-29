@@ -12,7 +12,7 @@ const TRANSCRIBE_BOUND_MS = STT_TIMEOUT_MS;
 const MIC_LABELS = {
   waiting: '🎤 Mic opens as the question is read',
   opening: '🎤 Opening the mic…',
-  recording: '🔴 Listening… ■ stop & submit',
+  recording: '🔴 Listening… ■ stop &amp; submit',
   transcribing: '… Transcribing',
   unavailable: '🎤 Microphone unavailable — type instead',
 };
