@@ -1,5 +1,6 @@
 import { drawRoute, drawSpeedProfile } from '../charts.js';
 import { formatClock, formatKm, formatPace } from '../format.js';
+import { SYNTHETIC_DISCLAIMER, leaderboardFor } from '../leaderboard.js';
 import { categoryBreakdown } from '../percentile.js';
 import { CATEGORY_LABELS } from '../questions.js';
 
@@ -13,6 +14,7 @@ export function renderResults(root, { snapshot, answers, onRestart }) {
   const totalPoints = answers.reduce((sum, a) => sum + a.points, 0);
   const categories = categoryBreakdown(answers);
   const avgSpeed = snapshot.elapsedSeconds ? snapshot.distance / snapshot.elapsedSeconds : 0;
+  const leaderboard = leaderboardFor(totalPoints);
 
   root.innerHTML = `
     <main class="screen">
@@ -57,6 +59,22 @@ export function renderResults(root, { snapshot, answers, onRestart }) {
             )
             .join('')}
         </ul>
+      </section>
+
+      <section class="card">
+        <h2>Leaderboard <span class="tag synthetic">synthetic</span></h2>
+        <p class="hint">${SYNTHETIC_DISCLAIMER}</p>
+        <table class="breakdown">
+          <thead><tr><th>#</th><th>Runner</th><th>Points</th></tr></thead>
+          <tbody>
+            ${leaderboard
+              .map(
+                (row) =>
+                  `<tr class="${row.you ? 'you' : 'synthetic-row'}"><td>${row.rank}</td><td>${row.name}</td><td>${row.points}</td></tr>`,
+              )
+              .join('')}
+          </tbody>
+        </table>
       </section>
 
       <section class="card">
