@@ -7,6 +7,7 @@ export const QUESTION_COUNT = 3;
 
 const EARTH_RADIUS = 6_371_000;
 const MAX_ACCURACY_METERS = 30;
+const SCRUB_MAX_SECONDS = 3600; // safety net so a scrub can never loop forever
 
 function haversine(a, b) {
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -114,6 +115,20 @@ export function createRun({ demo, multiplier, onUpdate, onKilometer, onFinish, o
     answerNow: clock.answerNow,
     setMultiplier: clock.setMultiplier,
     setAnswering: clock.setAnswering,
+    /**
+     * Demo only: fast-forward to `meters` by replaying normal simulated seconds,
+     * so distance, pace, samples and kilometer questions stay consistent. Only
+     * moves forward, and stops at the first kilometer whose question opens (the
+     * question freezes the run) — so no milestone is ever skipped.
+     */
+    scrubTo(meters) {
+      if (!demo || finished) return;
+      const target = Math.min(meters, RUN_DISTANCE_METERS);
+      let guard = SCRUB_MAX_SECONDS;
+      while (distance < target && !finished && !clock.answering() && guard-- > 0) {
+        clock.advanceSecond();
+      }
+    },
     noteAnswered() {
       answered += 1;
       maybeFinish();

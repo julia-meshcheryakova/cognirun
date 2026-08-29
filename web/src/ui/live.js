@@ -3,7 +3,7 @@ import { formatClock, formatKm, formatPace } from '../format.js';
 import { hrZone } from '../hrZones.js';
 import { QUESTION_COUNT, RUN_DISTANCE_METERS } from '../run.js';
 
-export function renderLive(root, { settings, onMultiplier }) {
+export function renderLive(root, { settings, onMultiplier, onScrub }) {
   root.innerHTML = `
     <main class="screen live">
       <div class="metric hero">
@@ -38,6 +38,17 @@ export function renderLive(root, { settings, onMultiplier }) {
       </div>
 
       <div id="question-slot"></div>
+
+      <div class="scrubber" ${settings.demo ? '' : 'hidden'}>
+        <div class="row">
+          <span>Demo timeline</span>
+          <strong id="scrub-value">0.00 km</strong>
+        </div>
+        <input id="scrub" type="range" min="0" max="${RUN_DISTANCE_METERS}" step="10" value="0" />
+        <div class="scrubber-ticks">
+          ${[0, 1, 2, 3].map((km) => `<span>${km} km</span>`).join('')}
+        </div>
+      </div>
     </main>
   `;
 
@@ -51,6 +62,21 @@ export function renderLive(root, { settings, onMultiplier }) {
 
   const el = (id) => root.querySelector(`#${id}`);
 
+  // Demo scrubber: drag to fast-forward the run. Dragging backwards does nothing
+  // (a run cannot rewind), so the thumb just snaps back to the live distance.
+  const scrub = el('scrub');
+  let dragging = false;
+  if (settings.demo) {
+    scrub.addEventListener('input', () => {
+      dragging = true;
+      el('scrub-value').textContent = `${formatKm(scrub.value)} km`;
+    });
+    scrub.addEventListener('change', () => {
+      dragging = false;
+      onScrub(Number(scrub.value));
+    });
+  }
+
   return {
     questionSlot: el('question-slot'),
     update(snapshot, { points, answered }) {
@@ -63,6 +89,10 @@ export function renderLive(root, { settings, onMultiplier }) {
       el('pace').textContent = formatPace(snapshot.speed);
       el('time').textContent = formatClock(snapshot.elapsedSeconds);
       el('progress').style.width = `${Math.min(100, (snapshot.distance / RUN_DISTANCE_METERS) * 100)}%`;
+      if (settings.demo && !dragging) {
+        scrub.value = snapshot.distance;
+        el('scrub-value').textContent = `${formatKm(snapshot.distance)} km`;
+      }
     },
   };
 }

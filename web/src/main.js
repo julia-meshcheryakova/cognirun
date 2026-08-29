@@ -47,6 +47,9 @@ async function startRun() {
       settings.multiplier = value;
       run.setMultiplier(value);
     },
+    onScrub(meters) {
+      run.scrubTo(meters);
+    },
   });
 
   const run = createRun({
