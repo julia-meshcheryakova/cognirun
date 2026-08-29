@@ -176,3 +176,37 @@ test('a spoken answer scores on when it was said, not how it was heard', async (
   assert.equal(scoreForElapsed(ANSWER_WINDOW_SECONDS), 50);
   assert.equal(scoreForElapsed(ANSWER_WINDOW_SECONDS + 0.5), 0);
 });
+
+test('listening once is one-shot, so the utterance itself ends the session', async () => {
+  const instances = stubRecognition({ onStart: (r) => r.onend() });
+
+  await listenOnce();
+
+  assert.equal(instances[0].continuous, false, 'a continuous session would never end on its own');
+});
+
+test('interim transcripts reach onInterim without joining the answer', async () => {
+  const partials = [];
+  stubRecognition({
+    onStart: (r) => {
+      r.emit({ transcript: 'Tok' }, false);
+      r.emit({ transcript: 'Tokyo', confidence: 0.9 });
+      r.onend();
+    },
+  });
+
+  const result = await listenOnce({ onInterim: (text) => partials.push(text) });
+
+  assert.deepEqual(partials, ['Tok']);
+  assert.equal(result.transcript, 'Tokyo');
+});
+
+test('the recognizer language follows the caller, defaulting to en-US', async () => {
+  const instances = stubRecognition({ onStart: (r) => r.onend() });
+
+  await listenOnce({ lang: 'fr-FR' });
+  await listenOnce();
+
+  assert.equal(instances[0].lang, 'fr-FR');
+  assert.equal(instances[1].lang, 'en-US');
+});
