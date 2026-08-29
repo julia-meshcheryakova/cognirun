@@ -13,6 +13,7 @@
     "render": "node scripts/render.mjs",
     "render:landscape": "node scripts/render.mjs --landscape",
     "render:portrait": "node scripts/render.mjs --portrait"
+    ,"render:pitch": "node scripts/render-pitch.mjs"
   },
   "dependencies": {
     "@fontsource/anton": "5.2.5",

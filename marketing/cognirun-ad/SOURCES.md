@@ -24,6 +24,13 @@ Primary paper: https://aaalab.stanford.edu/assets/papers/2014/Give_your_ideas_so
 - ROXFIT and ElevenLabs are named as intended integration platforms. The standalone static deployment does not itself establish live provider access. No sponsorship endorsement is claimed.
 - The research aim is exploratory, repeated within-person comparison, not a diagnostic measurement or IQ score.
 
+## Supplied runner footage
+
+- File: `public/video/runner-garmin.mov`.
+- Source: team-supplied personal footage downloaded from the SwissTransfer link `https://www.swisstransfer.com/dl/01a04e21-e5ca-7059-96a0-ce5761695b87` on 2026-08-29.
+- Content: a 10-second runner clip on the London Stadium track, with the runner checking a Garmin watch. It is used as documentary team footage in the product-demo scene; telemetry overlays remain illustrative and do not claim a live Garmin session.
+- Technical source metadata: HEVC video with AAC audio, 1920×1080 container with portrait rotation metadata, approximately 10.1 seconds, 11.1 MB.
+
 ## Original visual asset
 
 File: `public/images/runner-hero.png`.

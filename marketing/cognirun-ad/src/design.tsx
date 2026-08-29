@@ -1,7 +1,7 @@
 import React, { type CSSProperties } from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 
-export const C = { ink: '#080E12', panel: '#111A21', paper: '#F2F0E7', lime: '#D6FF5E', violet: '#B49AFF', muted: '#A5B2B8', coral: '#FF826F' };
+export const C = { ink: '#080E12', panel: '#111A21', paper: '#F2F0E7', lime: '#D6FF5E', violet: '#B49AFF', muted: '#A5B2B8', coral: '#FF826F', recovery: '#69DFF8' };
 export const display: CSSProperties = { fontFamily: 'Anton', fontWeight: 400, lineHeight: 1.07, letterSpacing: '-0.025em' };
 export const clamp = { extrapolateLeft: 'clamp' as const, extrapolateRight: 'clamp' as const };
 
