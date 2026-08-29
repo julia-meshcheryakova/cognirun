@@ -9,6 +9,8 @@ const RECOGNITION_FLUSH_MS = 1500;
 /** Bounds `stop()`, so a recogniser that never ends cannot freeze the question. */
 export const STT_TIMEOUT_MS = 5000;
 
+const DEFAULT_LANG = 'en-US';
+
 const deadline = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function recognitionCtor() {
@@ -37,9 +39,10 @@ function on(recognition, type, handler) {
 /**
  * Collects what the recogniser heard. `event.results` is cumulative, so only the
  * segments from `resultIndex` on are new; the confidence reported is the one of
- * the last final segment.
+ * the last final segment. Interim segments go to `onInterim` and stay out of the
+ * transcript, so a partial guess never becomes the answer.
  */
-function transcriptCollector() {
+function transcriptCollector({ onInterim } = {}) {
   let transcript = '';
   let confidence = 0;
   return {
@@ -48,7 +51,11 @@ function transcriptCollector() {
         .slice(event.resultIndex ?? 0)
         .forEach((result) => {
           const alternative = result[0];
-          if (!alternative || result.isFinal === false) return;
+          if (!alternative) return;
+          if (result.isFinal === false) {
+            onInterim?.(alternative.transcript ?? '');
+            return;
+          }
           transcript += `${transcript ? ' ' : ''}${alternative.transcript ?? ''}`;
           confidence = alternative.confidence ?? 0;
         });
@@ -62,14 +69,19 @@ function transcriptCollector() {
   };
 }
 
-function startRecognitionSession() {
+/**
+ * `continuous` decides who ends the session: the runner tapping stop, or the
+ * recogniser itself once an utterance is over (one-shot).
+ */
+function startRecognitionSession({ lang = DEFAULT_LANG, continuous = true, onInterim } = {}) {
   const Recognition = recognitionCtor();
   const recognition = new Recognition();
-  recognition.lang = 'en-US';
-  recognition.continuous = true;
-  recognition.interimResults = false;
+  recognition.lang = lang;
+  recognition.continuous = continuous;
+  recognition.interimResults = Boolean(onInterim);
+  recognition.maxAlternatives = 1;
 
-  const heard = transcriptCollector();
+  const heard = transcriptCollector({ onInterim });
   on(recognition, 'result', (event) => heard.collect(event));
   // The recogniser can end on its own (silence, an error) before the runner taps
   // stop; calling `stop()` on it again throws and would lose what was heard.
@@ -121,9 +133,9 @@ function startRecognitionSession() {
  * Opens the microphone and returns a session: `stop()` resolves with the
  * transcribed answer, `cancel()` drops the recording without transcribing.
  */
-export async function startListening({ mode = sttMode() } = {}) {
+export async function startListening({ mode = sttMode(), lang, onInterim } = {}) {
   if (mode !== 'browser') throw new Error('no speech input available');
-  const session = startRecognitionSession();
+  const session = startRecognitionSession({ lang, continuous: true, onInterim });
   session.recognition.start();
   return {
     mode: session.mode,
@@ -141,16 +153,19 @@ export function cancelListening() {
 }
 
 /**
- * Listens until the recogniser stops on its own (silence ends a Web Speech
- * session) and reports what was heard. `reason` explains an empty transcript:
- * `unsupported`, `start-failed`, `no-speech`, or the recogniser's own error.
+ * Listens for a single utterance and reports what was heard; `onInterim` sees the
+ * partial transcripts while the speaker is still talking. `reason` explains an
+ * empty transcript: `unsupported`, `start-failed`, `no-speech`, or the
+ * recogniser's own error.
  */
-export async function listenOnce() {
+export async function listenOnce({ lang, onInterim } = {}) {
   if (!recognitionCtor()) {
     return { supported: false, transcript: '', confidence: 0, reason: 'unsupported' };
   }
   cancelListening();
-  const session = startRecognitionSession();
+  // One-shot: the recogniser ends itself after the utterance, so nothing else has
+  // to stop it and the promise cannot stay pending.
+  const session = startRecognitionSession({ lang, continuous: false, onInterim });
   listening = session;
   try {
     session.recognition.start();
