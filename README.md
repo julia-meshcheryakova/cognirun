@@ -91,3 +91,29 @@ Turn demo mode off to use the real sensors: browser Geolocation (`watchPosition`
 distance/route and Web Bluetooth for a Garmin watch (or any strap) broadcasting the
 standard BLE Heart Rate Service. Both require a secure context (https or localhost)
 and a Chromium-based browser for Web Bluetooth.
+
+## Heart rate from a Garmin watch
+
+Real runs read live heart rate over the standard BLE Heart Rate Profile — service
+`0x180D`, characteristic `0x2A37` (Heart Rate Measurement) — so any watch or chest
+strap broadcasting heart rate works without a vendor SDK.
+
+1. On the watch, start broadcast mode: **Menu → Sensors & accessories → Wrist heart
+   rate → Broadcast heart rate** (wording varies slightly per model). The watch now
+   advertises the HR service.
+2. Open the app over https or localhost in a Chromium-based browser, turn **Demo mode**
+   off and press **Start run**. Pairing is triggered from that click because Web
+   Bluetooth requires user activation.
+3. Pick the watch in the browser's Bluetooth chooser. The live screen shows the
+   connection state under the heart rate, then streams the watch's beats into the run
+   (heart rate, zone, and the heart rate track on the results chart).
+
+Heart rate is never fatal to a run: no Bluetooth support, a cancelled chooser, a denied
+permission or a failing GATT connection only show a warning under the heart rate and the
+run continues on GPS alone. If the watch drops out mid-run the app retries with a backoff
+(1/2/4/8 s) and resumes streaming when it comes back.
+
+Demo mode never touches Bluetooth — its heart rate comes from the pace simulator in
+`web/src/sensors/demo.js`, while real runs use `web/src/sensors/heartRate.js` via
+`web/src/sensors/real.js`. `createRun({ demo })` picks one or the other, so the two paths
+never mix.

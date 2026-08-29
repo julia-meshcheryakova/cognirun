@@ -24,7 +24,16 @@ function haversine(a, b) {
  * every completed kilometer and finishing once the distance and all questions
  * are done.
  */
-export function createRun({ demo, multiplier, onUpdate, onKilometer, onFinish, onError }) {
+export function createRun({
+  demo,
+  multiplier,
+  onUpdate,
+  onKilometer,
+  onFinish,
+  onError,
+  onHeartRateStatus,
+  bluetooth,
+}) {
   const samples = [];
   let last = null;
   let firstT = null;
@@ -72,6 +81,8 @@ export function createRun({ demo, multiplier, onUpdate, onKilometer, onFinish, o
         onPosition: handlePosition,
         onHeartRate: handleHeartRate,
         onError,
+        onHeartRateStatus,
+        bluetooth,
       });
 
   const clock = createClock({

@@ -11,6 +11,7 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
         <strong id="hr">--</strong>
         <span class="unit">bpm</span>
         <span class="zone" id="zone">--</span>
+        <span class="hr-source" id="hr-source" ${settings.demo ? '' : 'hidden'}>Simulated</span>
       </div>
 
       <div class="metric hero points">
@@ -79,6 +80,13 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
 
   return {
     questionSlot: el('question-slot'),
+    /** Real runs only: show how the BLE heart rate connection is doing. */
+    setHeartRateStatus({ state, message }) {
+      const source = el('hr-source');
+      source.hidden = false;
+      source.textContent = message;
+      source.dataset.state = state;
+    },
     /** The scrubber can only fast-forward once the run (and its questions) are ready. */
     enableScrub() {
       scrub.disabled = false;
