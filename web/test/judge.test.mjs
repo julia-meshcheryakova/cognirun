@@ -128,3 +128,71 @@ test('a free-text logic question accepts the bare verdict', async () => {
   );
   assert.equal((await judgeAnswer({ question, text: 'Yes' })).correct, false);
 });
+
+function llmStub(reply, calls) {
+  return async (url, options) => {
+    calls.push({ url, body: JSON.parse(options.body) });
+    return {
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: JSON.stringify(reply) } }] }),
+    };
+  };
+}
+
+test('the LLM judge decides only when both local rules fail', async () => {
+  const calls = [];
+  const fetchImpl = llmStub({ correct: true, reason: 'synonym of the answer' }, calls);
+
+  const paraphrase = await judgeAnswer({
+    question: { prompt: 'What is the capital of Japan?', answer: 'Tokyo' },
+    text: 'the Japanese capital city, Edo renamed',
+    key: 'test-key',
+    fetchImpl,
+  });
+  assert.equal(paraphrase.correct, true);
+  assert.equal(paraphrase.method, 'llm');
+  assert.equal(paraphrase.reason, 'synonym of the answer');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://api.groq.com/openai/v1/chat/completions');
+  assert.equal(calls[0].body.model, 'qwen/qwen3.8-27b');
+
+  const local = await judgeAnswer({ question: QUESTION, text: 'Tokyo', key: 'test-key', fetchImpl });
+  assert.equal(local.method, 'exact');
+  assert.equal(calls.length, 1);
+});
+
+test('an LLM verdict of incorrect is reported as such', async () => {
+  const verdict = await judgeAnswer({
+    question: QUESTION,
+    text: 'somewhere in Japan',
+    key: 'test-key',
+    fetchImpl: llmStub({ correct: false, reason: 'no city named' }, []),
+  });
+
+  assert.equal(verdict.correct, false);
+  assert.equal(verdict.method, 'llm');
+});
+
+test('without a key or with a failing call, grading stays local', async () => {
+  let called = false;
+  const noKey = await judgeAnswer({
+    question: QUESTION,
+    text: 'Kyoto',
+    key: '',
+    fetchImpl: async () => { called = true; },
+  });
+  assert.deepEqual(
+    [noKey.correct, noKey.method, called],
+    [false, 'no-match', false],
+  );
+
+  const failing = await judgeAnswer({
+    question: QUESTION,
+    text: 'Kyoto',
+    key: 'test-key',
+    fetchImpl: async () => ({ ok: false, status: 401 }),
+  });
+  assert.equal(failing.correct, false);
+  assert.equal(failing.method, 'no-match');
+  assert.match(failing.reason, /401/);
+});
