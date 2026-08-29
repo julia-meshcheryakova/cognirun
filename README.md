@@ -69,6 +69,61 @@ with the `xi-api-key` header, `model_id: eleven_turbo_v2_5` and
 `voice_settings: { stability: 0.4, similarity_boost: 0.8 }`; the returned MP3 is played
 via an `Audio` element. Default voice id `21m00Tcm4TlvDq8ikWAM` ("Rachel").
 
+## Voice answering
+
+You answer by speaking. The flow per question:
+
+1. The question appears and is read aloud (see **Sound** above).
+2. The microphone becomes available the moment the reading *starts* — the mic button
+   unlocks then, so you can answer while the question is still being read.
+3. Tap the mic, speak, tap again. The answer time (and therefore the score) is taken
+   at that second tap, so transcription and judging latency never cost you points.
+4. The recording is transcribed by **ElevenLabs Speech-to-Text ("Scribe")**
+   (`web/src/stt.js`).
+5. The transcript is graded by `web/src/judge.js`: **exact match first** (free and
+   instant, after normalizing case, punctuation and filler words — "It's Tokyo!"
+   matches "Tokyo"), and if that fails an **LLM-as-a-judge** call decides semantic
+   correctness ("he is playing Monopoly" counts for "Monopoly").
+6. Correct answers earn the time-decay points (100 → 50 over 60 s), wrong answers 0.
+   The result card shows the verdict, the transcript and which path judged it.
+
+Typing stays available at all times (the text box under the mic button), so the run is
+still playable if the mic is denied or unavailable, and multiple-choice questions can
+still be answered by tapping an option. Voice answering works in demo mode too.
+
+### Speech-to-text key
+
+The STT calls use the same ElevenLabs key as the read-aloud voice
+(`VITE_ELEVENLABS_API_KEY`, see above; the runtime `localStorage` override works too).
+Request used: `POST https://api.elevenlabs.io/v1/speech-to-text` with the
+`xi-api-key` header, `model_id: scribe_v1` and the recorded audio as multipart `file`
+(captured with `getUserMedia` + `MediaRecorder`).
+
+With no ElevenLabs key the app degrades to the browser's built-in **Web Speech API**
+(`SpeechRecognition`, Chromium only), so voice answering still works. With neither, the
+mic button is disabled and typing is the only input.
+
+### LLM judge key
+
+```bash
+# in web/.env.local
+VITE_GROQ_API_KEY=gsk_...   # free tier, https://console.groq.com/keys
+```
+
+The judge calls Groq's OpenAI-compatible endpoint
+`POST https://api.groq.com/openai/v1/chat/completions` with `llama-3.3-70b-versatile`,
+`temperature: 0` and `response_format: json_object`; the model is given the question,
+the expected answer and the transcript and replies `{"correct": bool, "reason": "…"}`.
+It is bounded by a 6 s timeout. Runtime override for a quick test:
+
+```js
+localStorage.setItem('cognirun.groqApiKey', 'gsk_...'); // or window.COGNIRUN_GROQ_API_KEY = 'gsk_...'
+```
+
+If no Groq key is configured — or the call fails or times out — grading falls back to
+**exact match only**, and the result card says so (`judged by exact-only`), which means
+a correct-but-differently-phrased answer will be marked wrong.
+
 ## Demo mode
 
 Demo mode is **on by default** on the start screen, so you can test the whole flow

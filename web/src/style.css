@@ -276,3 +276,30 @@ textarea {
   color: var(--muted);
   font-size: 12px;
 }
+
+.voice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mic {
+  font: inherit;
+  background: #0f172a;
+  color: var(--text);
+  border: 1px solid #334155;
+  border-radius: 999px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.mic:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mic.recording {
+  border-color: #f87171;
+  color: #fecaca;
+}

@@ -1,88 +1,137 @@
-const DEFAULT_LANG = 'en-US';
+import { elevenLabsApiKey } from './keys.js';
 
-let active = null;
+const STT_ENDPOINT = 'https://api.elevenlabs.io/v1/speech-to-text';
+const MODEL_ID = 'scribe_v1'; // ElevenLabs "Scribe"
+const MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+/** How long we wait for the browser recogniser to flush its last result. */
+const RECOGNITION_FLUSH_MS = 1500;
 
 function recognitionCtor() {
-  return globalThis.SpeechRecognition || globalThis.webkitSpeechRecognition || null;
+  return globalThis.SpeechRecognition || globalThis.webkitSpeechRecognition;
 }
 
-/** True when the browser exposes the (prefixed or standard) SpeechRecognition API. */
-export function isSpeechToTextSupported() {
-  return Boolean(recognitionCtor());
-}
-
-function unsupportedResult() {
-  return { supported: false, transcript: '', confidence: 0, reason: 'unsupported' };
-}
-
-/** Stops the current recognition session; its promise resolves with what was heard so far. */
-export function cancelListening() {
-  const current = active;
-  active = null;
-  current?.abort?.();
+function recorderSupported() {
+  return Boolean(globalThis.navigator?.mediaDevices?.getUserMedia && globalThis.MediaRecorder);
 }
 
 /**
- * Listens once and resolves with `{ supported, transcript, confidence, reason }`.
- * `onInterim` receives partial transcripts while the speaker is still talking.
- * Never rejects: unsupported browsers, denied microphones and recognition errors
- * all resolve with an empty transcript and a `reason`, so callers can fall back
- * to typing without special-casing.
+ * Which speech-to-text path is available:
+ * - `elevenlabs`: record with MediaRecorder, transcribe with the Scribe API.
+ * - `browser`: the built-in Web Speech API (no key needed, Chromium only).
+ * - `none`: no microphone input at all, the text box is the only way to answer.
  */
-export function listenOnce({ lang = DEFAULT_LANG, onInterim } = {}) {
-  const Ctor = recognitionCtor();
-  if (!Ctor) return Promise.resolve(unsupportedResult());
+export function sttMode() {
+  if (elevenLabsApiKey() && recorderSupported()) return 'elevenlabs';
+  if (recognitionCtor()) return 'browser';
+  return 'none';
+}
 
-  cancelListening();
+export function sttAvailable() {
+  return sttMode() !== 'none';
+}
 
-  const recognition = new Ctor();
-  recognition.lang = lang;
-  recognition.continuous = false;
-  recognition.interimResults = Boolean(onInterim);
-  recognition.maxAlternatives = 1;
-  active = recognition;
+/** POSTs recorded audio to ElevenLabs Scribe and returns the transcript. */
+export async function transcribeWithElevenLabs(
+  blob,
+  { key = elevenLabsApiKey(), fetchImpl = globalThis.fetch } = {},
+) {
+  if (!key) throw new Error('no ElevenLabs API key');
+  const form = new FormData();
+  form.append('model_id', MODEL_ID);
+  form.append('file', blob, 'answer.webm');
 
-  return new Promise((resolve) => {
-    let transcript = '';
-    let confidence = 0;
-    let reason = null;
-    let settled = false;
-
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      if (active === recognition) active = null;
-      resolve({
-        supported: true,
-        transcript: transcript.trim(),
-        confidence,
-        reason: reason || (transcript.trim() ? null : 'no-speech'),
-      });
-    };
-
-    recognition.onresult = (event) => {
-      for (let i = event.resultIndex ?? 0; i < event.results.length; i += 1) {
-        const result = event.results[i];
-        const alternative = result[0];
-        if (!alternative) continue;
-        if (result.isFinal) {
-          transcript += `${transcript ? ' ' : ''}${alternative.transcript}`;
-          confidence = alternative.confidence ?? 0;
-        } else {
-          onInterim?.(alternative.transcript);
-        }
-      }
-    };
-    recognition.onerror = (event) => {
-      reason = event?.error || 'error';
-    };
-    recognition.onend = finish;
-
-    try {
-      recognition.start();
-    } catch (err) {
-      reason = 'start-failed';
-      finish();
-    }
+  const response = await fetchImpl(STT_ENDPOINT, {
+    method: 'POST',
+    headers: { 'xi-api-key': key },
+    body: form,
   });
+  if (!response.ok) throw new Error(`ElevenLabs STT responded ${response.status}`);
+  const data = await response.json();
+  return String(data?.text ?? '').trim();
+}
+
+async function startRecorderSession({ key, fetchImpl }) {
+  const stream = await globalThis.navigator.mediaDevices.getUserMedia({ audio: true });
+  const mimeType = MIME_CANDIDATES.find((type) =>
+    globalThis.MediaRecorder.isTypeSupported?.(type),
+  );
+  const recorder = new globalThis.MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+  const chunks = [];
+  recorder.addEventListener('dataavailable', (event) => {
+    if (event.data?.size) chunks.push(event.data);
+  });
+  const stopped = new Promise((resolve) => recorder.addEventListener('stop', resolve));
+  recorder.start();
+
+  const release = () => {
+    if (recorder.state !== 'inactive') recorder.stop();
+    stream.getTracks?.().forEach((track) => track.stop());
+  };
+
+  return {
+    mode: 'elevenlabs',
+    async stop() {
+      release();
+      await stopped;
+      const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+      if (!blob.size) return '';
+      return transcribeWithElevenLabs(blob, { key, fetchImpl });
+    },
+    cancel() {
+      try {
+        release();
+      } catch (err) {
+        console.warn('stopping the microphone failed', err);
+      }
+    },
+  };
+}
+
+function startRecognitionSession() {
+  const Recognition = recognitionCtor();
+  const recognition = new Recognition();
+  recognition.lang = 'en-US';
+  recognition.continuous = true;
+  recognition.interimResults = false;
+
+  let transcript = '';
+  recognition.addEventListener('result', (event) => {
+    transcript = Array.from(event.results ?? [])
+      .map((result) => result[0]?.transcript ?? '')
+      .join(' ');
+  });
+  const settled = new Promise((resolve) => {
+    recognition.addEventListener('end', resolve);
+    recognition.addEventListener('error', resolve);
+  });
+  recognition.start();
+
+  return {
+    mode: 'browser',
+    async stop() {
+      recognition.stop();
+      await Promise.race([
+        settled,
+        new Promise((resolve) => setTimeout(resolve, RECOGNITION_FLUSH_MS)),
+      ]);
+      return transcript.trim();
+    },
+    cancel() {
+      try {
+        recognition.abort?.();
+      } catch (err) {
+        console.warn('aborting speech recognition failed', err);
+      }
+    },
+  };
+}
+
+/**
+ * Opens the microphone and returns a session: `stop()` resolves with the
+ * transcribed answer, `cancel()` drops the recording without transcribing.
+ */
+export async function startListening({ mode = sttMode(), key, fetchImpl } = {}) {
+  if (mode === 'elevenlabs') return startRecorderSession({ key, fetchImpl });
+  if (mode === 'browser') return startRecognitionSession();
+  throw new Error('no speech input available');
 }

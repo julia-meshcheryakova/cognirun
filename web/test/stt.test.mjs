@@ -1,119 +1,159 @@
 import assert from 'node:assert/strict';
 import test, { afterEach } from 'node:test';
 
-import { cancelListening, isSpeechToTextSupported, listenOnce } from '../src/stt.js';
+import { startListening, sttMode, transcribeWithElevenLabs } from '../src/stt.js';
+import { judgeAnswer } from '../src/judge.js';
 
-/** Minimal stand-in for the browser SpeechRecognition API. */
-function stubRecognition({ key = 'SpeechRecognition', onStart } = {}) {
-  const instances = [];
-  globalThis[key] = class {
+/** Minimal stand-ins for the browser mic APIs the STT module records with. */
+function stubRecorder({ chunks = ['audio-bytes'] } = {}) {
+  const stopped = [];
+  globalThis.navigator = {
+    mediaDevices: {
+      getUserMedia: async () => ({ getTracks: () => [{ stop: () => stopped.push('track') }] }),
+    },
+  };
+  globalThis.MediaRecorder = class {
+    static isTypeSupported = () => true;
     constructor() {
-      this.started = false;
-      this.aborted = false;
-      instances.push(this);
+      this.state = 'recording';
+      this.mimeType = 'audio/webm';
+      this.listeners = {};
+    }
+    addEventListener(type, handler) {
+      (this.listeners[type] ??= []).push(handler);
+    }
+    emit(type, event) {
+      this.listeners[type]?.forEach((handler) => handler(event));
     }
     start() {
-      this.started = true;
-      onStart?.(this);
+      // The browser emits recorded audio asynchronously; do the same.
+      setTimeout(() => chunks.forEach((chunk) => this.emit('dataavailable', { data: blob(chunk) })));
     }
-    abort() {
-      this.aborted = true;
-      this.onend?.();
-    }
-    emitResult(alternatives, isFinal = true) {
-      this.onresult?.({
-        resultIndex: 0,
-        results: [Object.assign([alternatives], { isFinal })],
-      });
+    stop() {
+      this.state = 'inactive';
+      setTimeout(() => this.emit('stop', {}));
     }
   };
-  return instances;
+  return { stopped };
+}
+
+const blob = (text) => new Blob([text], { type: 'audio/webm' });
+
+/** ElevenLabs Scribe stub: returns `text` for whatever audio it is given. */
+function sttStub(text, { ok = true, status = 200 } = {}) {
+  const requests = [];
+  const fetchImpl = async (url, options) => {
+    requests.push({ url, options });
+    return { ok, status, json: async () => ({ text }) };
+  };
+  return { fetchImpl, requests };
 }
 
 afterEach(() => {
+  delete globalThis.navigator;
+  delete globalThis.MediaRecorder;
   delete globalThis.SpeechRecognition;
-  delete globalThis.webkitSpeechRecognition;
+  delete globalThis.COGNIRUN_ELEVENLABS_API_KEY;
 });
 
-test('an unsupported browser resolves instead of throwing', async () => {
-  assert.equal(isSpeechToTextSupported(), false);
+test('recorded audio is sent to ElevenLabs Scribe and comes back as a transcript', async () => {
+  const { fetchImpl, requests } = sttStub('  He is playing Monopoly.  ');
 
-  assert.deepEqual(await listenOnce(), {
-    supported: false,
-    transcript: '',
-    confidence: 0,
-    reason: 'unsupported',
+  const transcript = await transcribeWithElevenLabs(blob('audio'), {
+    key: 'sk-test',
+    fetchImpl,
   });
+
+  assert.equal(transcript, 'He is playing Monopoly.');
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, 'https://api.elevenlabs.io/v1/speech-to-text');
+  assert.equal(requests[0].options.headers['xi-api-key'], 'sk-test');
+  assert.equal(requests[0].options.body.get('model_id'), 'scribe_v1');
+  assert.ok(requests[0].options.body.get('file'));
 });
 
-test('the webkit-prefixed API is used when the standard one is missing', async () => {
-  const instances = stubRecognition({
-    key: 'webkitSpeechRecognition',
-    onStart: (r) => {
-      r.emitResult({ transcript: 'the man is bankrupt', confidence: 0.9 });
-      r.onend();
-    },
-  });
+test('a failing STT request rejects so the UI can offer typing instead', async () => {
+  const { fetchImpl } = sttStub('', { ok: false, status: 401 });
 
-  assert.equal(isSpeechToTextSupported(), true);
-  const result = await listenOnce();
-
-  assert.deepEqual(result, {
-    supported: true,
-    transcript: 'the man is bankrupt',
-    confidence: 0.9,
-    reason: null,
-  });
-  assert.equal(instances.length, 1);
+  await assert.rejects(
+    transcribeWithElevenLabs(blob('audio'), { key: 'sk-test', fetchImpl }),
+    /401/,
+  );
 });
 
-test('interim transcripts are reported through the callback', async () => {
-  const interim = [];
-  stubRecognition({
-    onStart: (r) => {
-      r.emitResult({ transcript: 'the man' }, false);
-      r.emitResult({ transcript: 'the man is bankrupt', confidence: 0.5 });
-      r.onend();
-    },
-  });
+test('the mic session records, transcribes and releases the microphone', async () => {
+  const { stopped } = stubRecorder();
+  const { fetchImpl } = sttStub('Tokyo');
+  globalThis.COGNIRUN_ELEVENLABS_API_KEY = 'sk-test';
 
-  const result = await listenOnce({ onInterim: (text) => interim.push(text) });
+  assert.equal(sttMode(), 'elevenlabs');
+  const session = await startListening({ fetchImpl });
+  const transcript = await session.stop();
 
-  assert.deepEqual(interim, ['the man']);
-  assert.equal(result.transcript, 'the man is bankrupt');
+  assert.equal(transcript, 'Tokyo');
+  assert.deepEqual(stopped, ['track']);
 });
 
-test('a recognition error resolves with an empty transcript and the reason', async () => {
-  stubRecognition({
-    onStart: (r) => {
-      r.onerror({ error: 'not-allowed' });
-      r.onend();
-    },
+test('the transcript flows into the judge, which grades it semantically', async () => {
+  stubRecorder();
+  const stt = sttStub('I think he is playing Monopoly');
+  globalThis.COGNIRUN_ELEVENLABS_API_KEY = 'sk-test';
+  const judgeCalls = [];
+  const judgeFetch = async (url, options) => {
+    judgeCalls.push(JSON.parse(options.body));
+    return {
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: '{"correct": true, "reason": "Same meaning"}' } }],
+      }),
+    };
+  };
+
+  const session = await startListening({ fetchImpl: stt.fetchImpl });
+  const transcript = await session.stop();
+  const verdict = await judgeAnswer({
+    question: { prompt: 'What game is he playing?', answer: 'Monopoly' },
+    text: transcript,
+    key: 'gsk-test',
+    fetchImpl: judgeFetch,
   });
 
-  const result = await listenOnce();
-
-  assert.deepEqual(result, {
-    supported: true,
-    transcript: '',
-    confidence: 0,
-    reason: 'not-allowed',
-  });
+  assert.equal(verdict.correct, true);
+  assert.equal(verdict.method, 'llm');
+  assert.match(judgeCalls[0].messages[1].content, /Runner's answer: I think he is playing Monopoly/);
 });
 
-test('silence resolves with a no-speech reason', async () => {
-  stubRecognition({ onStart: (r) => r.onend() });
+test('with no ElevenLabs key the browser recogniser is used', async () => {
+  let started = false;
+  globalThis.SpeechRecognition = class {
+    constructor() {
+      this.listeners = {};
+    }
+    addEventListener(type, handler) {
+      (this.listeners[type] ??= []).push(handler);
+    }
+    start() {
+      started = true;
+      setTimeout(() =>
+        this.listeners.result?.forEach((handler) =>
+          handler({ results: [[{ transcript: 'the capital is Tokyo' }]] }),
+        ),
+      );
+    }
+    stop() {
+      setTimeout(() => this.listeners.end?.forEach((handler) => handler({})));
+    }
+  };
 
-  assert.equal((await listenOnce()).reason, 'no-speech');
+  assert.equal(sttMode(), 'browser');
+  const session = await startListening();
+  const transcript = await session.stop();
+
+  assert.equal(started, true);
+  assert.equal(transcript, 'the capital is Tokyo');
 });
 
-test('cancelling ends the session and aborts the recognizer', async () => {
-  const instances = stubRecognition();
-
-  const pending = listenOnce();
-  cancelListening();
-  const result = await pending;
-
-  assert.equal(instances[0].aborted, true);
-  assert.equal(result.transcript, '');
+test('with neither path available the mic cannot be opened', async () => {
+  assert.equal(sttMode(), 'none');
+  await assert.rejects(startListening(), /no speech input available/);
 });
