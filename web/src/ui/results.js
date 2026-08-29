@@ -32,17 +32,19 @@ export function renderResults(root, { snapshot, answers, onRestart }) {
 
       <section class="card">
         <h2>Questions</h2>
-        <table class="breakdown">
-          <thead><tr><th>Km</th><th>Category</th><th>Time</th><th>Answer</th><th>Points</th></tr></thead>
-          <tbody>
-            ${answers
-              .map(
-                (a) =>
-                  `<tr><td>${a.kilometer}</td><td>${CATEGORY_LABELS[a.category] ?? '—'}</td><td>${a.elapsedSeconds.toFixed(1)}s</td><td>${verdictLabel(a)}</td><td>${a.points}</td></tr>`,
-              )
-              .join('')}
-          </tbody>
-        </table>
+        <div class="table-scroll">
+          <table class="breakdown">
+            <thead><tr><th>Km</th><th>Category</th><th>Time</th><th>Answer</th><th>Points</th></tr></thead>
+            <tbody>
+              ${answers
+                .map(
+                  (a) =>
+                    `<tr><td>${a.kilometer}</td><td>${CATEGORY_LABELS[a.category] ?? '—'}</td><td>${a.elapsedSeconds.toFixed(1)}s</td><td>${verdictLabel(a)}</td><td>${a.points}</td></tr>`,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section class="card">

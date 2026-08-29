@@ -10,18 +10,20 @@ export function liveMarkup({ settings }) {
   const count = Math.round(total / course.segment);
   return `
     <main class="screen live">
-      <div class="metric hero">
-        <span class="label">Heart rate</span>
-        <strong id="hr">--</strong>
-        <span class="unit">bpm</span>
-        <span class="zone" id="zone">--</span>
-        <span class="hr-source" id="hr-source" ${settings.demo ? '' : 'hidden'}>${settings.demo ? 'Simulated' : ''}</span>
-      </div>
+      <div class="heroes">
+        <div class="metric hero">
+          <span class="label">Heart rate</span>
+          <strong id="hr">--</strong>
+          <span class="unit">bpm</span>
+          <span class="zone" id="zone">--</span>
+          <span class="hr-source" id="hr-source" ${settings.demo ? '' : 'hidden'}>${settings.demo ? 'Simulated' : ''}</span>
+        </div>
 
-      <div class="metric hero points">
-        <span class="label">Points</span>
-        <strong id="points">0</strong>
-        <span class="unit" id="answered">0 / ${count} questions</span>
+        <div class="metric hero points">
+          <span class="label">Points</span>
+          <strong id="points">0</strong>
+          <span class="unit" id="answered">0 / ${count} questions</span>
+        </div>
       </div>
 
       <div class="grid">
