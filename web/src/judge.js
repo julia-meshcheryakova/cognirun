@@ -1,8 +1,24 @@
 /**
- * Grades a (typically spoken and transcribed) answer entirely locally: no API key,
- * no external LLM. Normalized matching absorbs the noise speech recognition adds —
- * casing, punctuation, filler words — so "It's Tokyo!" grades the same as "Tokyo".
+ * Grades a (typically spoken and transcribed) answer. Normalized local matching runs
+ * first and absorbs the noise speech recognition adds — casing, punctuation, filler
+ * words — so "It's Tokyo!" grades the same as "Tokyo". Only when no local rule matches,
+ * and only with a Groq key configured, an LLM decides semantic equivalence.
  */
+
+import { groqApiKey } from './keys.js';
+
+const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+/** The model the project's Groq key has access to. */
+const MODEL = 'qwen/qwen3.8-27b';
+/** A judge slower than this is treated as absent: the answer window keeps ticking. */
+const JUDGE_TIMEOUT_MS = 6000;
+
+const SYSTEM_PROMPT = [
+  'You grade a runner\'s spoken answer to a quiz question.',
+  'Be lenient about phrasing, filler words, synonyms and word order;',
+  'be strict about meaning: the answer must convey the expected answer.',
+  'Reply with JSON only: {"correct": true|false, "reason": "<max 12 words>"}.',
+].join(' ');
 
 /** Negates what follows it: "not Tokyo" is not an answer of "Tokyo". */
 const NEGATOR = /^(not|no|nope|never|isnt|arent|wasnt|dont|doesnt|didnt|cant|wouldnt|except)$/;
@@ -91,12 +107,55 @@ export function containsAnswer(text, question) {
   });
 }
 
+function parseVerdict(content) {
+  const json = content?.match(/\{[\s\S]*\}/)?.[0];
+  if (!json) throw new Error('judge returned no JSON');
+  const parsed = JSON.parse(json);
+  if (typeof parsed.correct !== 'boolean') throw new Error('judge returned no verdict');
+  return { correct: parsed.correct, reason: String(parsed.reason ?? '').slice(0, 120) };
+}
+
+async function askLlm({ question, text, key, fetchImpl, timeoutMs }) {
+  const response = await fetchImpl(GROQ_ENDPOINT, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(timeoutMs),
+    body: JSON.stringify({
+      model: MODEL,
+      temperature: 0,
+      max_tokens: 120,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        {
+          role: 'user',
+          content: [
+            `Question: ${question.prompt}`,
+            `Expected answer: ${question.answer}`,
+            `Runner's answer: ${text}`,
+          ].join('\n'),
+        },
+      ],
+    }),
+  });
+  if (!response.ok) throw new Error(`Groq responded ${response.status}`);
+  const data = await response.json();
+  return parseVerdict(data?.choices?.[0]?.message?.content);
+}
+
 /**
- * Grades an answer and reports which local rule decided it, so the UI can explain
- * the verdict. `method` is `exact`, `contains` or `no-match` (`empty` when nothing
- * was captured at all).
+ * Grades an answer and reports which rule decided it, so the UI can explain the
+ * verdict. `method` is `exact`, `contains`, `llm` or `no-match` (`empty` when nothing
+ * was captured at all). Without a key, or when the LLM call fails, only the local
+ * rules count.
  */
-export async function judgeAnswer({ question, text }) {
+export async function judgeAnswer({
+  question,
+  text,
+  key = groqApiKey(),
+  fetchImpl = globalThis.fetch,
+  timeoutMs = JUDGE_TIMEOUT_MS,
+}) {
   const answer = String(text ?? '').trim();
   if (!answer) return { correct: false, method: 'empty', reason: 'No answer captured.' };
   if (exactMatch(answer, question)) {
@@ -105,9 +164,22 @@ export async function judgeAnswer({ question, text }) {
   if (containsAnswer(answer, question)) {
     return { correct: true, method: 'contains', reason: 'Contains the expected answer.' };
   }
-  return {
-    correct: false,
-    method: 'no-match',
-    reason: 'Does not match the expected answer.',
-  };
+  if (!key) {
+    return {
+      correct: false,
+      method: 'no-match',
+      reason: 'Does not match the expected answer.',
+    };
+  }
+  try {
+    const verdict = await askLlm({ question, text: answer, key, fetchImpl, timeoutMs });
+    return { ...verdict, method: 'llm' };
+  } catch (err) {
+    console.warn('LLM judge unavailable, falling back to local matching', err);
+    return {
+      correct: false,
+      method: 'no-match',
+      reason: `Judge unavailable (${err.message}) — only local matches count.`,
+    };
+  }
 }
