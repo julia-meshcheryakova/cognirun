@@ -101,3 +101,9 @@ test('a rejected negative answer is wrong', () => {
 
   assert.equal(containsAnswer('No is wrong', question), false);
 });
+
+test('a rejection in its own clause still rejects the answer', () => {
+  assert.equal(containsAnswer('Tokyo, which is wrong', QUESTION), false);
+  assert.equal(containsAnswer('Tokyo; that is incorrect', QUESTION), false);
+  assert.equal(containsAnswer('every city except Tokyo', QUESTION), false);
+});

@@ -5,7 +5,7 @@
  */
 
 /** Negates what follows it: "not Tokyo" is not an answer of "Tokyo". */
-const NEGATOR = /^(not|no|nope|never|isnt|arent|wasnt|dont|doesnt|didnt|cant|wouldnt)$/;
+const NEGATOR = /^(not|no|nope|never|isnt|arent|wasnt|dont|doesnt|didnt|cant|wouldnt|except)$/;
 /** Rejects what precedes it: "Tokyo is wrong". */
 const REJECTION = /^(wrong|incorrect|false|opposite)$/;
 /** How many words after a match are checked for a rejection. */
@@ -34,6 +34,24 @@ export function exactMatch(text, question) {
 }
 
 /**
+ * Splits a sentence into clauses graded on their own, so "Tokyo, not Kyoto" is judged
+ * on "Tokyo". A clause that rejects ("..., which is wrong") stays joined to the clause
+ * it rejects, since that is what it talks about.
+ */
+function clausesOf(text) {
+  const parts = String(text ?? '').split(/[,;]|\bbut\b/i).map(normalizeAnswer);
+  return parts
+    .reduce((clauses, part) => {
+      const rejects = part.split(' ').some((word) => REJECTION.test(word));
+      if (rejects && clauses.length) clauses[clauses.length - 1] += ` ${part}`;
+      else clauses.push(part);
+      return clauses;
+    }, [])
+    .map((clause) => clause.trim())
+    .filter(Boolean);
+}
+
+/**
  * True when the expected answer is contained in a longer spoken sentence, so
  * "he is playing monopoly" grades as "monopoly". Only whole-word runs count, and
  * one-word expected answers still need to appear as their own word.
@@ -46,11 +64,7 @@ export function containsAnswer(text, question) {
   const expected = [question.answer, ...(question.acceptedAnswers ?? [])]
     .map(normalizeAnswer)
     .filter(Boolean);
-  // Clauses are graded on their own, so "Tokyo, not Kyoto" is judged on "Tokyo".
-  const clauses = String(text ?? '')
-    .split(/[,;]|\bbut\b/i)
-    .map(normalizeAnswer)
-    .filter(Boolean);
+  const clauses = clausesOf(text);
   return clauses.some((clause) => {
     const words = clause.split(' ');
     return expected.some((answer) => {
