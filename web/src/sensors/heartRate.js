@@ -44,34 +44,59 @@ function createNativeHeartRateMonitor({ ble, onHeartRate, onStatus }) {
   let notifyListener = null;
   let stopped = false;
 
+  // A Garmin watch in Broadcast-HR mode often does NOT put the 0x180D service in
+  // its advertisement packet, so a service-filtered scan never sees it. Scan
+  // unfiltered, collect candidates over a short window, then prefer one that
+  // advertises the HR service (a real strap) or looks like a watch by name.
   async function scanForDevice() {
     return new Promise((resolve, reject) => {
       let settled = false;
       let scanListener = null;
-      const timeout = setTimeout(async () => {
+      const candidates = new Map();
+
+      const finish = async (device, err) => {
         if (settled) return;
         settled = true;
-        await ble.stopLEScan().catch(() => {});
-        await scanListener?.remove?.().catch(() => {});
-        reject(new Error('No heart rate device found — enable broadcast on the watch.'));
-      }, 15000);
-      timeout.unref?.();
-      ble.addListener('onScanResult', async (result) => {
-        if (settled || !result?.device) return;
-        settled = true;
         clearTimeout(timeout);
+        clearTimeout(pick);
         await ble.stopLEScan().catch(() => {});
         await scanListener?.remove?.().catch(() => {});
-        resolve(result.device);
+        if (device) resolve(device);
+        else reject(err ?? new Error('No heart rate device found — enable broadcast on the watch.'));
+      };
+
+      const best = () => {
+        const all = [...candidates.values()];
+        // A device advertising the HR service is the surest bet (chest straps).
+        const withHr = all.find((c) => c.hasHrService);
+        if (withHr) return withHr.device;
+        // Otherwise a named device is more likely the watch than a bare MAC.
+        const named = all.find((c) => c.device.name);
+        return named?.device ?? all[0]?.device ?? null;
+      };
+
+      // Give the scan a moment to gather a few adverts, then take the best match.
+      const pick = setTimeout(() => {
+        const device = best();
+        if (device) finish(device);
+      }, 4000);
+      pick.unref?.();
+
+      const timeout = setTimeout(() => finish(best()), 15000);
+      timeout.unref?.();
+
+      ble.addListener('onScanResult', (result) => {
+        const device = result?.device;
+        if (!device?.deviceId) return;
+        const uuids = (result.uuids || []).map((u) => String(u).toLowerCase());
+        const hasHrService = uuids.includes(HEART_RATE_SERVICE_UUID);
+        candidates.set(device.deviceId, { device, hasHrService });
+        // A confirmed HR advertiser is unambiguous — take it immediately.
+        if (hasHrService) finish(device);
       }).then((listener) => {
         scanListener = listener;
-        return ble.requestLEScan({ services: [HEART_RATE_SERVICE_UUID] });
-      }).catch((err) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeout);
-        reject(err);
-      });
+        return ble.requestLEScan({ allowDuplicates: false });
+      }).catch((err) => finish(null, err));
     });
   }
 
