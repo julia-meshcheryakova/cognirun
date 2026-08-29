@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { SYNTHETIC_COHORT, leaderboardFor } from '../src/leaderboard.js';
+import {
+  SYNTHETIC_COHORT,
+  SYNTHETIC_LABEL,
+  YOUR_ROW_NAME,
+  leaderboardFor,
+  leaderboardSection,
+} from '../src/leaderboard.js';
 
 test('includes the current run alongside the whole synthetic cohort', () => {
   const rows = leaderboardFor(200);
@@ -40,4 +46,25 @@ test('does not mutate the synthetic cohort', () => {
   const before = JSON.stringify(SYNTHETIC_COHORT);
   leaderboardFor(150);
   assert.equal(JSON.stringify(SYNTHETIC_COHORT), before);
+});
+
+test('the label appears in the heading and in the table caption', () => {
+  const html = leaderboardSection(180);
+  const labels = html.split(SYNTHETIC_LABEL).length - 1;
+  assert.equal(labels, 2);
+  assert.match(html, /<caption class="synthetic-caption">SYNTHETIC DATA/);
+  assert.match(html, /<section class="card synthetic" data-synthetic="true">/);
+});
+
+test('every cohort row is marked synthetic and only the run row is not', () => {
+  const html = leaderboardSection(180);
+  assert.equal(html.split('data-synthetic="true"').length - 1, SYNTHETIC_COHORT.length + 1);
+  assert.equal(html.split('data-synthetic="false"').length - 1, 1);
+  assert.match(html, new RegExp(`data-synthetic="false"[^\n]*${YOUR_ROW_NAME.replace(/[()]/g, '\\$&')}`));
+});
+
+test('the label survives an empty and a top-ranked run', () => {
+  for (const points of [0, 999]) {
+    assert.ok(leaderboardSection(points).includes(SYNTHETIC_LABEL));
+  }
 });
