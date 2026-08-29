@@ -65,7 +65,7 @@ export function drawSpeedProfile(canvas, samples) {
   const minY = Math.min(...points.map((p) => p.y)) - 0.2;
   const maxY = Math.max(...points.map((p) => p.y)) + 0.2;
   const sx = (x) => padding.left + (x / maxX) * plotW;
-  const sy = (y) => padding.top + ((y - minY) / (maxY - minY)) * plotH;
+  const sy = (y) => padding.top + ((maxY - y) / (maxY - minY)) * plotH;
 
   ctx.strokeStyle = '#334155';
   ctx.fillStyle = '#94a3b8';

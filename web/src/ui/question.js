@@ -1,5 +1,6 @@
 import { ANSWER_WINDOW_SECONDS, scoreForElapsed } from '../scoring.js';
 import { beep } from '../beep.js';
+import { escapeHtml } from '../format.js';
 
 /**
  * Shows a question with a 60 second (real time) answer window and resolves with
@@ -44,7 +45,7 @@ export function askQuestion(slot, { question, kilometer, onAnswered, onClosed })
       <div class="modal">
         <span class="label">Kilometer ${kilometer} · ${points} points</span>
         <p class="prompt">${question.prompt}</p>
-        <p class="hint">Your answer: ${text || '(no answer)'}</p>
+        <p class="hint">Your answer: ${text ? escapeHtml(text) : '(no answer)'}</p>
         <p class="answer"><strong>Answer:</strong> ${question.answer}</p>
         <button class="primary" id="continue">Keep running</button>
       </div>

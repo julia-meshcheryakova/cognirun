@@ -1,3 +1,11 @@
+export function escapeHtml(text) {
+  return text.replace(
+    /[&<>"']/g,
+    (char) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char],
+  );
+}
+
 export function formatKm(meters) {
   return (meters / 1000).toFixed(2);
 }

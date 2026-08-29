@@ -5,6 +5,7 @@ export const RUN_DISTANCE_METERS = 3000;
 export const QUESTION_COUNT = 3;
 
 const EARTH_RADIUS = 6_371_000;
+const MAX_ACCURACY_METERS = 30;
 
 function haversine(a, b) {
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -32,8 +33,10 @@ export function createRun({ demo, multiplier, onUpdate, onKilometer, onFinish, o
   let finished = false;
 
   function handlePosition(point) {
+    if (point.accuracy > MAX_ACCURACY_METERS) return;
     if (last) {
       const meters = haversine(last, point);
+      if (meters <= (point.accuracy ?? 0) / 2) return; // GPS jitter, not movement
       const seconds = (point.t - last.t) / 1000;
       if (seconds > 0) speed = speed ? speed * 0.7 + (meters / seconds) * 0.3 : meters / seconds;
       distance += meters;
@@ -42,9 +45,9 @@ export function createRun({ demo, multiplier, onUpdate, onKilometer, onFinish, o
     samples.push({ ...point, distance, speed, heartRate });
 
     const km = Math.min(QUESTION_COUNT, Math.floor(distance / 1000));
-    if (km > kmReached) {
-      kmReached = km;
-      onKilometer(km);
+    while (kmReached < km) {
+      kmReached += 1;
+      onKilometer(kmReached);
     }
     onUpdate(snapshot());
     maybeFinish();

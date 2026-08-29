@@ -29,6 +29,7 @@ export function createRealSensors({ onPosition, onHeartRate, onError }) {
           onPosition({
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
             t: pos.timestamp,
           }),
         (err) => onError(`GPS error: ${err.message}`),
