@@ -46,6 +46,18 @@ test('questions load from the server and fall back to the bundled library', asyn
   });
   assert.equal(down.source, 'bundled');
   assert.equal(down.library.questions.length, 30);
+
+  const hanging = await loadLibrary({
+    fetchImpl: (url, { signal }) =>
+      new Promise((_, reject) => {
+        const pending = setTimeout(() => {}, 60_000); // a server that never answers
+        signal.addEventListener('abort', () => {
+          clearTimeout(pending);
+          reject(signal.reason);
+        });
+      }),
+  });
+  assert.equal(hanging.source, 'bundled', 'a server that never answers must not block the run');
 });
 
 test('percentiles rise with the score and stay within 1-99%', () => {

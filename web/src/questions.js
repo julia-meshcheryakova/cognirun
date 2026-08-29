@@ -12,9 +12,14 @@ export const CATEGORY_LABELS = {
   math: 'Maths',
 };
 
+/** A question server that does not answer this fast is treated as absent. */
+const LOAD_TIMEOUT_MS = 2000;
+
 export async function loadLibrary({ url = QUESTION_SERVER_URL, fetchImpl = fetch } = {}) {
   try {
-    const response = await fetchImpl(`${url}/questions`);
+    const response = await fetchImpl(`${url}/questions`, {
+      signal: AbortSignal.timeout(LOAD_TIMEOUT_MS),
+    });
     if (!response.ok) throw new Error(`question server returned ${response.status}`);
     const library = await response.json();
     if (!library.questions?.length) throw new Error('question server returned an empty library');

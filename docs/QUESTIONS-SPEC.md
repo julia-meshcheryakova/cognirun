@@ -61,7 +61,8 @@ app (see its README):
 The web app calls `loadLibrary()` at the start of every run; it fetches
 `${QUESTION_SERVER_URL}/questions` (`VITE_QUESTION_SERVER_URL`, default
 `http://localhost:4000`) and **falls back to the bundled copy of the same module**
-if the server is missing, slow to reach or returns an empty library. So demo mode
+if the server is missing, errors, returns an empty library or does not answer within
+2 seconds (a run must never be blocked by the server). So demo mode
 and offline use always work, and the returned `source` (`server` | `bundled`)
 records which library was used.
 

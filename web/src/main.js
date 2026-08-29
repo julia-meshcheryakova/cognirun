@@ -8,6 +8,7 @@ import { askQuestion } from './ui/question.js';
 
 const root = document.querySelector('#app');
 const settings = { demo: true, multiplier: 1 };
+let starting = false;
 
 function showSetup() {
   renderSetup(root, {
@@ -21,10 +22,14 @@ function showSetup() {
 }
 
 async function startRun() {
+  if (starting) return;
+  starting = true;
+
   // One question per category (km1 trivia, km2 logic, km3 maths), from the question
-  // server when it is up and from the bundled library otherwise.
-  const { library } = await loadLibrary();
-  const runQuestions = selectRunQuestions(library);
+  // server when it is up and from the bundled library otherwise. Started, not
+  // awaited, so pairing below still runs inside the Start click.
+  const libraryLoad = loadLibrary();
+  let runQuestions = [];
 
   const answers = [];
   const pendingKilometers = [];
@@ -72,7 +77,6 @@ async function startRun() {
       now: run.answerNow,
       onAnswered(answer) {
         answers.push(answer);
-        run.setAnswering(false);
         if (latest) {
           live.update(latest, {
             points: answers.reduce((sum, a) => sum + a.points, 0),
@@ -82,17 +86,25 @@ async function startRun() {
       },
       onClosed() {
         questionOpen = false;
+        // The run stays frozen until the answer has been read, so reading time
+        // cannot add simulated distance at high multipliers.
+        run.setAnswering(false);
         run.noteAnswered();
         askNext();
       },
     });
   }
 
+  // Web Bluetooth needs the Start click's user activation, so pair before awaiting.
   if (!settings.demo) {
     run.sensors.connectHeartRate().catch((err) => {
       console.warn('heart rate unavailable', err);
     });
   }
+
+  const { library } = await libraryLoad;
+  runQuestions = selectRunQuestions(library);
+  starting = false;
   run.start();
 }
 

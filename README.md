@@ -47,9 +47,11 @@ the run to fast-forward through the full 3 km → 3 questions → results flow. 
 the running part of a 3 km run takes a couple of seconds.
 
 Kilometer detection, the beep and the answer countdown all read one simulated clock,
-never wall-clock time. The multiplier scales running time only: while a question is
-open the clock drops to real-time rate, so the 60 second answer window stays
-answerable (and scores stay correct) at every multiplier.
+never wall-clock time. The run stays frozen from the moment a question opens until
+you dismiss the revealed answer, so reading time never adds simulated distance. The
+multiplier scales running time only: while a question is open the clock drops to
+real-time rate, so the 60 second answer window stays answerable (and scores stay
+correct) at every multiplier.
 
 Turn demo mode off to use the real sensors: browser Geolocation (`watchPosition`) for
 distance/route and Web Bluetooth for a Garmin watch (or any strap) broadcasting the
