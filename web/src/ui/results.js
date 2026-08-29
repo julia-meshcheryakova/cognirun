@@ -1,8 +1,11 @@
 import { drawRoute, drawSpeedProfile } from '../charts.js';
 import { formatClock, formatKm, formatPace } from '../format.js';
+import { categoryBreakdown } from '../percentile.js';
+import { CATEGORY_LABELS } from '../questions.js';
 
 export function renderResults(root, { snapshot, answers, onRestart }) {
   const totalPoints = answers.reduce((sum, a) => sum + a.points, 0);
+  const categories = categoryBreakdown(answers);
   const avgSpeed = snapshot.elapsedSeconds ? snapshot.distance / snapshot.elapsedSeconds : 0;
 
   root.innerHTML = `
@@ -23,16 +26,31 @@ export function renderResults(root, { snapshot, answers, onRestart }) {
       <section class="card">
         <h2>Questions</h2>
         <table class="breakdown">
-          <thead><tr><th>Km</th><th>Time</th><th>Points</th></tr></thead>
+          <thead><tr><th>Km</th><th>Category</th><th>Time</th><th>Points</th></tr></thead>
           <tbody>
             ${answers
               .map(
                 (a) =>
-                  `<tr><td>${a.kilometer}</td><td>${a.elapsedSeconds.toFixed(1)}s</td><td>${a.points}</td></tr>`,
+                  `<tr><td>${a.kilometer}</td><td>${CATEGORY_LABELS[a.category] ?? '—'}</td><td>${a.elapsedSeconds.toFixed(1)}s</td><td>${a.points}</td></tr>`,
               )
               .join('')}
           </tbody>
         </table>
+      </section>
+
+      <section class="card">
+        <h2>Cognitive profile</h2>
+        <p class="hint">Your per-category score against our baseline population.</p>
+        <ul class="percentiles">
+          ${categories
+            .map(
+              (c) =>
+                `<li><strong>${c.label}:</strong> ${
+                  c.answered ? `${c.message} (${c.score} pts)` : 'not asked this run'
+                }</li>`,
+            )
+            .join('')}
+        </ul>
       </section>
 
       <section class="card">

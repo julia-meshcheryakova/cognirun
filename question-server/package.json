@@ -1,0 +1,10 @@
+{
+  "name": "cognirun-question-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Serves the CogniRun questions library over HTTP, decoupled from the web app.",
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}

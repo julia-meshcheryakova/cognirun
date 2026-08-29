@@ -1,20 +1,47 @@
-export const QUESTIONS = [
-  {
-    id: 'q1',
-    prompt:
-      'A man pushes his car to a hotel and tells the owner he is bankrupt. Why?',
-    answer: 'He is playing Monopoly.',
-  },
-  {
-    id: 'q2',
-    prompt:
-      'A woman shoots her husband, holds him under water for five minutes, then they go out for dinner. How?',
-    answer: 'She is a photographer: she shot a photo and developed it.',
-  },
-  {
-    id: 'q3',
-    prompt:
-      'Two guards stand at two doors. One always lies, one always tells the truth. One question, one door to freedom — what do you ask?',
-    answer: '"Which door would the other guard say leads to freedom?" Then pick the other door.',
-  },
-];
+import { QUESTION_SERVER_URL } from './config.js';
+// Bundled fallback: the same module the question server serves, so the app also
+// works offline / in demo with no server running.
+import { QUESTION_LIBRARY } from '../../question-server/questions.js';
+
+/** Asked in this order, one per kilometer of the 3 km run. */
+export const RUN_CATEGORIES = ['trivia', 'logic', 'math'];
+
+export const CATEGORY_LABELS = {
+  trivia: 'Trivia',
+  logic: 'Logic',
+  math: 'Maths',
+};
+
+/** A question server that does not answer this fast is treated as absent. */
+const LOAD_TIMEOUT_MS = 2000;
+
+export async function loadLibrary({ url = QUESTION_SERVER_URL, fetchImpl = fetch } = {}) {
+  try {
+    const response = await fetchImpl(`${url}/questions`, {
+      signal: AbortSignal.timeout(LOAD_TIMEOUT_MS),
+    });
+    if (!response.ok) throw new Error(`question server returned ${response.status}`);
+    const library = await response.json();
+    const missing = RUN_CATEGORIES.filter(
+      (category) => !library.questions?.some((q) => q.category === category),
+    );
+    if (missing.length) throw new Error(`question server is missing ${missing.join(', ')}`);
+    return { library, source: 'server' };
+  } catch (err) {
+    console.warn('using bundled questions:', err.message);
+    return { library: QUESTION_LIBRARY, source: 'bundled' };
+  }
+}
+
+/**
+ * The single place run selection happens: the first question of each category,
+ * in RUN_CATEGORIES order, so a run is reproducible. Swap the `[0]` for a random
+ * pick to randomize.
+ */
+export function selectRunQuestions(library) {
+  return RUN_CATEGORIES.map((category) => {
+    const question = library.questions.find((q) => q.category === category);
+    if (!question) throw new Error(`no questions for category ${category}`);
+    return question;
+  });
+}

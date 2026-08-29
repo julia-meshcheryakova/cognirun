@@ -1,6 +1,7 @@
 import { ANSWER_WINDOW_SECONDS, scoreForElapsed } from '../scoring.js';
 import { beep } from '../beep.js';
 import { escapeHtml } from '../format.js';
+import { CATEGORY_LABELS } from '../questions.js';
 
 /**
  * Shows a question with a 60 second answer window measured on the run's
@@ -8,13 +9,22 @@ import { escapeHtml } from '../format.js';
  */
 export function askQuestion(slot, { question, kilometer, now, onAnswered, onClosed }) {
   const startedAt = now();
+  const category = CATEGORY_LABELS[question.category] ?? question.category;
   beep();
+
+  const input = question.options
+    ? `<div class="choices">
+        ${question.options
+          .map((option) => `<button class="choice" data-option="${escapeHtml(option)}">${escapeHtml(option)}</button>`)
+          .join('')}
+      </div>`
+    : `<textarea id="answer" rows="3" placeholder="Your answer..."></textarea>`;
 
   slot.innerHTML = `
     <div class="modal">
-      <span class="label">Kilometer ${kilometer}</span>
-      <p class="prompt">${question.prompt}</p>
-      <textarea id="answer" rows="3" placeholder="Your answer..."></textarea>
+      <span class="label">Kilometer ${kilometer} · ${category}</span>
+      <p class="prompt">${escapeHtml(question.prompt)}</p>
+      ${input}
       <div class="row">
         <span class="hint"><span id="countdown">${ANSWER_WINDOW_SECONDS}</span>s left ·
           <span id="potential">100</span> pts</span>
@@ -25,7 +35,8 @@ export function askQuestion(slot, { question, kilometer, now, onAnswered, onClos
 
   const countdown = slot.querySelector('#countdown');
   const potential = slot.querySelector('#potential');
-  slot.querySelector('#answer').focus();
+  let chosen = '';
+  slot.querySelector('#answer')?.focus();
 
   const timer = setInterval(() => {
     const elapsed = (now() - startedAt) / 1000;
@@ -38,15 +49,26 @@ export function askQuestion(slot, { question, kilometer, now, onAnswered, onClos
     clearInterval(timer);
     const elapsedSeconds = (now() - startedAt) / 1000;
     const points = scoreForElapsed(elapsedSeconds);
-    const text = slot.querySelector('#answer').value.trim();
-    onAnswered({ questionId: question.id, kilometer, elapsedSeconds, points, text });
+    const text = (slot.querySelector('#answer')?.value ?? chosen).trim();
+    // Free-text answers are not graded; multiple choice is.
+    const correct = question.options ? text === question.answer : null;
+    onAnswered({
+      questionId: question.id,
+      category: question.category,
+      kilometer,
+      elapsedSeconds,
+      points,
+      text,
+      correct,
+    });
 
+    const verdict = correct === null ? '' : correct ? ' · correct' : ' · wrong';
     slot.innerHTML = `
       <div class="modal">
-        <span class="label">Kilometer ${kilometer} · ${points} points</span>
-        <p class="prompt">${question.prompt}</p>
+        <span class="label">Kilometer ${kilometer} · ${category} · ${points} points${verdict}</span>
+        <p class="prompt">${escapeHtml(question.prompt)}</p>
         <p class="hint">Your answer: ${text ? escapeHtml(text) : '(no answer)'}</p>
-        <p class="answer"><strong>Answer:</strong> ${question.answer}</p>
+        <p class="answer"><strong>Answer:</strong> ${escapeHtml(question.answer)}</p>
         <button class="primary" id="continue">Keep running</button>
       </div>
     `;
@@ -56,5 +78,11 @@ export function askQuestion(slot, { question, kilometer, now, onAnswered, onClos
     });
   }
 
+  slot.querySelectorAll('.choice').forEach((button) => {
+    button.addEventListener('click', () => {
+      chosen = button.dataset.option;
+      submit();
+    });
+  });
   slot.querySelector('#submit').addEventListener('click', submit);
 }
