@@ -1,5 +1,6 @@
 import { ANSWER_WINDOW_SECONDS, scoreForElapsed } from '../scoring.js';
 import { beep } from '../beep.js';
+import { cancelSpeech, speak } from '../tts.js';
 import { escapeHtml } from '../format.js';
 import { CATEGORY_LABELS } from '../questions.js';
 
@@ -10,7 +11,8 @@ import { CATEGORY_LABELS } from '../questions.js';
 export function askQuestion(slot, { question, kilometer, now, onAnswered, onClosed }) {
   const startedAt = now();
   const category = CATEGORY_LABELS[question.category] ?? question.category;
-  beep();
+  // Beep first as the milestone cue, then read the question over the screen text.
+  const voiceTimer = setTimeout(() => speak(question.prompt), beep());
 
   const input = question.options
     ? `<div class="choices">
@@ -47,6 +49,8 @@ export function askQuestion(slot, { question, kilometer, now, onAnswered, onClos
 
   function submit() {
     clearInterval(timer);
+    clearTimeout(voiceTimer);
+    cancelSpeech();
     const elapsedSeconds = (now() - startedAt) / 1000;
     const points = scoreForElapsed(elapsedSeconds);
     const text = (slot.querySelector('#answer')?.value ?? chosen).trim();
