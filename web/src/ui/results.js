@@ -3,6 +3,12 @@ import { formatClock, formatKm, formatPace } from '../format.js';
 import { categoryBreakdown } from '../percentile.js';
 import { CATEGORY_LABELS } from '../questions.js';
 
+function verdictLabel(answer) {
+  if (answer.correct === null || answer.correct === undefined) return '—';
+  const how = answer.spoken ? 'spoken' : 'typed';
+  return `${answer.correct ? 'correct' : 'wrong'} · ${how}`;
+}
+
 export function renderResults(root, { snapshot, answers, onRestart }) {
   const totalPoints = answers.reduce((sum, a) => sum + a.points, 0);
   const categories = categoryBreakdown(answers);
@@ -26,14 +32,12 @@ export function renderResults(root, { snapshot, answers, onRestart }) {
       <section class="card">
         <h2>Questions</h2>
         <table class="breakdown">
-          <thead><tr><th>Km</th><th>Category</th><th>Time</th><th>Result</th><th>Points</th></tr></thead>
+          <thead><tr><th>Km</th><th>Category</th><th>Time</th><th>Answer</th><th>Points</th></tr></thead>
           <tbody>
             ${answers
               .map(
                 (a) =>
-                  `<tr><td>${a.kilometer}</td><td>${CATEGORY_LABELS[a.category] ?? '—'}</td><td>${a.elapsedSeconds.toFixed(1)}s</td><td>${
-                    a.correct === null || a.correct === undefined ? 'ungraded' : a.correct ? 'correct' : 'wrong'
-                  }</td><td>${a.points}</td></tr>`,
+                  `<tr><td>${a.kilometer}</td><td>${CATEGORY_LABELS[a.category] ?? '—'}</td><td>${a.elapsedSeconds.toFixed(1)}s</td><td>${verdictLabel(a)}</td><td>${a.points}</td></tr>`,
               )
               .join('')}
           </tbody>
