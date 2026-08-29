@@ -72,6 +72,11 @@ async function startRun() {
     onError(message) {
       alert(message);
     },
+    // Real runs only: connection state of the BLE heart rate device. Never fatal —
+    // the run keeps going with whatever the last reading was.
+    onHeartRateStatus(status) {
+      live.setHeartRateStatus(status);
+    },
   });
 
   function askNext() {
@@ -104,6 +109,7 @@ async function startRun() {
   }
 
   // Web Bluetooth needs the Start click's user activation, so pair before awaiting.
+  // Demo runs never touch Bluetooth: their heart rate comes from the simulator.
   if (!settings.demo) {
     run.sensors.connectHeartRate().catch((err) => {
       console.warn('heart rate unavailable', err);

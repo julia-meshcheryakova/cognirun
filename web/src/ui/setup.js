@@ -27,7 +27,10 @@ export function renderSetup(root, { settings, onChange, onStart }) {
           <input type="checkbox" id="voice-toggle" ${settings.voice ? 'checked' : ''} />
         </label>
         <p class="hint" id="hr-status" ${settings.demo ? 'hidden' : ''}>Real mode uses GPS and asks you to
-          pick a Bluetooth heart rate monitor (Garmin watch broadcasting HR, or any BLE strap) when the run starts.</p>
+          pick a Bluetooth heart rate monitor when the run starts. On a Garmin watch start
+          <em>Broadcast heart rate</em> first (Menu → Sensors &amp; accessories → Wrist heart rate →
+          Broadcast heart rate), then press Start here and choose the watch in the browser's
+          Bluetooth dialog. Any BLE chest strap works too.</p>
       </section>
 
       <button class="primary" id="start">Start run</button>

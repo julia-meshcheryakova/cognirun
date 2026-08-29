@@ -1,22 +1,22 @@
-const HEART_RATE_SERVICE = 0x180d;
-const HEART_RATE_MEASUREMENT = 0x2a37;
-
-function parseHeartRate(value) {
-  const flags = value.getUint8(0);
-  return flags & 0x01 ? value.getUint16(1, true) : value.getUint8(1);
-}
+import { createHeartRateMonitor } from './heartRate.js';
 
 /**
- * Real sensors: Geolocation for the route, Web Bluetooth (standard BLE Heart
- * Rate Service) for a watch broadcasting heart rate, e.g. a Garmin.
+ * Real sensors: Geolocation for the route, and the standard BLE Heart Rate
+ * Profile (see heartRate.js) for a watch broadcasting heart rate, e.g. a Garmin.
  */
-export function createRealSensors({ onPosition, onHeartRate, onError }) {
+export function createRealSensors({
+  onPosition,
+  onHeartRate,
+  onError,
+  onHeartRateStatus,
+  bluetooth,
+}) {
   let watchId = null;
-  let hrCharacteristic = null;
-
-  function handleHrEvent(event) {
-    onHeartRate(parseHeartRate(event.target.value));
-  }
+  const heartRate = createHeartRateMonitor({
+    onHeartRate,
+    onStatus: onHeartRateStatus,
+    ...(bluetooth ? { bluetooth } : {}),
+  });
 
   return {
     start() {
@@ -40,25 +40,10 @@ export function createRealSensors({ onPosition, onHeartRate, onError }) {
     stop() {
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
       watchId = null;
-      if (hrCharacteristic) {
-        hrCharacteristic.removeEventListener('characteristicvaluechanged', handleHrEvent);
-        hrCharacteristic.stopNotifications().catch(() => {});
-        hrCharacteristic = null;
-      }
+      heartRate.stop();
     },
 
     /** Must be called from a user gesture (Web Bluetooth requirement). */
-    async connectHeartRate() {
-      if (!navigator.bluetooth) throw new Error('Web Bluetooth is not available.');
-      const device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [HEART_RATE_SERVICE] }],
-      });
-      const server = await device.gatt.connect();
-      const service = await server.getPrimaryService(HEART_RATE_SERVICE);
-      hrCharacteristic = await service.getCharacteristic(HEART_RATE_MEASUREMENT);
-      hrCharacteristic.addEventListener('characteristicvaluechanged', handleHrEvent);
-      await hrCharacteristic.startNotifications();
-      return device.name || 'Heart rate monitor';
-    },
+    connectHeartRate: heartRate.connect,
   };
 }
