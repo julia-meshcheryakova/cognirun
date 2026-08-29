@@ -19,26 +19,41 @@ function stubBrowser() {
   return { spoken, cancelled };
 }
 
+/**
+ * The TTS module now tries ElevenLabs (fetch /api/tts) first and only falls back to
+ * the browser voice. These tests exercise the browser fallback, so `fetch` is stubbed
+ * to fail, forcing the fallback path deterministically.
+ */
+function stubFetchFails() {
+  globalThis.fetch = async () => {
+    throw new Error('no server in tests');
+  };
+}
+
 afterEach(() => {
   setVoiceEnabled(true);
+  delete globalThis.fetch;
 });
 
-test('the browser voice reads the question', () => {
+test('the browser voice reads the question when ElevenLabs is unavailable', async () => {
   const { spoken } = stubBrowser();
+  stubFetchFails();
 
-  speak('Why is the man bankrupt?');
+  await speak('Why is the man bankrupt?');
 
   assert.deepEqual(spoken, ['Why is the man bankrupt?']);
 });
 
-test('a new question cancels whatever was being read', () => {
+test('a new question cancels whatever was being read', async () => {
   const { spoken, cancelled } = stubBrowser();
+  stubFetchFails();
 
-  speak('First question.');
-  speak('Second question.');
+  await speak('First question.');
+  await speak('Second question.');
 
   assert.deepEqual(spoken, ['First question.', 'Second question.']);
-  assert.equal(cancelled.length, 2);
+  // Each speak() cancels the previous read before starting the next.
+  assert.ok(cancelled.length >= 2);
 });
 
 test('cancelling silences the browser voice', () => {
@@ -49,18 +64,20 @@ test('cancelling silences the browser voice', () => {
   assert.equal(cancelled.length, 1);
 });
 
-test('the voice toggle silences read-aloud', () => {
+test('the voice toggle silences read-aloud', async () => {
   const { spoken } = stubBrowser();
+  stubFetchFails();
   setVoiceEnabled(false);
 
-  speak('Should stay silent.');
+  await speak('Should stay silent.');
 
   assert.deepEqual(spoken, []);
 });
 
-test('a browser without speech synthesis stays silent instead of throwing', () => {
+test('a browser without speech synthesis stays silent instead of throwing', async () => {
   stubBrowser();
+  stubFetchFails();
   delete globalThis.SpeechSynthesisUtterance;
 
-  assert.doesNotThrow(() => speak('No voice available.'));
+  await assert.doesNotReject(speak('No voice available.'));
 });

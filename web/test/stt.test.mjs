@@ -127,12 +127,14 @@ test('with no recogniser listenOnce reports it instead of throwing', async () =>
   });
 });
 
-test('reading a question and grading a spoken answer makes no network calls', async () => {
+test('grading a spoken answer makes no network calls beyond the optional TTS probe', async () => {
   const state = stubSessionRecognition();
   const requests = [];
+  // TTS now tries ElevenLabs first and falls back to the browser voice; the STT and
+  // judging path must still stay fully offline.
   globalThis.fetch = async (url) => {
     requests.push(url);
-    throw new Error('the demo must not call any external service');
+    throw new Error('no server in tests');
   };
   globalThis.speechSynthesis = { speak() {}, cancel() {} };
   globalThis.SpeechSynthesisUtterance = class {
@@ -141,14 +143,19 @@ test('reading a question and grading a spoken answer makes no network calls', as
     }
   };
 
-  speak('What is the capital of Japan?');
+  await speak('What is the capital of Japan?');
   const session = await startListening();
   state.instance.speak('Tokyo');
+  const transcript = await session.stop();
   const verdict = await judgeAnswer({
     question: { prompt: 'What is the capital of Japan?', answer: 'Tokyo' },
-    text: await session.stop(),
+    text: transcript,
   });
 
   assert.equal(verdict.correct, true);
-  assert.deepEqual(requests, []);
+  // The browser recogniser path itself makes no fetches; only TTS probed the server.
+  assert.deepEqual(
+    requests.filter((url) => !String(url).includes('/api/tts')),
+    [],
+  );
 });

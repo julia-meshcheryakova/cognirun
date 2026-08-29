@@ -33,6 +33,8 @@ jobs:
         env:
           # Vite inlines this into the bundle at build time (web/src/keys.js).
           VITE_GROQ_API_KEY: ${{ secrets.VITE_GROQ_API_KEY }}
+          # Reaches the question-server at runtime; the client only calls the server.
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
         run: |
           npm run build:web
           npx cap sync android

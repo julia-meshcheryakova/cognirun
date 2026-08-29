@@ -9,12 +9,96 @@ const RECOGNITION_FLUSH_MS = 1500;
 /** Bounds `stop()`, so a recogniser that never ends cannot freeze the question. */
 export const STT_TIMEOUT_MS = 5000;
 
+import { QUESTION_SERVER_URL } from './config.js';
+
 const DEFAULT_LANG = 'en-US';
+
+/** Bounds the ElevenLabs recording; a runner tap stops it sooner. */
+const ELEVENLABS_MAX_MS = 12000;
 
 const deadline = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function recognitionCtor() {
   return globalThis.SpeechRecognition || globalThis.webkitSpeechRecognition;
+}
+
+function mediaRecorderAvailable() {
+  return Boolean(globalThis.navigator?.mediaDevices?.getUserMedia && globalThis.MediaRecorder);
+}
+
+let elevenLabsChecked = false;
+let elevenLabsReady = false;
+
+/**
+ * Asks the question server whether ElevenLabs is configured. Cached: the answer
+ * does not change during a run, and a failed probe just leaves the browser path.
+ */
+async function probeElevenLabs() {
+  if (elevenLabsChecked) return elevenLabsReady;
+  elevenLabsChecked = true;
+  try {
+    const response = await fetch(`${QUESTION_SERVER_URL}/api/config`);
+    if (response.ok) elevenLabsReady = Boolean((await response.json()).elevenLabs);
+  } catch {
+    elevenLabsReady = false;
+  }
+  return elevenLabsReady;
+}
+
+/**
+ * Records with MediaRecorder and transcribes via /api/stt. Works in the Android
+ * WebView where SpeechRecognition is silent. Returns a session with the same
+ * `stop()`/`cancel()` shape the browser path exposes.
+ */
+async function startElevenLabsSession() {
+  const stream = await globalThis.navigator.mediaDevices.getUserMedia({ audio: true });
+  const supported = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find((type) =>
+    globalThis.MediaRecorder.isTypeSupported?.(type),
+  );
+  const recorder = new globalThis.MediaRecorder(stream, supported ? { mimeType: supported } : undefined);
+  const chunks = [];
+  recorder.ondataavailable = (event) => {
+    if (event.data?.size) chunks.push(event.data);
+  };
+  let maxTimer = setTimeout(() => {
+    if (recorder.state === 'recording') recorder.stop();
+  }, ELEVENLABS_MAX_MS);
+  const stopped = new Promise((resolve) => {
+    recorder.onstop = () => resolve(new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }));
+  });
+  recorder.start(180);
+
+  const cleanup = () => {
+    clearTimeout(maxTimer);
+    stream.getTracks().forEach((track) => track.stop());
+  };
+
+  return {
+    mode: 'elevenlabs',
+    async stop() {
+      if (recorder.state === 'recording') recorder.stop();
+      const blob = await stopped;
+      cleanup();
+      if (!blob.size) return '';
+      const filename = blob.type.includes('mp4') ? 'answer.m4a' : 'answer.webm';
+      const response = await fetch(`${QUESTION_SERVER_URL}/api/stt`, {
+        method: 'POST',
+        headers: { 'content-type': blob.type || 'application/octet-stream', 'x-audio-filename': filename },
+        body: blob,
+      });
+      if (!response.ok) throw new Error(`stt ${response.status}`);
+      const result = await response.json();
+      return (result.text || '').trim();
+    },
+    cancel() {
+      try {
+        if (recorder.state === 'recording') recorder.stop();
+      } catch (err) {
+        console.warn('stopping recorder failed', err);
+      }
+      cleanup();
+    },
+  };
 }
 
 /**
@@ -23,7 +107,9 @@ function recognitionCtor() {
  * - `none`: no microphone input at all, the text box is the only way to answer.
  */
 export function sttMode() {
-  return recognitionCtor() ? 'browser' : 'none';
+  if (recognitionCtor()) return 'browser';
+  if (mediaRecorderAvailable()) return 'recorder';
+  return 'none';
 }
 
 export function sttAvailable() {
@@ -134,14 +220,26 @@ function startRecognitionSession({ lang = DEFAULT_LANG, continuous = true, onInt
  * transcribed answer, `cancel()` drops the recording without transcribing.
  */
 export async function startListening({ mode = sttMode(), lang, onInterim } = {}) {
-  if (mode !== 'browser') throw new Error('no speech input available');
-  const session = startRecognitionSession({ lang, continuous: true, onInterim });
-  session.recognition.start();
-  return {
-    mode: session.mode,
-    stop: () => session.drain(),
-    cancel: () => session.abort(),
-  };
+  // Prefer ElevenLabs when the server has it: works in the WebView where the
+  // browser recogniser is silent. Only try it if a recorder is actually present.
+  if (mediaRecorderAvailable() && (await probeElevenLabs())) {
+    try {
+      return await startElevenLabsSession();
+    } catch (err) {
+      console.warn('ElevenLabs mic unavailable, falling back', err);
+    }
+  }
+  if (mode === 'browser' && recognitionCtor()) {
+    const session = startRecognitionSession({ lang, continuous: true, onInterim });
+    session.recognition.start();
+    return {
+      mode: session.mode,
+      stop: () => session.drain(),
+      cancel: () => session.abort(),
+    };
+  }
+  if (mediaRecorderAvailable()) return startElevenLabsSession();
+  throw new Error('no speech input available');
 }
 
 let listening = null;
