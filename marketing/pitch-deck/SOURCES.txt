@@ -1,0 +1,20 @@
+CogniRun — 2-Minute Pitch sources
+
+Research
+- Oppezzo, M. & Schwartz, D. L. (2014). Give Your Ideas Some Legs: The Positive Effect of Walking on Creative Thinking. https://aaalab.stanford.edu/assets/papers/2014/Give_your_ideas_some_legs.pdf
+- Wohlwend, M. et al. (2017). Exercise Intensity-Dependent Effects on Cognitive Control Function during and after Acute Treadmill Running in Young Healthy Adults. https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2017.00406/full
+- Garrett, S. et al. (2024). A systematic review and Bayesian meta-analysis provide evidence for an effect of acute physical activity on cognition in young adults. https://www.nature.com/articles/s44271-024-00124-2
+- Swain, D. P. & Leutholtz, B. C. (1997). Heart rate reserve is equivalent to %VO2 reserve, not to %VO2max. https://pubmed.ncbi.nlm.nih.gov/9139182/
+
+Commercial analogues
+- Strava Business Sponsored Challenges. https://business.strava.com/challenges
+- Prolific participant-recruitment platform. https://www.prolific.com/
+
+Assets
+- cognirun-hero.png: generated for this deck using the built-in image-generation tool. Prompt: premium editorial sports-technology photograph; an anonymous adult recreational female runner on a near-black athletics track at blue hour; runner in the right third; negative space on the left; acid-lime rim light and violet haze; no text, logos, medical imagery, glowing brain, or watermark.
+- live-demo.gif: eight-second excerpt generated from marketing/cognirun-ad/out/cognirun-pitch-16x9.mp4. It combines user-supplied runner/Garmin footage with an illustrative CogniRun interface. The product clip labels synthetic telemetry.
+
+Claim guardrails
+- “Cognitive heart-rate threshold” is described as provisional and task-specific, not as a validated physiological threshold.
+- The Stanford result is one divergent-thinking experiment, not IQ, a universal effect, or a CogniRun result.
+- Go-to-market items are product hypotheses and roadmap concepts, not current revenue, customers, or study enrollment.
