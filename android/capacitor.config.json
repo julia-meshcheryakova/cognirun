@@ -1,0 +1,8 @@
+{
+  "appId": "com.cognirun.app",
+  "appName": "CogniRun",
+  "webDir": "../web/dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
