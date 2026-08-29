@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Serves the CogniRun questions library over HTTP, decoupled from the web app.",
   "scripts": {
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "test": "node --test test/"
   }
 }
