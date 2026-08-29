@@ -43,6 +43,13 @@ export function createClock({ multiplier = 1, onSecond = () => {}, onAnswerSecon
     },
     now: () => simMs,
     answerNow: () => answerMs,
+    answering: () => answering,
+    /** Emit one more simulated second right now (demo scrubbing fast-forward). */
+    advanceSecond() {
+      simMs = emittedMs + 1000;
+      emittedMs = simMs;
+      onSecond(simMs);
+    },
     setMultiplier(value) {
       runningRate = value;
     },

@@ -6,8 +6,37 @@ import { scoreForElapsed } from '../src/scoring.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Demo run whose questions open and are answered synchronously, as the UI does. */
+function instantRun() {
+  const kilometers = [];
+  let finish = null;
+  const run = createRun({
+    demo: true,
+    multiplier: 1000,
+    onUpdate() {},
+    onKilometer(km) {
+      kilometers.push(km);
+      run.setAnswering(true);
+    },
+    onFinish(snapshot) {
+      finish = snapshot;
+    },
+    onError() {},
+  });
+
+  return {
+    run,
+    kilometers,
+    finish: () => finish,
+    answer() {
+      run.setAnswering(false);
+      run.noteAnswered();
+    },
+  };
+}
+
 /** Plays a full demo run, answering every question after `answerDelayMs`. */
-function playRun({ multiplier, answerDelayMs }) {
+function playRun({ multiplier, answerDelayMs, scrubToMeters }) {
   return new Promise((resolve, reject) => {
     const kilometers = [];
     const answers = [];
@@ -39,6 +68,7 @@ function playRun({ multiplier, answerDelayMs }) {
 
     const giveUp = setTimeout(() => reject(new Error('run did not finish in time')), 20_000);
     run.start();
+    if (scrubToMeters) run.scrubTo(scrubToMeters);
   });
 }
 
@@ -69,6 +99,55 @@ test('pace varies and slows after each kilometer', async () => {
   assert.ok(Math.min(...paces) < 6.2, `fastest pace ${Math.min(...paces)}`);
   assert.ok(Math.max(...paces) > 7, `slowest pace ${Math.max(...paces)}`);
   assert.ok(snapshot.samples.at(-1).heartRate > snapshot.samples[10].heartRate);
+});
+
+test('scrubbing stops at each kilometer it crosses and still finishes at 3 km', () => {
+  const { run, kilometers, finish, answer } = instantRun();
+
+  run.scrubTo(2500); // past km 1 and km 2 in one drag
+  assert.deepEqual(kilometers, [1]);
+  assert.ok(run.snapshot().distance < 1100, `stopped late: ${run.snapshot().distance}`);
+
+  answer();
+  run.scrubTo(2500);
+  assert.deepEqual(kilometers, [1, 2]);
+
+  answer();
+  run.scrubTo(RUN_DISTANCE_METERS);
+  assert.deepEqual(kilometers, [1, 2, 3]);
+
+  answer();
+  assert.ok(finish(), 'run should finish once 3 km and 3 questions are done');
+  assert.ok(finish().distance >= RUN_DISTANCE_METERS);
+  assert.ok(finish().elapsedSeconds > 1000, `clock did not follow: ${finish().elapsedSeconds}`);
+});
+
+test('scrubbing short of a kilometer keeps the run going from there', async () => {
+  const { kilometers, answers, snapshot } = await playRun({
+    multiplier: 1000,
+    answerDelayMs: 50,
+    scrubToMeters: 900,
+  });
+
+  assert.deepEqual(kilometers, [1, 2, 3]);
+  assert.equal(answers.length, QUESTION_COUNT);
+  assert.ok(snapshot.distance >= RUN_DISTANCE_METERS, `distance ${snapshot.distance}`);
+  assert.ok(snapshot.samples.some((s) => s.distance >= 900), 'scrubbed distance is in samples');
+});
+
+test('a real (non-demo) run ignores scrubbing', () => {
+  const run = createRun({
+    demo: false,
+    multiplier: 1,
+    onUpdate() {},
+    onKilometer() {},
+    onFinish() {},
+    onError() {},
+  });
+
+  run.scrubTo(2000);
+  assert.equal(run.snapshot().distance, 0);
+  run.stop();
 });
 
 test('scoring decays linearly from 100 to 50 within the answer window', () => {

@@ -234,3 +234,24 @@ textarea {
   flex-direction: column;
   gap: 6px;
 }
+
+.scrubber {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  background: var(--card);
+  border-radius: 12px;
+  padding: 8px 12px 12px;
+}
+
+.scrubber input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.scrubber-ticks {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 12px;
+}

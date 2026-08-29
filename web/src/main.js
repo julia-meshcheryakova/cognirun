@@ -47,6 +47,9 @@ async function startRun() {
       settings.multiplier = value;
       run.setMultiplier(value);
     },
+    onScrub(meters) {
+      run.scrubTo(meters);
+    },
   });
 
   const run = createRun({
@@ -110,6 +113,7 @@ async function startRun() {
   const { library } = await libraryLoad;
   runQuestions = selectRunQuestions(library);
   starting = false;
+  live.enableScrub();
   run.start();
 }
 
