@@ -25,6 +25,8 @@ function haversine(a, b) {
 export function createRun({ demo, multiplier, onUpdate, onKilometer, onFinish, onError }) {
   const samples = [];
   let last = null;
+  let firstT = null;
+  let lastT = null;
   let distance = 0;
   let speed = 0;
   let heartRate = 0;
@@ -33,6 +35,10 @@ export function createRun({ demo, multiplier, onUpdate, onKilometer, onFinish, o
   let finished = false;
 
   function handlePosition(point) {
+    // The clock runs on every fix, even ones rejected below for distance.
+    if (firstT === null) firstT = point.t;
+    lastT = point.t;
+
     if (point.accuracy > MAX_ACCURACY_METERS) return;
     if (last) {
       const meters = haversine(last, point);
@@ -71,7 +77,7 @@ export function createRun({ demo, multiplier, onUpdate, onKilometer, onFinish, o
       distance,
       speed,
       heartRate,
-      elapsedSeconds: samples.length ? (samples[samples.length - 1].t - samples[0].t) / 1000 : 0,
+      elapsedSeconds: firstT === null ? 0 : (lastT - firstT) / 1000,
       samples,
     };
   }
