@@ -1,5 +1,5 @@
 import { drawRoute, drawSpeedProfile } from '../charts.js';
-import { formatClock, formatKm, formatPace } from '../format.js';
+import { formatClock, formatKm, formatPace, formatSpeed } from '../format.js';
 import { categoryBreakdown } from '../percentile.js';
 import { CATEGORY_LABELS } from '../questions.js';
 
@@ -26,7 +26,7 @@ export function renderResults(root, { snapshot, answers, onRestart }) {
       <div class="grid">
         <div class="metric"><span class="label">Distance</span><strong>${formatKm(snapshot.distance)}</strong><span class="unit">km</span></div>
         <div class="metric"><span class="label">Time</span><strong>${formatClock(snapshot.elapsedSeconds)}</strong></div>
-        <div class="metric"><span class="label">Avg pace</span><strong>${formatPace(avgSpeed)}</strong></div>
+        <div class="metric"><span class="label">Avg pace</span><strong>${formatPace(avgSpeed)}</strong><span class="unit">${formatSpeed(avgSpeed)}</span></div>
       </div>
 
       <section class="card">

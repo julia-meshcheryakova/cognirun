@@ -133,24 +133,31 @@ button {
   font-size: 13px;
 }
 
-.hr-source {
+.hr-source,
+.gps-source {
   display: block;
   margin-top: 4px;
   color: var(--muted);
   font-size: 12px;
 }
 
-.hr-source[data-state='connected'] {
+.hr-source[data-state='connected'],
+.gps-source[data-state='live'] {
   color: #4ade80;
 }
 
-.hr-source[data-state='reconnecting'] {
+.hr-source[data-state='reconnecting'],
+.gps-source[data-state='weak'],
+.gps-source[data-state='no-signal'] {
   color: #facc15;
 }
 
 .hr-source[data-state='failed'],
 .hr-source[data-state='lost'],
-.hr-source[data-state='unavailable'] {
+.hr-source[data-state='unavailable'],
+.gps-source[data-state='denied'],
+.gps-source[data-state='failed'],
+.gps-source[data-state='unavailable'] {
   color: #f87171;
 }
 

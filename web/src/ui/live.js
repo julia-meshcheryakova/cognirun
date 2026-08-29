@@ -1,5 +1,6 @@
+import { drawRoute } from '../charts.js';
 import { MULTIPLIERS } from '../config.js';
-import { formatClock, formatKm, formatPace } from '../format.js';
+import { formatClock, formatKm, formatPace, formatSpeed } from '../format.js';
 import { hrZone } from '../hrZones.js';
 import { QUESTION_COUNT, RUN_DISTANCE_METERS } from '../run.js';
 
@@ -22,9 +23,11 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
 
       <div class="grid">
         <div class="metric"><span class="label">Distance</span><strong id="distance">0.00</strong><span class="unit">km of ${RUN_DISTANCE_METERS / 1000}</span></div>
-        <div class="metric"><span class="label">Pace</span><strong id="pace">--:--</strong></div>
+        <div class="metric"><span class="label">Pace</span><strong id="pace">--:--</strong><span class="unit" id="speed">0.0 km/h</span></div>
         <div class="metric"><span class="label">Time</span><strong id="time">0:00</strong></div>
       </div>
+
+      <span class="gps-source" id="gps-status" ${settings.demo ? 'hidden' : ''}>Waiting for GPS…</span>
 
       <div class="progress"><div class="progress-fill" id="progress"></div></div>
 
@@ -50,6 +53,11 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
           ${[0, 1, 2, 3].map((km) => `<span>${km} km</span>`).join('')}
         </div>
       </div>
+
+      <section class="card">
+        <h2>Route</h2>
+        <canvas id="live-route" class="chart"></canvas>
+      </section>
     </main>
   `;
 
@@ -87,6 +95,13 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
       source.textContent = message;
       source.dataset.state = state;
     },
+    /** Real runs only: whether GPS is feeding the run, and how well. */
+    setGpsStatus({ state, message }) {
+      const status = el('gps-status');
+      status.hidden = false;
+      status.textContent = message;
+      status.dataset.state = state;
+    },
     /** The scrubber can only fast-forward once the run (and its questions) are ready. */
     enableScrub() {
       scrub.disabled = false;
@@ -100,7 +115,9 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
       el('distance').textContent = formatKm(snapshot.distance);
       el('pace').textContent = formatPace(snapshot.speed);
       el('time').textContent = formatClock(snapshot.elapsedSeconds);
+      el('speed').textContent = formatSpeed(snapshot.speed);
       el('progress').style.width = `${Math.min(100, (snapshot.distance / RUN_DISTANCE_METERS) * 100)}%`;
+      drawRoute(el('live-route'), snapshot.samples);
       if (settings.demo && !dragging) {
         scrub.value = snapshot.distance;
         el('scrub-value').textContent = `${formatKm(snapshot.distance)} km`;

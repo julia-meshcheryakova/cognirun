@@ -77,6 +77,10 @@ async function startRun() {
     onHeartRateStatus(status) {
       live.setHeartRateStatus(status);
     },
+    // Real runs only: GPS is what makes distance move, so its state is always visible.
+    onGpsStatus(status) {
+      live.setGpsStatus(status);
+    },
   });
 
   function askNext() {
@@ -108,9 +112,10 @@ async function startRun() {
     });
   }
 
-  // Web Bluetooth needs the Start click's user activation, so pair before awaiting.
-  // Demo runs never touch Bluetooth: their heart rate comes from the simulator.
+  // Geolocation and Web Bluetooth prompt against the Start click's user activation,
+  // so ask before awaiting. Demo runs use the simulator instead of either.
   if (!settings.demo) {
+    run.sensors.requestPermission();
     run.sensors.connectHeartRate().catch((err) => {
       console.warn('heart rate unavailable', err);
     });
