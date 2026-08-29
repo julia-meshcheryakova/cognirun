@@ -1,4 +1,6 @@
 .tmp-build/
+.tmp-build-v2/
 CogniRun-2-Minute-Pitch/
+CogniRun-2-Minute-Pitch-v2/
 assets/live-demo-still.png
 *.inspect.ndjson

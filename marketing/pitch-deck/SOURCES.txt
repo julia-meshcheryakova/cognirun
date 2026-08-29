@@ -18,3 +18,9 @@ Claim guardrails
 - “Cognitive heart-rate threshold” is described as provisional and task-specific, not as a validated physiological threshold.
 - The Stanford result is one divergent-thinking experiment, not IQ, a universal effect, or a CogniRun result.
 - Go-to-market items are product hypotheses and roadmap concepts, not current revenue, customers, or study enrollment.
+
+V2 deck assets
+- assets/v2/runner-live.gif: one eight-second excerpt from the user-supplied runner/Garmin footage; used once on the live-demo slide.
+- assets/v2/app-live-screen.png: crop of the real CogniRun mobile live-session screen supplied by the user.
+- assets/v2/app-result-screen.png: crop of the real CogniRun Android prototype result screen supplied by the user; labelled illustrative in the deck.
+- CogniRun-2-Minute-Pitch-v2.pptx: four-slide, approximately two-minute presentation with an embedded animated runner clip and speaker notes.
