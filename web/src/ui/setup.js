@@ -21,6 +21,11 @@ export function renderSetup(root, { settings, onChange, onStart }) {
             ).join('')}
           </span>
         </label>
+        <label class="row">
+          <span>Read questions aloud <small>ElevenLabs voice when a key is configured,
+            otherwise your browser's voice</small></span>
+          <input type="checkbox" id="voice-toggle" ${settings.voice ? 'checked' : ''} />
+        </label>
         <p class="hint" id="hr-status" ${settings.demo ? 'hidden' : ''}>Real mode uses GPS and asks you to
           pick a Bluetooth heart rate monitor (Garmin watch broadcasting HR, or any BLE strap) when the run starts.</p>
       </section>
@@ -31,6 +36,8 @@ export function renderSetup(root, { settings, onChange, onStart }) {
 
   const demoToggle = root.querySelector('#demo-toggle');
   demoToggle.addEventListener('change', () => onChange({ demo: demoToggle.checked }));
+  const voiceToggle = root.querySelector('#voice-toggle');
+  voiceToggle.addEventListener('change', () => onChange({ voice: voiceToggle.checked }));
   root.querySelectorAll('[data-mult]').forEach((btn) =>
     btn.addEventListener('click', () => onChange({ multiplier: Number(btn.dataset.mult) })),
   );

@@ -5,9 +5,11 @@ import { renderLive } from './ui/live.js';
 import { renderResults } from './ui/results.js';
 import { renderSetup } from './ui/setup.js';
 import { askQuestion } from './ui/question.js';
+import { primeAudio } from './beep.js';
+import { setVoiceEnabled } from './tts.js';
 
 const root = document.querySelector('#app');
-const settings = { demo: true, multiplier: 1 };
+const settings = { demo: true, multiplier: 1, voice: true };
 let starting = false;
 
 function showSetup() {
@@ -24,6 +26,9 @@ function showSetup() {
 async function startRun() {
   if (starting) return;
   starting = true;
+
+  primeAudio(); // still inside the click gesture that started the run
+  setVoiceEnabled(settings.voice);
 
   // One question per category (km1 trivia, km2 logic, km3 maths), from the question
   // server when it is up and from the bundled library otherwise. Started, not
