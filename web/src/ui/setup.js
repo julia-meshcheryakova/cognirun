@@ -27,8 +27,8 @@ export function renderSetup(root, { settings, onChange, onStart }) {
           <input type="checkbox" id="voice-toggle" ${settings.voice ? 'checked' : ''} />
         </label>
         <p class="hint">Answer by speaking: the microphone opens as soon as the question starts
-          being read aloud. Your answer is transcribed and graded (exact match first, then an
-          LLM judge) — typing still works if the mic is unavailable.</p>
+          being read aloud. Your browser transcribes what you said and it is graded against the
+          expected answer — typing still works if the mic is unavailable.</p>
         <p class="hint" id="hr-status" ${settings.demo ? 'hidden' : ''}>Real mode uses GPS and asks you to
           pick a Bluetooth heart rate monitor when the run starts. On a Garmin watch start
           <em>Broadcast heart rate</em> first (Menu → Sensors &amp; accessories → Wrist heart rate →
