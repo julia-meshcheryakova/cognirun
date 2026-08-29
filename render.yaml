@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: cognirun-app
+    runtime: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: ELEVENLABS_VOICE_ID
+        value: JBFqnCBsd6RMkjVDRZzb
+      - key: ELEVENLABS_TTS_MODEL
+        value: eleven_flash_v2_5
+      - key: ELEVENLABS_STT_MODEL
+        value: scribe_v2
+      # ELEVENLABS_API_KEY set as a secret in the Render dashboard, not committed.

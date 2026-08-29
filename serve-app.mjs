@@ -53,4 +53,5 @@ const server = createServer(async (req, res) => {
   try { const data = await readFile(f); res.writeHead(200, { 'content-type': MIME[extname(f)] || 'application/octet-stream', ...CORS }); res.end(data); }
   catch { res.writeHead(404); res.end('not found'); }
 });
-server.listen(4173, '0.0.0.0', () => console.log('CogniRun on http://0.0.0.0:4173'));
+const PORT = process.env.PORT || 4173;
+server.listen(PORT, '0.0.0.0', () => console.log(`CogniRun on http://0.0.0.0:${PORT}`));
