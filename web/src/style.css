@@ -11,6 +11,11 @@
   box-sizing: border-box;
 }
 
+/* Layout rules below set `display`, which would otherwise beat [hidden]. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -227,6 +232,46 @@ textarea {
   color: var(--muted);
   font-weight: 500;
   font-size: 13px;
+}
+
+.breakdown tr.you td {
+  font-weight: 600;
+}
+
+.breakdown tr.synthetic-row td {
+  color: var(--muted);
+}
+
+.tag {
+  vertical-align: middle;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.tag.synthetic {
+  background: #422006;
+  color: #fbbf24;
+}
+
+.card.synthetic {
+  border: 1px solid #b45309;
+}
+
+.synthetic-caption {
+  position: sticky;
+  top: 0;
+  caption-side: top;
+  text-align: left;
+  background: #422006;
+  color: #fbbf24;
+  border-radius: 6px;
+  padding: 4px 6px;
+  margin-bottom: 4px;
+  font-size: 12px;
 }
 
 .chart {

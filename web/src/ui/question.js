@@ -6,8 +6,8 @@ import { CATEGORY_LABELS } from '../questions.js';
 import { judgeAnswer } from '../judge.js';
 import { STT_TIMEOUT_MS, sttMode, startListening } from '../stt.js';
 
-/** Slack on top of the STT module's own bound, after which the answer counts as lost. */
-const TRANSCRIBE_BOUND_MS = STT_TIMEOUT_MS + 2000;
+/** After this the transcription counts as lost and the runner can retry or type. */
+const TRANSCRIBE_BOUND_MS = STT_TIMEOUT_MS;
 
 const MIC_LABELS = {
   waiting: '🎤 Mic opens as the question is read',
@@ -23,8 +23,8 @@ const MIC_LABELS = {
  * simulated clock, and reports the elapsed time and the points earned.
  *
  * Answering by voice: the mic becomes available the moment the question starts
- * being read aloud; the recorded audio is transcribed (speech-to-text) and the
- * transcript is graded by `judgeAnswer` (exact match, then LLM judge).
+ * being read aloud; the browser transcribes what was said and the transcript is
+ * graded locally by `judgeAnswer` (normalized exact match).
  */
 export function askQuestion(
   slot,

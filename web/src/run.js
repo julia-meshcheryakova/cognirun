@@ -55,8 +55,6 @@ export function createRun({
     if (firstT === null) firstT = point.t;
     lastT = point.t;
 
-    lastFixMs = Date.now();
-
     if (point.accuracy > MAX_ACCURACY_METERS) {
       onGpsStatus?.({
         state: 'weak',
@@ -64,6 +62,7 @@ export function createRun({
       });
       return;
     }
+    lastFixMs = Date.now(); // only usable fixes keep the shown pace alive
     if (last) {
       const meters = haversine(last, point);
       if (meters <= (point.accuracy ?? 0) / 2) return; // GPS jitter, not movement

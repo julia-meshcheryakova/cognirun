@@ -1,5 +1,6 @@
 import { drawRoute, drawSpeedProfile } from '../charts.js';
 import { formatClock, formatKm, formatPace, formatSpeed } from '../format.js';
+import { leaderboardSection } from '../leaderboard.js';
 import { categoryBreakdown } from '../percentile.js';
 import { CATEGORY_LABELS } from '../questions.js';
 
@@ -58,6 +59,8 @@ export function renderResults(root, { snapshot, answers, onRestart }) {
             .join('')}
         </ul>
       </section>
+
+      ${leaderboardSection(totalPoints)}
 
       <section class="card">
         <h2>Route</h2>

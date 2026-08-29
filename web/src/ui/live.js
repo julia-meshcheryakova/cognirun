@@ -4,15 +4,16 @@ import { formatClock, formatKm, formatPace, formatSpeed } from '../format.js';
 import { hrZone } from '../hrZones.js';
 import { QUESTION_COUNT, RUN_DISTANCE_METERS } from '../run.js';
 
-export function renderLive(root, { settings, onMultiplier, onScrub }) {
-  root.innerHTML = `
+/** Markup of the run screen; exported so its demo-only parts can be tested. */
+export function liveMarkup({ settings }) {
+  return `
     <main class="screen live">
       <div class="metric hero">
         <span class="label">Heart rate</span>
         <strong id="hr">--</strong>
         <span class="unit">bpm</span>
         <span class="zone" id="zone">--</span>
-        <span class="hr-source" id="hr-source" ${settings.demo ? '' : 'hidden'}>Simulated</span>
+        <span class="hr-source" id="hr-source" ${settings.demo ? '' : 'hidden'}>${settings.demo ? 'Simulated' : ''}</span>
       </div>
 
       <div class="metric hero points">
@@ -31,7 +32,9 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
 
       <div class="progress"><div class="progress-fill" id="progress"></div></div>
 
-      <div class="row demo-controls" ${settings.demo ? '' : 'hidden'}>
+      ${
+        settings.demo
+          ? `<div class="row demo-controls">
         <span>Demo speed</span>
         <span class="multipliers">
           ${MULTIPLIERS.map(
@@ -39,11 +42,15 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
               `<button class="chip ${m === settings.multiplier ? 'active' : ''}" data-mult="${m}">x${m}</button>`,
           ).join('')}
         </span>
-      </div>
+      </div>`
+          : ''
+      }
 
       <div id="question-slot"></div>
 
-      <div class="scrubber" ${settings.demo ? '' : 'hidden'}>
+      ${
+        settings.demo
+          ? `<div class="scrubber">
         <div class="row">
           <span>Demo timeline</span>
           <strong id="scrub-value">0.00 km</strong>
@@ -52,7 +59,9 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
         <div class="scrubber-ticks">
           ${[0, 1, 2, 3].map((km) => `<span>${km} km</span>`).join('')}
         </div>
-      </div>
+      </div>`
+          : ''
+      }
 
       <section class="card">
         <h2>Route</h2>
@@ -60,6 +69,10 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
       </section>
     </main>
   `;
+}
+
+export function renderLive(root, { settings, onMultiplier, onScrub }) {
+  root.innerHTML = liveMarkup({ settings });
 
   root.querySelectorAll('[data-mult]').forEach((btn) =>
     btn.addEventListener('click', () => {
@@ -75,7 +88,7 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
   // (a run cannot rewind), so the thumb just snaps back to the live distance.
   const scrub = el('scrub');
   let dragging = false;
-  if (settings.demo) {
+  if (scrub) {
     scrub.addEventListener('input', () => {
       dragging = true;
       el('scrub-value').textContent = `${formatKm(scrub.value)} km`;
@@ -104,7 +117,7 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
     },
     /** The scrubber can only fast-forward once the run (and its questions) are ready. */
     enableScrub() {
-      scrub.disabled = false;
+      if (scrub) scrub.disabled = false;
     },
     update(snapshot, { points, answered }) {
       const zone = hrZone(snapshot.heartRate || 0);
@@ -118,7 +131,7 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
       el('speed').textContent = formatSpeed(snapshot.speed);
       el('progress').style.width = `${Math.min(100, (snapshot.distance / RUN_DISTANCE_METERS) * 100)}%`;
       drawRoute(el('live-route'), snapshot.samples);
-      if (settings.demo && !dragging) {
+      if (scrub && !dragging) {
         scrub.value = snapshot.distance;
         el('scrub-value').textContent = `${formatKm(snapshot.distance)} km`;
       }
