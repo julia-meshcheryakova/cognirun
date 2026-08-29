@@ -36,6 +36,7 @@ export function createClock({ multiplier = 1, onSecond = () => {}, onAnswerSecon
   return {
     start() {
       if (!timer) timer = setInterval(tick, REAL_TICK_MS);
+      timer.unref?.(); // don't hold a Node test process open
     },
     stop() {
       clearInterval(timer);
