@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test, { afterEach } from 'node:test';
 
-import { startListening, sttMode } from '../src/stt.js';
+import { listenOnce, startListening, sttMode } from '../src/stt.js';
+import { speak } from '../src/tts.js';
 import { judgeAnswer } from '../src/judge.js';
 
 /**
@@ -40,6 +41,9 @@ function stubSessionRecognition({ key = 'SpeechRecognition' } = {}) {
 afterEach(() => {
   delete globalThis.SpeechRecognition;
   delete globalThis.webkitSpeechRecognition;
+  delete globalThis.speechSynthesis;
+  delete globalThis.SpeechSynthesisUtterance;
+  delete globalThis.fetch;
 });
 
 test('a spoken answer is transcribed by the browser recogniser', async () => {
@@ -112,4 +116,39 @@ test('a recogniser that ends on its own still returns what it heard', async () =
   state.instance.emit('end', {}); // silence ended the session before the stop tap
 
   assert.equal(await session.stop(), 'Tokyo');
+});
+
+test('with no recogniser listenOnce reports it instead of throwing', async () => {
+  assert.deepEqual(await listenOnce(), {
+    supported: false,
+    transcript: '',
+    confidence: 0,
+    reason: 'unsupported',
+  });
+});
+
+test('reading a question and grading a spoken answer makes no network calls', async () => {
+  const state = stubSessionRecognition();
+  const requests = [];
+  globalThis.fetch = async (url) => {
+    requests.push(url);
+    throw new Error('the demo must not call any external service');
+  };
+  globalThis.speechSynthesis = { speak() {}, cancel() {} };
+  globalThis.SpeechSynthesisUtterance = class {
+    constructor(text) {
+      this.text = text;
+    }
+  };
+
+  speak('What is the capital of Japan?');
+  const session = await startListening();
+  state.instance.speak('Tokyo');
+  const verdict = await judgeAnswer({
+    question: { prompt: 'What is the capital of Japan?', answer: 'Tokyo' },
+    text: await session.stop(),
+  });
+
+  assert.equal(verdict.correct, true);
+  assert.deepEqual(requests, []);
 });
