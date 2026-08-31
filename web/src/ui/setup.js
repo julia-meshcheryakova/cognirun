@@ -62,19 +62,9 @@ export function setupMarkup({ settings, devices = IDLE_DEVICES }) {
       <p class="lede">Run ${course.label}. After every ${course.segment} m a lateral-thinking question pops up —
         answer fast for more points.</p>
 
-      <section class="card">
-        <div class="row">
-          <span>Mode</span>
-          <span class="modes">
-            <button class="chip ${settings.demo ? 'active' : ''}" data-mode="demo">Demo</button>
-            <button class="chip ${settings.demo ? '' : 'active'}" data-mode="live">Live run</button>
-          </span>
-        </div>
-        <p class="hint">${
-          settings.demo
-            ? 'Demo simulates the run — connecting a watch or GPS below is optional, and you can speed it up.'
-            : 'Live run: connect your watch and GPS below. Both are optional, and nothing is asked for again once the run starts.'
-        }</p>
+      <section class="card" id="devices-card">
+        ${watchPanel(devices.heartRate)}
+        ${gpsPanel(devices.gps)}
       </section>
 
       <section class="card" id="course-card" ${settings.demo ? 'hidden' : ''}>
@@ -92,13 +82,27 @@ export function setupMarkup({ settings, devices = IDLE_DEVICES }) {
         <p class="hint">60 m is a walkable test course — a question every 20 m so you can finish a full run on foot.</p>
       </section>
 
-      <section class="card" id="devices-card">
-        ${watchPanel(devices.heartRate)}
-        ${gpsPanel(devices.gps)}
+      <section class="card">
+        <label class="row">
+          <span>Read questions aloud <small>your browser's built-in voice</small></span>
+          <input type="checkbox" id="voice-toggle" ${settings.voice ? 'checked' : ''} />
+        </label>
+        <p class="hint">Answer by speaking: the microphone opens once the question finishes
+          being read aloud. Your browser transcribes what you said and it is graded against the
+          expected answer — typing still works if the mic is unavailable.</p>
       </section>
 
-      <section class="card" id="speed-card" ${settings.demo ? '' : 'hidden'}>
-        <div class="row">
+      <section class="card">
+        <label class="row">
+          <span>Demo mode <small>simulate the run instead of using your watch/GPS</small></span>
+          <input type="checkbox" id="demo-toggle" ${settings.demo ? 'checked' : ''} />
+        </label>
+        <p class="hint">${
+          settings.demo
+            ? 'Demo simulates the run — connecting a watch or GPS above is optional, and you can speed it up.'
+            : 'Live run: connect your watch and GPS above. Both are optional, and nothing is asked for again once the run starts.'
+        }</p>
+        <div class="row" id="speed-row" ${settings.demo ? '' : 'hidden'}>
           <span>Demo speed</span>
           <span class="multipliers">
             ${MULTIPLIERS.map(
@@ -107,16 +111,6 @@ export function setupMarkup({ settings, devices = IDLE_DEVICES }) {
             ).join('')}
           </span>
         </div>
-      </section>
-
-      <section class="card">
-        <label class="row">
-          <span>Read questions aloud <small>your browser's built-in voice</small></span>
-          <input type="checkbox" id="voice-toggle" ${settings.voice ? 'checked' : ''} />
-        </label>
-        <p class="hint">Answer by speaking: the microphone opens as soon as the question starts
-          being read aloud. Your browser transcribes what you said and it is graded against the
-          expected answer — typing still works if the mic is unavailable.</p>
       </section>
 
       <button class="primary" id="start">Start run</button>
@@ -130,9 +124,6 @@ export function renderSetup(
 ) {
   root.innerHTML = setupMarkup({ settings, devices });
 
-  root.querySelectorAll('[data-mode]').forEach((btn) =>
-    btn.addEventListener('click', () => onChange({ demo: btn.dataset.mode === 'demo' })),
-  );
   root.querySelectorAll('[data-mult]').forEach((btn) =>
     btn.addEventListener('click', () => onChange({ multiplier: Number(btn.dataset.mult) })),
   );
@@ -141,6 +132,8 @@ export function renderSetup(
   );
   const voiceToggle = root.querySelector('#voice-toggle');
   voiceToggle.addEventListener('change', () => onChange({ voice: voiceToggle.checked }));
+  const demoToggle = root.querySelector('#demo-toggle');
+  demoToggle.addEventListener('change', () => onChange({ demo: demoToggle.checked }));
   root.querySelector('#start').addEventListener('click', onStart);
 
   const card = root.querySelector('#devices-card');

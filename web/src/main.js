@@ -23,6 +23,7 @@ const devices = createDevices({
 });
 
 function showSetup() {
+  document.querySelector('#download-apk')?.removeAttribute('hidden');
   setup = renderSetup(root, {
     settings,
     devices: devices.state(),
@@ -45,6 +46,7 @@ async function startRun() {
   starting = true;
 
   setup = null;
+  document.querySelector('#download-apk')?.setAttribute('hidden', '');
   primeAudio(); // still inside the click gesture that started the run
   setVoiceEnabled(settings.voice);
 

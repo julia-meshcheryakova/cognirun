@@ -8,20 +8,19 @@ import { liveMarkup } from '../src/ui/live.js';
 const demo = { demo: true, multiplier: 10, voice: true };
 const live = { demo: false, multiplier: 10, voice: true };
 
-test('the setup screen offers both modes', () => {
+test('the setup screen offers a demo toggle and course chips', () => {
   const markup = setupMarkup({ settings: demo });
-  assert.match(markup, /data-mode="demo"/);
-  assert.match(markup, /data-mode="live"/);
+  assert.match(markup, /id="demo-toggle" checked/);
   assert.match(markup, /id="start"/);
 });
 
 test('the setup screen shows the speed selector in demo mode only', () => {
   const markup = setupMarkup({ settings: demo });
   MULTIPLIERS.forEach((m) => assert.match(markup, new RegExp(`data-mult="${m}"`)));
-  assert.match(markup, /id="speed-card"(?! hidden)/);
+  assert.match(markup, /id="speed-row"(?! hidden)/);
 
   const liveSetup = setupMarkup({ settings: live });
-  assert.match(liveSetup, /id="speed-card" hidden/);
+  assert.match(liveSetup, /id="speed-row" hidden/);
 });
 
 test('the selected multiplier is the active chip', () => {
