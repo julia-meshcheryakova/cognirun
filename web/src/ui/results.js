@@ -1,4 +1,5 @@
 import { drawRoute, drawSpeedProfile } from '../charts.js';
+import { escapeHtml } from '../format.js';
 import { formatClock, formatKm, formatPace, formatSpeed } from '../format.js';
 import { leaderboardSection } from '../leaderboard.js';
 import { categoryBreakdown } from '../percentile.js';
@@ -33,12 +34,12 @@ export function renderResults(root, { snapshot, answers, onRestart }) {
       <section class="card">
         <h2>Questions</h2>
         <table class="breakdown">
-          <thead><tr><th>Km</th><th>Category</th><th>Time</th><th>Answer</th><th>Points</th></tr></thead>
+          <thead><tr><th>Km</th><th>Category</th><th>Time</th><th>You said</th><th>Answer</th><th>Points</th></tr></thead>
           <tbody>
             ${answers
               .map(
                 (a) =>
-                  `<tr><td>${a.kilometer}</td><td>${CATEGORY_LABELS[a.category] ?? '—'}</td><td>${a.elapsedSeconds.toFixed(1)}s</td><td>${verdictLabel(a)}</td><td>${a.points}</td></tr>`,
+                  `<tr><td>${a.kilometer}</td><td>${CATEGORY_LABELS[a.category] ?? '—'}</td><td>${a.elapsedSeconds.toFixed(1)}s</td><td>${a.text ? escapeHtml(a.text) : '(no answer)'}</td><td>${verdictLabel(a)}</td><td>${a.points}</td></tr>`,
               )
               .join('')}
           </tbody>
