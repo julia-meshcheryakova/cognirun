@@ -82,26 +82,18 @@ export function setupMarkup({ settings, devices = IDLE_DEVICES }) {
         <p class="hint">60 m is a walkable test course — a question every 20 m so you can finish a full run on foot.</p>
       </section>
 
-      <section class="card">
+      <section class="card compact">
         <label class="row">
-          <span>Read questions aloud <small>your browser's built-in voice</small></span>
+          <span>Read questions aloud</span>
           <input type="checkbox" id="voice-toggle" ${settings.voice ? 'checked' : ''} />
         </label>
-        <p class="hint">Answer by speaking: the microphone opens once the question finishes
-          being read aloud. Your browser transcribes what you said and it is graded against the
-          expected answer — typing still works if the mic is unavailable.</p>
       </section>
 
-      <section class="card">
+      <section class="card compact">
         <label class="row">
-          <span>Demo mode <small>simulate the run instead of using your watch/GPS</small></span>
+          <span>Demo mode</span>
           <input type="checkbox" id="demo-toggle" ${settings.demo ? 'checked' : ''} />
         </label>
-        <p class="hint">${
-          settings.demo
-            ? 'Demo simulates the run — connecting a watch or GPS above is optional, and you can speed it up.'
-            : 'Live run: connect your watch and GPS above. Both are optional, and nothing is asked for again once the run starts.'
-        }</p>
         <div class="row" id="speed-row" ${settings.demo ? '' : 'hidden'}>
           <span>Demo speed</span>
           <span class="multipliers">

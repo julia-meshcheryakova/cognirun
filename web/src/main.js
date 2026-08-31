@@ -10,7 +10,7 @@ import { setVoiceEnabled } from './tts.js';
 import { createDevices } from './sensors/devices.js';
 
 const root = document.querySelector('#app');
-const settings = { demo: true, multiplier: 1, voice: true, course: '3k' };
+const settings = { demo: false, multiplier: 1, voice: true, course: '3k' };
 let starting = false;
 let setup = null;
 

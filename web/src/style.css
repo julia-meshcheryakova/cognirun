@@ -56,6 +56,14 @@ h2 {
   padding: 16px;
 }
 
+.card.compact {
+  padding: 8px 16px;
+}
+
+.card.compact .row {
+  padding: 4px 0;
+}
+
 .row {
   display: flex;
   align-items: center;
