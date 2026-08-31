@@ -85,6 +85,7 @@ export function askQuestion(
   let micState = 'waiting';
   let session = null;
   let submitted = false;
+  let lastInterim = '';
   // While a recording is being transcribed the deadline must not submit an empty
   // answer: the runner did speak in time, only the transcript is still on its way.
   let transcribing = false;
@@ -110,6 +111,7 @@ export function askQuestion(
         mode,
         onInterim(text) {
           if (!text) return;
+          lastInterim = text;
           interim.hidden = false;
           interim.textContent = `“${text}”`;
         },
@@ -161,6 +163,13 @@ export function askQuestion(
     }
     if (!transcript) {
       transcribing = false;
+      // The mic was stopped before the recognizer finalized anything, but it may
+      // still have heard something — the last interim guess beats an empty retry
+      // that silently reopens the mic and reads as "my submit did nothing".
+      if (lastInterim.trim()) {
+        submit({ text: lastInterim, elapsedSeconds, spoken: true });
+        return;
+      }
       // No transcript from an auto-opened mic: retry listening once, keep typing open.
       setMicState('unavailable');
       await autoStartMic();

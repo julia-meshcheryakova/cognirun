@@ -8,13 +8,19 @@ import { cancelListening, listenOnce } from '../src/stt.js';
 
 /**
  * Minimal stand-in for the browser SpeechRecognition API: `onStart` drives the
- * session by emitting results and ending it, the way Chrome does.
+ * session by emitting results and ending it, the way Chrome does. `results` is
+ * kept cumulative across calls (like the real API): `emit(alt, isFinal, index)`
+ * revises/creates the slot at `index` (default: next slot), and every event
+ * reports the full array so far with `resultIndex` pointing at the first index
+ * that is new/revised in this event — the same shape `transcriptCollector` has
+ * to cope with when a browser fires the same index again with a longer partial.
  */
 function stubRecognition({ onStart } = {}) {
   const instances = [];
   globalThis.SpeechRecognition = class {
     constructor() {
       this.aborted = false;
+      this.results = [];
       instances.push(this);
     }
     start() {
@@ -24,11 +30,9 @@ function stubRecognition({ onStart } = {}) {
       this.aborted = true;
       this.onend?.();
     }
-    emit(alternatives, isFinal = true, resultIndex = 0) {
-      this.onresult?.({
-        resultIndex,
-        results: [Object.assign([alternatives], { isFinal })],
-      });
+    emit(alternatives, isFinal = true, index = this.results.length) {
+      this.results[index] = Object.assign([alternatives], { isFinal });
+      this.onresult?.({ resultIndex: index, results: this.results.slice() });
     }
   };
   return instances;
@@ -80,17 +84,37 @@ test('a whitespace-only transcript counts as silence, not an answer', async () =
   assert.equal(result.reason, 'no-speech');
 });
 
-test('segments before resultIndex are not re-appended', async () => {
+test('a later result at the same index replaces the earlier revision instead of appending', async () => {
   stubRecognition({
     onStart: (r) => {
       r.emit({ transcript: 'Pacific', confidence: 0.7 });
-      // A second event repeats the results array but moves resultIndex past it.
-      r.emit({ transcript: 'Pacific', confidence: 0.7 }, true, 1);
+      // Same index (0) revised with a longer transcript — real recognisers do
+      // this while still deciding on one utterance; it replaces, it never joins.
+      r.emit({ transcript: 'Pacific Ocean', confidence: 0.9 }, true, 0);
       r.onend();
     },
   });
 
-  assert.equal((await listenOnce()).transcript, 'Pacific');
+  assert.equal((await listenOnce()).transcript, 'Pacific Ocean');
+});
+
+test('a result index firing repeatedly with a growing partial does not duplicate words', async () => {
+  // Real device transcript bug: saying "no I don't think so" produced
+  // "no no I no I don't no I don't think so" — Android Chrome's continuous
+  // mode revised the same result index several times, each revision longer
+  // than the last, and every one of those was wrongly treated as a new final
+  // segment to append instead of a revision of the same one to replace.
+  stubRecognition({
+    onStart: (r) => {
+      r.emit({ transcript: 'no', confidence: 0.5 }, true, 0);
+      r.emit({ transcript: 'no I', confidence: 0.5 }, true, 0);
+      r.emit({ transcript: "no I don't", confidence: 0.5 }, true, 0);
+      r.emit({ transcript: "no I don't think so", confidence: 0.9 }, true, 0);
+      r.onend();
+    },
+  });
+
+  assert.equal((await listenOnce()).transcript, "no I don't think so");
 });
 
 test('a re-fired identical final segment at the same resultIndex is not duplicated', async () => {
@@ -99,9 +123,9 @@ test('a re-fired identical final segment at the same resultIndex is not duplicat
   // "I am sinking I am sinking no I am sinking no" from one spoken phrase.
   stubRecognition({
     onStart: (r) => {
-      r.emit({ transcript: 'I am sinking', confidence: 0.6 });
-      r.emit({ transcript: 'I am sinking', confidence: 0.6 });
-      r.emit({ transcript: 'no', confidence: 0.6 });
+      r.emit({ transcript: 'I am sinking', confidence: 0.6 }, true, 0);
+      r.emit({ transcript: 'I am sinking', confidence: 0.6 }, true, 0);
+      r.emit({ transcript: 'no', confidence: 0.6 }, true, 1);
       r.onend();
     },
   });
@@ -109,19 +133,20 @@ test('a re-fired identical final segment at the same resultIndex is not duplicat
   assert.equal((await listenOnce()).transcript, 'I am sinking no');
 });
 
-test('a re-fired segment that only differs in casing/punctuation is still deduplicated', async () => {
-  // Real device transcript: "au au it's a u" — same word repeated with a
-  // capitalization/punctuation change, from re-fired recognition segments.
+test('a re-fired segment that only differs in casing/punctuation keeps the latest revision', async () => {
+  // Real device transcript: "au au it's a u" — same index re-fired with a
+  // capitalization/punctuation change; the later revision replaces the earlier
+  // one instead of both being appended.
   stubRecognition({
     onStart: (r) => {
-      r.emit({ transcript: 'Au', confidence: 0.6 });
-      r.emit({ transcript: 'au', confidence: 0.6 });
-      r.emit({ transcript: "it's a u", confidence: 0.6 });
+      r.emit({ transcript: 'Au', confidence: 0.6 }, true, 0);
+      r.emit({ transcript: 'au', confidence: 0.6 }, true, 0);
+      r.emit({ transcript: "it's a u", confidence: 0.6 }, true, 1);
       r.onend();
     },
   });
 
-  assert.equal((await listenOnce()).transcript, "Au it's a u");
+  assert.equal((await listenOnce()).transcript, "au it's a u");
 });
 
 test('an empty alternatives list is skipped instead of throwing', async () => {

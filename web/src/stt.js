@@ -128,51 +128,40 @@ function on(recognition, type, handler) {
 }
 
 /**
- * Collects what the recogniser heard. `event.results` is cumulative, so only the
- * segments from `resultIndex` on are new; the confidence reported is the one of
- * the last final segment. Interim segments go to `onInterim` and stay out of the
- * transcript, so a partial guess never becomes the answer.
+ * Collects what the recogniser heard. `event.results` is a growing array where
+ * each index can be revised multiple times before it settles — Android Chrome's
+ * continuous mode has been seen to fire the same index repeatedly with a longer
+ * partial each time ("no" -> "no I" -> "no I don't" -> "no I don't think so"),
+ * all flagged `isFinal`. Treating every one of those as a new segment to append
+ * produced transcripts like "no no I no I don't no I don't think so" and, worse,
+ * could drop the actual final revision entirely if the mic was stopped between
+ * an early partial-final and the last one. Tracking final text per result index
+ * (replacing, not appending, on every revision of the same index) fixes both.
  */
-/** Normalizes a segment for duplicate detection: case/punctuation/whitespace do
- * not matter for "is this the same thing repeated", only the words do. */
-function normalizeSegment(text) {
-  return text
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function transcriptCollector({ onInterim } = {}) {
-  let transcript = '';
+  const finals = new Map(); // result index -> final transcript
   let confidence = 0;
-  let lastSegment = '';
   return {
     collect(event) {
-      Array.from(event.results ?? [])
-        .slice(event.resultIndex ?? 0)
-        .forEach((result) => {
-          const alternative = result[0];
-          if (!alternative) return;
-          if (result.isFinal === false) {
-            onInterim?.(alternative.transcript ?? '');
-            return;
-          }
-          const segment = (alternative.transcript ?? '').trim();
-          if (!segment) return;
-          // Android Chrome's continuous mode has been seen to silently restart
-          // recognition mid-utterance and re-fire the same final segment again,
-          // sometimes with different casing/punctuation ("Au" then "au"). Compare
-          // normalized text against only the segment just heard, not the whole
-          // transcript, so a genuine repeated word later in the answer still counts.
-          if (normalizeSegment(segment) === lastSegment) return;
-          lastSegment = normalizeSegment(segment);
-          transcript += `${transcript ? ' ' : ''}${segment}`;
-          confidence = alternative.confidence ?? 0;
-        });
+      Array.from(event.results ?? []).forEach((result, index) => {
+        const alternative = result[0];
+        if (!alternative) return;
+        if (result.isFinal === false) {
+          if (index >= (event.resultIndex ?? 0)) onInterim?.(alternative.transcript ?? '');
+          return;
+        }
+        const segment = (alternative.transcript ?? '').trim();
+        if (!segment) return;
+        finals.set(index, segment);
+        confidence = alternative.confidence ?? 0;
+      });
     },
     get transcript() {
-      return transcript.trim();
+      return Array.from(finals.keys())
+        .sort((a, b) => a - b)
+        .map((index) => finals.get(index))
+        .join(' ')
+        .trim();
     },
     get confidence() {
       return confidence;
