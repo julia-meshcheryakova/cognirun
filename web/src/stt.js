@@ -142,7 +142,13 @@ function transcriptCollector({ onInterim } = {}) {
             onInterim?.(alternative.transcript ?? '');
             return;
           }
-          transcript += `${transcript ? ' ' : ''}${alternative.transcript ?? ''}`;
+          const segment = (alternative.transcript ?? '').trim();
+          if (!segment) return;
+          // Android Chrome's continuous mode can re-fire the same final segment
+          // more than once; a repeat of the segment just heard is noise, not a
+          // second thing said, so it is dropped instead of appended again.
+          if (segment === transcript.slice(-segment.length)) return;
+          transcript += `${transcript ? ' ' : ''}${segment}`;
           confidence = alternative.confidence ?? 0;
         });
     },

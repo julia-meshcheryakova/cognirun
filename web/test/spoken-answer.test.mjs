@@ -93,6 +93,22 @@ test('segments before resultIndex are not re-appended', async () => {
   assert.equal((await listenOnce()).transcript, 'Pacific');
 });
 
+test('a re-fired identical final segment at the same resultIndex is not duplicated', async () => {
+  // Android Chrome's continuous mode has been seen to re-fire the same final
+  // segment repeatedly while the mic stays open, producing transcripts like
+  // "I am sinking I am sinking no I am sinking no" from one spoken phrase.
+  stubRecognition({
+    onStart: (r) => {
+      r.emit({ transcript: 'I am sinking', confidence: 0.6 });
+      r.emit({ transcript: 'I am sinking', confidence: 0.6 });
+      r.emit({ transcript: 'no', confidence: 0.6 });
+      r.onend();
+    },
+  });
+
+  assert.equal((await listenOnce()).transcript, 'I am sinking no');
+});
+
 test('an empty alternatives list is skipped instead of throwing', async () => {
   stubRecognition({
     onStart: (r) => {

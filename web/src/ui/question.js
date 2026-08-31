@@ -201,6 +201,7 @@ export function askQuestion(
       elapsedSeconds: elapsed,
       points,
       text: answerText,
+      correctAnswer: question.answer,
       spoken,
       correct: verdict.correct,
       verdict,
