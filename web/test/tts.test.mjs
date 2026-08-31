@@ -8,7 +8,10 @@ function stubBrowser() {
   const spoken = [];
   const cancelled = [];
   globalThis.speechSynthesis = {
-    speak: (u) => spoken.push(u.text),
+    speak: (u) => {
+      spoken.push(u.text);
+      u.onend?.();
+    },
     cancel: () => cancelled.push(true),
   };
   globalThis.SpeechSynthesisUtterance = class {

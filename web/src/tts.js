@@ -25,10 +25,15 @@ export function cancelSpeech() {
 
 function speakBrowser(text) {
   const synth = globalThis.speechSynthesis;
-  if (!synth || !globalThis.SpeechSynthesisUtterance) return;
-  const utterance = new globalThis.SpeechSynthesisUtterance(text);
-  utterance.rate = 1;
-  synth.speak(utterance);
+  if (!synth || !globalThis.SpeechSynthesisUtterance) return Promise.resolve();
+  return new Promise((resolve) => {
+    const utterance = new globalThis.SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    // Mic must not open until reading is done, so it never records its own TTS.
+    utterance.onend = resolve;
+    utterance.onerror = resolve;
+    synth.speak(utterance);
+  });
 }
 
 async function speakElevenLabs(text) {
@@ -50,15 +55,16 @@ async function speakElevenLabs(text) {
 }
 
 /**
- * Reads `text` aloud. Returns a promise, but callers may ignore it: the ElevenLabs
- * path is async while the browser path stays synchronous, matching the old API.
+ * Reads `text` aloud. Always returns a promise that resolves once playback has
+ * actually finished, so callers can safely wait before opening the mic (it used
+ * to resolve immediately for the browser path, which raced the mic against the
+ * TTS audio and let it transcribe its own question back as the answer).
  */
 export function speak(text) {
   if (!enabled || !text) return Promise.resolve();
   cancelSpeech();
   if (!globalThis.fetch) {
-    speakBrowser(text);
-    return Promise.resolve();
+    return speakBrowser(text);
   }
   return speakElevenLabs(text).catch(() => speakBrowser(text));
 }

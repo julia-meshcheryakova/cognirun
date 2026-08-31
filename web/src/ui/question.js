@@ -10,7 +10,7 @@ import { STT_TIMEOUT_MS, sttMode, startListening } from '../stt.js';
 const TRANSCRIBE_BOUND_MS = STT_TIMEOUT_MS;
 
 const MIC_LABELS = {
-  waiting: '🎤 Mic opens as the question is read',
+  waiting: '🎤 Mic opens once the question finishes reading',
   opening: '🎤 Opening the mic…',
   recording: '🔴 Listening… ■ stop &amp; submit',
   transcribing: '… Transcribing',
@@ -21,9 +21,10 @@ const MIC_LABELS = {
  * Shows a question with a 60 second answer window measured on the run's
  * simulated clock, and reports the elapsed time and the points earned.
  *
- * Answering by voice: the mic becomes available the moment the question starts
- * being read aloud; the browser transcribes what was said and the transcript is
- * graded locally by `judgeAnswer` (normalized exact match).
+ * Answering by voice: the mic opens automatically once the question has
+ * finished being read aloud (starting it any earlier records the TTS audio
+ * itself); the browser transcribes what was said and the transcript is graded
+ * locally by `judgeAnswer` (normalized exact match).
  */
 export function askQuestion(
   slot,
@@ -43,12 +44,17 @@ export function askQuestion(
   // Beep first as the milestone cue, then read the question over the screen text
   // and open the mic automatically — no tap required.
   const voiceTimer = setTimeout(async () => {
-    // Read the question, then auto-start listening the moment reading begins.
-    speak(question.prompt);
+    // Read the question first, then auto-start listening once reading has
+    // actually finished — starting the mic in parallel with speak() let it
+    // record and transcribe the question's own TTS audio as the answer.
     if (mode === 'none') {
       setMicState('unavailable', 'Microphone unavailable — type your answer instead.');
+      await speak(question.prompt);
       return;
     }
+    setMicState('waiting', 'Reading the question…');
+    await speak(question.prompt);
+    if (submitted) return;
     await autoStartMic();
   }, beep());
 

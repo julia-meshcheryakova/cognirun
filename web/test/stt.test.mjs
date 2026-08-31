@@ -136,7 +136,7 @@ test('grading a spoken answer makes no network calls beyond the optional TTS pro
     requests.push(url);
     throw new Error('no server in tests');
   };
-  globalThis.speechSynthesis = { speak() {}, cancel() {} };
+  globalThis.speechSynthesis = { speak: (u) => u.onend?.(), cancel() {} };
   globalThis.SpeechSynthesisUtterance = class {
     constructor(text) {
       this.text = text;
