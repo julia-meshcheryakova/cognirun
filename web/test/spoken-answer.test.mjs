@@ -109,6 +109,21 @@ test('a re-fired identical final segment at the same resultIndex is not duplicat
   assert.equal((await listenOnce()).transcript, 'I am sinking no');
 });
 
+test('a re-fired segment that only differs in casing/punctuation is still deduplicated', async () => {
+  // Real device transcript: "au au it's a u" — same word repeated with a
+  // capitalization/punctuation change, from re-fired recognition segments.
+  stubRecognition({
+    onStart: (r) => {
+      r.emit({ transcript: 'Au', confidence: 0.6 });
+      r.emit({ transcript: 'au', confidence: 0.6 });
+      r.emit({ transcript: "it's a u", confidence: 0.6 });
+      r.onend();
+    },
+  });
+
+  assert.equal((await listenOnce()).transcript, "Au it's a u");
+});
+
 test('an empty alternatives list is skipped instead of throwing', async () => {
   stubRecognition({
     onStart: (r) => {

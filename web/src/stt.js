@@ -128,9 +128,20 @@ function on(recognition, type, handler) {
  * the last final segment. Interim segments go to `onInterim` and stay out of the
  * transcript, so a partial guess never becomes the answer.
  */
+/** Normalizes a segment for duplicate detection: case/punctuation/whitespace do
+ * not matter for "is this the same thing repeated", only the words do. */
+function normalizeSegment(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function transcriptCollector({ onInterim } = {}) {
   let transcript = '';
   let confidence = 0;
+  let lastSegment = '';
   return {
     collect(event) {
       Array.from(event.results ?? [])
@@ -144,10 +155,13 @@ function transcriptCollector({ onInterim } = {}) {
           }
           const segment = (alternative.transcript ?? '').trim();
           if (!segment) return;
-          // Android Chrome's continuous mode can re-fire the same final segment
-          // more than once; a repeat of the segment just heard is noise, not a
-          // second thing said, so it is dropped instead of appended again.
-          if (segment === transcript.slice(-segment.length)) return;
+          // Android Chrome's continuous mode has been seen to silently restart
+          // recognition mid-utterance and re-fire the same final segment again,
+          // sometimes with different casing/punctuation ("Au" then "au"). Compare
+          // normalized text against only the segment just heard, not the whole
+          // transcript, so a genuine repeated word later in the answer still counts.
+          if (normalizeSegment(segment) === lastSegment) return;
+          lastSegment = normalizeSegment(segment);
           transcript += `${transcript ? ' ' : ''}${segment}`;
           confidence = alternative.confidence ?? 0;
         });
