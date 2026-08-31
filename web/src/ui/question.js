@@ -133,7 +133,16 @@ export function askQuestion(
   const timer = setInterval(() => {
     const elapsed = (now() - startedAt) / 1000;
     countdown.textContent = Math.floor(elapsed);
-    if (elapsed >= ANSWER_WINDOW_SECONDS && !transcribing) submit();
+    if (elapsed < ANSWER_WINDOW_SECONDS || transcribing) return;
+    // Deadline while still recording: transcribe what was said instead of
+    // discarding it. Submitting here logged "(no answer)" for runners who had
+    // answered aloud and never tapped Submit.
+    if (micState === 'recording') {
+      toggleMic();
+      return;
+    }
+    // Mic never opened but an interim guess exists — better than nothing.
+    submit(lastInterim.trim() ? { text: lastInterim, spoken: true } : undefined);
   }, 200);
 
   async function toggleMic() {
