@@ -45,10 +45,25 @@ function createNativeHeartRateMonitor({ ble, onHeartRate, onStatus }) {
   let stopped = false;
 
   // A Garmin watch in Broadcast-HR mode often does NOT put the 0x180D service in
-  // its advertisement packet, so a service-filtered scan never sees it. Scan
-  // unfiltered, collect candidates over a short window, then prefer one that
-  // advertises the HR service (a real strap) or looks like a watch by name.
+  // its advertisement packet, so a service-filtered scan never sees it. Prefer the
+  // plugin's own device picker (a system dialog listing everything nearby); fall
+  // back to an unfiltered manual scan only if the picker is unavailable.
   async function scanForDevice() {
+    if (typeof ble.requestDevice === 'function') {
+      try {
+        // services: [] keeps non-advertising devices in the list, which is where
+        // a broadcasting Garmin usually hides.
+        const picked = await ble.requestDevice({ services: [], allowDuplicates: true });
+        if (picked?.deviceId) return picked;
+      } catch (err) {
+        // A dismissed picker is a real cancel, not a scan failure.
+        if (/cancel/i.test(err?.message || '')) throw err;
+      }
+    }
+    return manualScan();
+  }
+
+  async function manualScan() {
     return new Promise((resolve, reject) => {
       let settled = false;
       let scanListener = null;
@@ -62,7 +77,7 @@ function createNativeHeartRateMonitor({ ble, onHeartRate, onStatus }) {
         await ble.stopLEScan().catch(() => {});
         await scanListener?.remove?.().catch(() => {});
         if (device) resolve(device);
-        else reject(err ?? new Error('No heart rate device found — enable broadcast on the watch.'));
+        else reject(err ?? new Error('No device found — turn on Broadcast HR on the watch, then retry.'));
       };
 
       const best = () => {
@@ -79,10 +94,10 @@ function createNativeHeartRateMonitor({ ble, onHeartRate, onStatus }) {
       const pick = setTimeout(() => {
         const device = best();
         if (device) finish(device);
-      }, 4000);
+      }, 5000);
       pick.unref?.();
 
-      const timeout = setTimeout(() => finish(best()), 15000);
+      const timeout = setTimeout(() => finish(best()), 20000);
       timeout.unref?.();
 
       ble.addListener('onScanResult', (result) => {
@@ -91,11 +106,16 @@ function createNativeHeartRateMonitor({ ble, onHeartRate, onStatus }) {
         const uuids = (result.uuids || []).map((u) => String(u).toLowerCase());
         const hasHrService = uuids.includes(HEART_RATE_SERVICE_UUID);
         candidates.set(device.deviceId, { device, hasHrService });
+        // Show progress: a silent "connecting" line reads as a hang.
+        onStatus({
+          state: 'connecting',
+          message: `Scanning… ${candidates.size} nearby`,
+        });
         // A confirmed HR advertiser is unambiguous — take it immediately.
         if (hasHrService) finish(device);
       }).then((listener) => {
         scanListener = listener;
-        return ble.requestLEScan({ allowDuplicates: false });
+        return ble.requestLEScan({ services: [], allowDuplicates: false });
       }).catch((err) => finish(null, err));
     });
   }
@@ -104,7 +124,7 @@ function createNativeHeartRateMonitor({ ble, onHeartRate, onStatus }) {
     async connect() {
       stopped = false;
       try {
-        onStatus({ state: 'connecting', message: 'Pick your watch or heart rate strap…' });
+        onStatus({ state: 'connecting', message: 'Looking for your watch — keep Broadcast HR on.' });
         // androidNeverForLocation matches the manifest flag so BLE scan needs no
         // location grant on Android 12+.
         await ble.initialize({ androidNeverForLocation: true });
