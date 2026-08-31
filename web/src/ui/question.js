@@ -7,6 +7,8 @@ import { STT_TIMEOUT_MS, sttMode, startListening } from '../stt.js';
 
 /** After this the transcription counts as lost and the runner can retry or type. */
 const TRANSCRIBE_BOUND_MS = STT_TIMEOUT_MS;
+/** How long the correct/wrong verdict stays on screen before the run resumes on its own. */
+const RESULT_DISPLAY_MS = 2500;
 
 /**
  * Shows a question with a 60 second answer window measured on the run's
@@ -210,13 +212,14 @@ export function askQuestion(
         <p class="prompt">${escapeHtml(question.prompt)}</p>
         <p class="hint">You said: ${answerText ? escapeHtml(answerText) : '(no answer)'}</p>
         <p class="answer"><strong>${escapeHtml(question.answer)}</strong></p>
-        <button class="primary" id="continue">Keep running</button>
       </div>
     `;
-    slot.querySelector('#continue').addEventListener('click', () => {
+    // Auto-advances — the runner keeps moving right after submitting and just
+    // glances at the verdict; no extra tap needed to get back to running.
+    setTimeout(() => {
       slot.innerHTML = '';
       onClosed();
-    });
+    }, RESULT_DISPLAY_MS);
   }
 
   slot.querySelectorAll('.choice').forEach((button) => {
