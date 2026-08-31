@@ -68,12 +68,11 @@ export function askQuestion(
           </div>
         </div>
         <p class="interim" id="interim" hidden></p>
-        <button class="primary stop-submit" id="stop-mic" hidden>■ Submit</button>
       </div>
-      <textarea id="answer" rows="2" placeholder="Your answer..."></textarea>
+      <textarea id="answer" rows="2" placeholder="Backup: type instead..."></textarea>
       <div class="row">
         <span class="hint"><span id="countdown">0</span>s</span>
-        <button class="primary" id="submit">Submit</button>
+        <button class="primary" id="submit">■ Submit</button>
       </div>
     </div>
   `;
@@ -82,7 +81,7 @@ export function askQuestion(
   const micIcon = slot.querySelector('#mic-icon');
   const waveform = slot.querySelector('#waveform');
   const interim = slot.querySelector('#interim');
-  const stopMic = slot.querySelector('#stop-mic');
+  const submitButton = slot.querySelector('#submit');
   let micState = 'waiting';
   let session = null;
   let submitted = false;
@@ -96,8 +95,10 @@ export function askQuestion(
     micState = state;
     micIcon.textContent = MIC_ICONS[state] ?? '🎤';
     waveform.hidden = state !== 'recording';
-    stopMic.hidden = state !== 'recording';
     if (state !== 'recording') interim.hidden = true;
+    // One Submit button throughout: while recording it stops & transcribes the
+    // mic; otherwise it submits whatever is in the backup text field.
+    submitButton.textContent = state === 'recording' ? '■ Submit' : 'Submit';
   }
 
   // Opens the mic without a tap; permission denial falls back to typing, never dead-ends.
@@ -222,7 +223,12 @@ export function askQuestion(
   slot.querySelectorAll('.choice').forEach((button) => {
     button.addEventListener('click', () => submit({ text: button.dataset.option }));
   });
-  stopMic.addEventListener('click', toggleMic);
-  slot.querySelector('#submit').addEventListener('click', () => submit());
-  slot.querySelector('#answer')?.focus();
+  // One Submit button: while the mic is recording it stops & transcribes;
+  // otherwise it submits whatever is in the backup text field.
+  submitButton.addEventListener('click', () => {
+    if (micState === 'recording') toggleMic();
+    else submit();
+  });
+  // No autofocus on the textarea — it is a backup, typing into it should be a
+  // deliberate tap, not something that pops the mobile keyboard by default.
 }
