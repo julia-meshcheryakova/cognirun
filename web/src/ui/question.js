@@ -2,7 +2,6 @@ import { ANSWER_WINDOW_SECONDS, scoreForAnswer, scoreForElapsed } from '../scori
 import { beep } from '../beep.js';
 import { cancelSpeech, speak } from '../tts.js';
 import { escapeHtml } from '../format.js';
-import { CATEGORY_LABELS } from '../questions.js';
 import { judgeAnswer } from '../judge.js';
 import { STT_TIMEOUT_MS, sttMode, startListening } from '../stt.js';
 
@@ -32,7 +31,6 @@ export function askQuestion(
   },
 ) {
   const startedAt = now();
-  const category = CATEGORY_LABELS[question.category] ?? question.category;
   // Beep first as the milestone cue, then read the question over the screen text
   // and open the mic automatically — no tap required.
   const voiceTimer = setTimeout(async () => {
@@ -60,7 +58,6 @@ export function askQuestion(
 
   slot.innerHTML = `
     <div class="modal">
-      <span class="label">Kilometer ${kilometer} · ${category}</span>
       <p class="prompt">${escapeHtml(question.prompt)}</p>
       ${input}
       <div class="voice">
@@ -69,25 +66,21 @@ export function askQuestion(
           <div class="waveform" id="waveform" hidden>
             ${Array.from({ length: 5 }, (_, i) => `<span class="bar bar-${i}"></span>`).join('')}
           </div>
-          <span class="hint" id="mic-status">Mic opens once the question finishes reading.</span>
         </div>
         <p class="interim" id="interim" hidden></p>
-        <button class="primary stop-submit" id="stop-mic" hidden>■ Stop &amp; submit</button>
+        <button class="primary stop-submit" id="stop-mic" hidden>■ Submit</button>
       </div>
       <textarea id="answer" rows="2" placeholder="Your answer..."></textarea>
       <div class="row">
-        <span class="hint"><span id="countdown">${ANSWER_WINDOW_SECONDS}</span>s left ·
-          <span id="potential">100</span> pts if correct</span>
+        <span class="hint"><span id="countdown">0</span>s</span>
         <button class="primary" id="submit">Submit</button>
       </div>
     </div>
   `;
 
   const countdown = slot.querySelector('#countdown');
-  const potential = slot.querySelector('#potential');
   const micIcon = slot.querySelector('#mic-icon');
   const waveform = slot.querySelector('#waveform');
-  const micStatus = slot.querySelector('#mic-status');
   const interim = slot.querySelector('#interim');
   const stopMic = slot.querySelector('#stop-mic');
   let micState = 'waiting';
@@ -99,19 +92,18 @@ export function askQuestion(
 
   const MIC_ICONS = { waiting: '🎤', opening: '🎤', recording: '🔴', transcribing: '…', unavailable: '🎤' };
 
-  function setMicState(state, status) {
+  function setMicState(state) {
     micState = state;
     micIcon.textContent = MIC_ICONS[state] ?? '🎤';
     waveform.hidden = state !== 'recording';
     stopMic.hidden = state !== 'recording';
     if (state !== 'recording') interim.hidden = true;
-    if (status) micStatus.textContent = status;
   }
 
   // Opens the mic without a tap; permission denial falls back to typing, never dead-ends.
   async function autoStartMic() {
     if (submitted) return;
-    setMicState('opening', 'Opening the microphone…');
+    setMicState('opening');
     try {
       const opened = await listen({
         mode,
@@ -126,17 +118,18 @@ export function askQuestion(
         return;
       }
       session = opened;
-      setMicState('recording', 'Listening… speak your answer.');
+      setMicState('recording');
     } catch (err) {
       console.warn('microphone unavailable', err);
-      setMicState('unavailable', 'Microphone blocked — type your answer instead.');
+      setMicState('unavailable');
     }
   }
 
+  // Ticks up from zero (not a countdown): the runner has no fixed answer
+  // budget to watch, just how long they have taken so far.
   const timer = setInterval(() => {
     const elapsed = (now() - startedAt) / 1000;
-    countdown.textContent = Math.max(0, Math.ceil(ANSWER_WINDOW_SECONDS - elapsed));
-    potential.textContent = scoreForElapsed(elapsed);
+    countdown.textContent = Math.floor(elapsed);
     if (elapsed >= ANSWER_WINDOW_SECONDS && !transcribing) submit();
   }, 200);
 
@@ -146,7 +139,7 @@ export function askQuestion(
     // Elapsed is taken here, before transcription latency, so speaking fast pays.
     const elapsedSeconds = (now() - startedAt) / 1000;
     transcribing = true;
-    setMicState('transcribing', 'Transcribing your answer…');
+    setMicState('transcribing');
     const active = session;
     session = null;
     let transcript = '';
@@ -161,14 +154,14 @@ export function askQuestion(
       console.warn('transcription failed', err);
       active.cancel();
       transcribing = false;
-      setMicState('unavailable', 'Could not transcribe that — type your answer, or retry the mic.');
+      setMicState('unavailable');
       await autoStartMic();
       return;
     }
     if (!transcript) {
       transcribing = false;
       // No transcript from an auto-opened mic: retry listening once, keep typing open.
-      setMicState('unavailable', 'Nothing was heard — type your answer, or retry the mic.');
+      setMicState('unavailable');
       await autoStartMic();
       return;
     }
@@ -190,10 +183,8 @@ export function askQuestion(
 
     slot.innerHTML = `
       <div class="modal">
-        <span class="label">Kilometer ${kilometer} · ${category}</span>
         <p class="prompt">${escapeHtml(question.prompt)}</p>
-        <p class="hint">Your answer: ${answerText ? escapeHtml(answerText) : '(no answer)'}</p>
-        <p class="hint">Checking your answer…</p>
+        <p class="hint">${answerText ? escapeHtml(answerText) : '(no answer)'}</p>
       </div>
     `;
 
@@ -215,16 +206,9 @@ export function askQuestion(
 
     slot.innerHTML = `
       <div class="modal">
-        <span class="label">Kilometer ${kilometer} · ${category} · ${points} points ·
-          ${verdict.correct ? 'correct' : 'wrong'}</span>
+        <span class="label">${verdict.correct ? '✅ Correct' : '❌ Wrong'}</span>
         <p class="prompt">${escapeHtml(question.prompt)}</p>
-        <p class="hint">${spoken ? 'You said' : 'Your answer'}: ${
-          answerText ? escapeHtml(answerText) : '(no answer)'
-        }</p>
-        <p class="answer"><strong>Answer:</strong> ${escapeHtml(question.answer)}</p>
-        <p class="hint">Judged by ${escapeHtml(verdict.method)}${
-          verdict.reason ? ` · ${escapeHtml(verdict.reason)}` : ''
-        }</p>
+        <p class="answer"><strong>${escapeHtml(question.answer)}</strong></p>
         <button class="primary" id="continue">Keep running</button>
       </div>
     `;
