@@ -67,7 +67,7 @@ export function setupMarkup({ settings, devices = IDLE_DEVICES }) {
         ${gpsPanel(devices.gps)}
       </section>
 
-      <section class="card" id="course-card" ${settings.demo ? 'hidden' : ''}>
+      <section class="card" id="course-card">
         <div class="row">
           <span>Course</span>
           <span class="courses">
