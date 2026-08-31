@@ -12,8 +12,22 @@ export const COURSES = {
 export const DEFAULT_COURSE = '3k';
 export const courseOf = (id) => COURSES[id] ?? COURSES[DEFAULT_COURSE];
 
-/** Where the question server lives; falls back to the bundled library if it is down. */
-// Empty string = same origin, so the deployed build hits its own /api routes.
+/**
+ * Where the question server lives; falls back to the bundled library if it is down.
+ *
+ * Native (Capacitor) serves the app from capacitor://localhost, so a same-origin
+ * '' would resolve /api/* against the WebView itself and every voice call would
+ * fail silently. Native must therefore point at the deployed server.
+ */
+const DEPLOYED_SERVER = 'https://cognirun.vercel.app';
+
+function defaultServerUrl() {
+  const isNative =
+    typeof window !== 'undefined' && Boolean(window.Capacitor?.isNativePlatform?.());
+  if (isNative) return DEPLOYED_SERVER;
+  // Deployed web build talks to its own /api routes; dev talks to the local server.
+  return import.meta.env?.PROD ? '' : 'http://localhost:4000';
+}
+
 export const QUESTION_SERVER_URL =
-  import.meta.env?.VITE_QUESTION_SERVER_URL ??
-  (import.meta.env?.PROD ? '' : 'http://localhost:4000');
+  import.meta.env?.VITE_QUESTION_SERVER_URL ?? defaultServerUrl();
