@@ -208,6 +208,7 @@ export function askQuestion(
       <div class="modal">
         <span class="label">${verdict.correct ? '✅ Correct' : '❌ Wrong'}</span>
         <p class="prompt">${escapeHtml(question.prompt)}</p>
+        <p class="hint">You said: ${answerText ? escapeHtml(answerText) : '(no answer)'}</p>
         <p class="answer"><strong>${escapeHtml(question.answer)}</strong></p>
         <button class="primary" id="continue">Keep running</button>
       </div>
