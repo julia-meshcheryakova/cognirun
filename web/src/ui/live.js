@@ -10,18 +10,19 @@ export function liveMarkup({ settings }) {
   const count = Math.round(total / course.segment);
   return `
     <main class="screen live">
-      <div class="metric hero">
-        <span class="label">Heart rate</span>
-        <strong id="hr">--</strong>
-        <span class="unit">bpm</span>
-        <span class="zone" id="zone">--</span>
-        <span class="hr-source" id="hr-source" ${settings.demo ? '' : 'hidden'}>${settings.demo ? 'Simulated' : ''}</span>
-      </div>
+      <div class="grid hero-grid">
+        <div class="metric hero">
+          <span class="label">Heart rate</span>
+          <strong id="hr">--</strong>
+          <span class="unit">bpm <span class="zone" id="zone"></span></span>
+          <span class="hr-source" id="hr-source" hidden></span>
+        </div>
 
-      <div class="metric hero points">
-        <span class="label">Points</span>
-        <strong id="points">0</strong>
-        <span class="unit" id="answered">0 / ${count} questions</span>
+        <div class="metric hero points">
+          <span class="label">Points</span>
+          <strong id="points">0</strong>
+          <span class="unit" id="answered">0 / ${count}</span>
+        </div>
       </div>
 
       <div class="grid">
@@ -106,7 +107,7 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
 
   return {
     questionSlot: el('question-slot'),
-    /** Real runs only: show how the BLE heart rate connection is doing. */
+    /** Real watch connection status; only shown once a watch is actually connected. */
     setHeartRateStatus({ state, message }) {
       const source = el('hr-source');
       source.hidden = false;
@@ -127,9 +128,16 @@ export function renderLive(root, { settings, onMultiplier, onScrub }) {
     update(snapshot, { points, answered }) {
       const zone = hrZone(snapshot.heartRate || 0);
       el('hr').textContent = snapshot.heartRate || '--';
-      el('zone').textContent = snapshot.heartRate ? `Zone ${zone.zone} · ${zone.name}` : '--';
+      el('zone').textContent = snapshot.heartRate ? `· Zone ${zone.zone}` : '';
+      const source = el('hr-source');
+      if (snapshot.heartRate && !snapshot.heartRateIsReal) {
+        source.hidden = false;
+        source.textContent = 'Simulated';
+      } else if (!snapshot.heartRateIsReal) {
+        source.hidden = true;
+      }
       el('points').textContent = points;
-      el('answered').textContent = `${answered} / ${count} questions`;
+      el('answered').textContent = `${answered} / ${count}`;
       el('distance').textContent = formatKm(snapshot.distance);
       el('pace').textContent = formatPace(snapshot.speed);
       el('time').textContent = formatClock(snapshot.elapsedSeconds);

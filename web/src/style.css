@@ -145,7 +145,7 @@ button {
 }
 
 .metric.hero strong {
-  font-size: 56px;
+  font-size: 44px;
 }
 
 .metric.points strong {
@@ -208,6 +208,10 @@ button {
   /* minmax(0,…) so a long value like "6:05/km" wraps instead of widening the row. */
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+}
+
+.hero-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .progress {
@@ -456,7 +460,7 @@ textarea {
   }
 
   .metric.hero strong {
-    font-size: 44px;
+    font-size: 36px;
   }
 
   .choices {

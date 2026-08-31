@@ -55,6 +55,7 @@ export function createRun({
   let distance = 0;
   let speed = 0;
   let heartRate = 0;
+  let heartRateIsReal = !demo;
   let kmReached = 0;
   let answered = 0;
   let finished = false;
@@ -99,13 +100,31 @@ export function createRun({
   }
 
   // A live run normally reuses the devices connected on the setup screen; a run
-  // given none owns the ones it makes, connecting and closing them itself.
+  // given none owns the ones it makes, connecting and closing them itself. A demo
+  // run still listens to a real watch if one was connected on setup — only the
+  // pace/GPS side is simulated, so a genuinely connected heart rate is never
+  // mislabelled as simulated.
   const ownDevices =
     demo || devices
       ? null
       : createDevices({ onError, bluetooth, ...(geolocation ? { geolocation } : {}) });
+  if (demo && devices) {
+    devices.attach({
+      onHeartRate(bpm) {
+        heartRateIsReal = true;
+        handleHeartRate(bpm);
+      },
+      onHeartRateStatus,
+    });
+  }
   const sensors = demo
-    ? createDemoSensors({ onPosition: handlePosition, onHeartRate: handleHeartRate })
+    ? createDemoSensors({
+        onPosition: handlePosition,
+        // A connected real watch takes priority over the simulated heart rate.
+        onHeartRate: (bpm) => {
+          if (!heartRateIsReal) handleHeartRate(bpm);
+        },
+      })
     : createRealSensors({
         devices: devices ?? ownDevices,
         onPosition: handlePosition,
@@ -131,6 +150,7 @@ export function createRun({
       distance,
       speed,
       heartRate,
+      heartRateIsReal,
       elapsedSeconds: elapsedSeconds(),
       samples,
     };
