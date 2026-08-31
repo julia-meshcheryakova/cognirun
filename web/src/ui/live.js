@@ -10,6 +10,8 @@ export function liveMarkup({ settings }) {
   const count = Math.round(total / course.segment);
   return `
     <main class="screen live">
+      <button class="icon-btn exit-run" id="exit-run" aria-label="End run and go back">←</button>
+
       <div class="grid hero-grid">
         <div class="metric hero">
           <span class="label">Heart rate</span>
@@ -74,11 +76,17 @@ export function liveMarkup({ settings }) {
   `;
 }
 
-export function renderLive(root, { settings, onMultiplier, onScrub }) {
+export function renderLive(root, { settings, onMultiplier, onScrub, onExit }) {
   root.innerHTML = liveMarkup({ settings });
   const course = courseOf(settings.course);
   const total = course.total;
   const count = Math.round(total / course.segment);
+
+  root.querySelector('#exit-run')?.addEventListener('click', () => {
+    // eslint-disable-next-line no-alert -- a run in progress needs an explicit,
+    // hard-to-misfire confirmation before it is abandoned.
+    if (confirm('End this run and go back to setup?')) onExit?.();
+  });
 
   root.querySelectorAll('[data-mult]').forEach((btn) =>
     btn.addEventListener('click', () => {

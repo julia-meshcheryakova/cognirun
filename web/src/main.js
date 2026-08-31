@@ -69,6 +69,10 @@ async function startRun() {
     onScrub(meters) {
       run.scrubTo(meters);
     },
+    onExit() {
+      run.stop();
+      showSetup();
+    },
   });
 
   const run = createRun({
