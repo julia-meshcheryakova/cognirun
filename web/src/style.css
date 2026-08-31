@@ -1,10 +1,26 @@
+/* ============================================================
+   CogniRun — "Telemetry" (Direction E)
+   Instrument-panel aesthetic: near-black ground, phosphor cyan
+   readouts, magenta for the live/critical state, mono type.
+   Restyle only — every class name matches the existing markup.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap');
+
 :root {
   color-scheme: dark;
-  --bg: #0f172a;
-  --card: #1e293b;
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-  --accent: #38bdf8;
+  --bg: #05080a;
+  --grid: #0d1518;
+  --card: #0b1417;
+  --card-2: #0e1a1e;
+  --line: #1b2f35;
+  --text: #d8f2f0;
+  --muted: #7ea3ac;
+  --accent: #2ee6c5;        /* phosphor cyan — primary readout */
+  --accent-dim: #1a8f7d;
+  --hot: #ff2d78;           /* magenta — live, alert, submit */
+  --amber: #f5a524;         /* zone warning */
+  --ok: #2ee6c5;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
 * {
@@ -19,56 +35,82 @@
 body {
   margin: 0;
   background: var(--bg);
+  /* faint instrument grid, keeps large dark areas from reading as flat */
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 48px 48px, 48px 48px;
   color: var(--text);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--mono);
+  font-size: 14px;
+  letter-spacing: 0.01em;
 }
 
 .screen {
   max-width: 520px;
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  padding: 20px 14px 44px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .icon-btn {
-  background: var(--card);
-  border: none;
-  border-radius: 999px;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
   width: 40px;
   height: 40px;
-  font-size: 18px;
-  color: var(--text);
+  font-size: 16px;
+  color: var(--muted);
   align-self: flex-start;
+}
+
+.icon-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent-dim);
 }
 
 h1 {
   margin: 0;
-  font-size: 28px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* "CogniRun" reads as one word, second half in phosphor */
+h1::first-line {
+  letter-spacing: -0.02em;
 }
 
 h2 {
-  margin: 0 0 8px;
-  font-size: 15px;
+  margin: 0 0 10px;
+  font-size: 10px;
+  font-weight: 700;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.22em;
 }
 
 .lede {
   margin: 0;
   color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
+
+/* ---------- panels ---------- */
 
 .card {
   background: var(--card);
-  border-radius: 12px;
-  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+  position: relative;
 }
 
 .card.compact {
-  padding: 8px 16px;
+  padding: 8px 14px;
 }
 
 .card.compact .row {
@@ -80,46 +122,96 @@ h2 {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   padding: 8px 0;
 }
 
 .row small {
   display: block;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
 }
 
 input[type='checkbox'] {
   flex: none;
   width: 22px;
   height: 22px;
-  accent-color: var(--accent);
+  appearance: none;
+  background: var(--card-2);
+  /* brighter than --line: an unchecked box must still read as a control */
+  border: 1px solid #35545c;
+  border-radius: 5px;
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+}
+
+/* Checked state needs to read at a glance mid-run, hence the glow. */
+input[type='checkbox']:checked {
+  background: rgba(46, 230, 197, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(46, 230, 197, 0.3);
+}
+
+input[type='checkbox']:checked::after {
+  content: '';
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(-45deg) translateY(-1px);
 }
 
 .hint {
   margin: 4px 0 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 button {
   font: inherit;
+  font-family: var(--mono);
   cursor: pointer;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
 }
+
+/* ---------- primary action: armed-button treatment ---------- */
 
 .primary {
   background: var(--accent);
-  color: #062033;
-  font-weight: 600;
-  padding: 14px;
-  min-height: 48px;
+  color: #02201b;
+  font-weight: 800;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  padding: 15px;
+  min-height: 50px;
+  box-shadow: 0 0 24px rgba(46, 230, 197, 0.28);
 }
 
+.primary:hover {
+  background: #46f5d6;
+}
+
+/* Submit-answer sits in the live question modal — magenta = act now. */
+.modal .primary {
+  background: var(--hot);
+  color: #fff;
+  box-shadow: 0 0 24px rgba(255, 45, 120, 0.35);
+}
+
+.modal .primary:hover {
+  background: #ff4b8b;
+}
+
+/* ---------- segmented chips ---------- */
+
 .modes,
-.multipliers {
+.multipliers,
+.courses {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -130,70 +222,95 @@ button {
 }
 
 .chip {
-  background: #334155;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  padding: 9px 15px;
+  min-height: 42px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chip:hover {
   color: var(--text);
-  padding: 8px 14px;
-  min-height: 44px;
+  border-color: var(--accent-dim);
 }
 
 .chip.active {
-  background: var(--accent);
-  color: #062033;
-  font-weight: 600;
+  background: rgba(46, 230, 197, 0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
 }
 
+/* ---------- metric readouts ---------- */
+
 .metric {
-  background: var(--card);
-  border-radius: 12px;
-  padding: 12px;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 12px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .metric .label {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 9px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.18em;
 }
 
 .metric strong {
-  font-size: 28px;
-  line-height: 1.1;
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 .metric.hero strong {
   font-size: 44px;
+  color: var(--accent);
+  text-shadow: 0 0 18px rgba(46, 230, 197, 0.35);
 }
 
 .metric.points strong {
-  color: #facc15;
+  color: var(--accent);
 }
 
 .metric .unit,
 .metric .zone {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
 }
+
+/* ---------- signal / source states ---------- */
 
 .hr-source,
 .gps-source {
   display: block;
   margin-top: 4px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .hr-source[data-state='connected'],
 .gps-source[data-state='live'] {
-  color: #4ade80;
+  color: var(--ok);
 }
 
 .hr-source[data-state='reconnecting'],
 .gps-source[data-state='weak'],
 .gps-source[data-state='no-signal'] {
-  color: #facc15;
+  color: var(--amber);
 }
 
 .hr-source[data-state='failed'],
@@ -202,31 +319,35 @@ button {
 .gps-source[data-state='denied'],
 .gps-source[data-state='failed'],
 .gps-source[data-state='unavailable'] {
-  color: #f87171;
+  color: var(--hot);
 }
 
 .device-value {
   flex: none;
-  color: #4ade80;
-  font-size: 18px;
+  color: var(--accent);
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .device-status[data-state='connecting'] {
-  color: #facc15;
+  color: var(--amber);
 }
 
 .device-status[data-state='failed'],
 .device-status[data-state='denied'],
 .device-status[data-state='lost'],
 .device-status[data-state='unavailable'] {
-  color: #f87171;
+  color: var(--hot);
 }
+
+/* ---------- grids ---------- */
 
 .grid {
   display: grid;
   /* minmax(0,…) so a long value like "6:05/km" wraps instead of widening the row. */
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .hero-grid {
@@ -234,8 +355,9 @@ button {
 }
 
 .progress {
-  height: 8px;
-  background: var(--card);
+  height: 6px;
+  background: var(--card-2);
+  border: 1px solid var(--line);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -244,62 +366,85 @@ button {
   height: 100%;
   width: 0;
   background: var(--accent);
+  box-shadow: 0 0 12px rgba(46, 230, 197, 0.5);
   transition: width 0.2s linear;
 }
+
+/* ---------- question modal ---------- */
 
 .modal {
   /* Stacks above the sticky demo scrubber, which would otherwise cover the answer form. */
   position: relative;
   z-index: 1;
   background: var(--card);
-  border: 1px solid var(--accent);
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--hot);
+  border-radius: 10px;
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .prompt {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.55;
 }
 
 .answer {
   margin: 0;
-  color: #86efac;
+  color: var(--accent);
+  font-size: 13px;
 }
 
 textarea {
   font: inherit;
-  background: #0f172a;
+  font-family: var(--mono);
+  background: var(--bg);
   color: var(--text);
-  border: 1px solid #334155;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 10px;
+  padding: 11px;
   resize: vertical;
 }
+
+textarea:focus {
+  outline: none;
+  border-color: var(--accent-dim);
+}
+
+/* ---------- results table ---------- */
 
 .breakdown {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  font-size: 12px;
 }
 
 .breakdown th,
 .breakdown td {
-  padding: 6px 4px;
-  border-bottom: 1px solid #334155;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--line);
 }
 
 .breakdown th {
   color: var(--muted);
-  font-weight: 500;
-  font-size: 13px;
+  font-weight: 700;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+.breakdown td {
+  font-variant-numeric: tabular-nums;
 }
 
 .breakdown tr.you td {
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--accent);
 }
 
 .breakdown tr.synthetic-row td {
@@ -310,19 +455,20 @@ textarea {
   vertical-align: middle;
   margin-left: 6px;
   padding: 2px 6px;
-  border-radius: 6px;
-  font-size: 11px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
 }
 
 .tag.synthetic {
-  background: #422006;
-  color: #fbbf24;
+  background: rgba(245, 165, 36, 0.14);
+  color: var(--amber);
 }
 
 .card.synthetic {
-  border: 1px solid #b45309;
+  border-color: rgba(245, 165, 36, 0.45);
 }
 
 .synthetic-caption {
@@ -330,12 +476,14 @@ textarea {
   top: 0;
   caption-side: top;
   text-align: left;
-  background: #422006;
-  color: #fbbf24;
-  border-radius: 6px;
-  padding: 4px 6px;
+  background: rgba(245, 165, 36, 0.12);
+  color: var(--amber);
+  border-radius: 4px;
+  padding: 5px 7px;
   margin-bottom: 4px;
-  font-size: 12px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .chart {
@@ -343,6 +491,8 @@ textarea {
   height: 220px;
   display: block;
 }
+
+/* ---------- multiple choice ---------- */
 
 .choices {
   display: grid;
@@ -352,39 +502,48 @@ textarea {
 
 .choice {
   font: inherit;
-  background: #0f172a;
+  font-family: var(--mono);
+  background: var(--card-2);
   color: var(--text);
-  border: 1px solid #334155;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 12px;
+  padding: 13px;
   min-height: 44px;
+  font-size: 13px;
   cursor: pointer;
+  text-align: left;
 }
 
 .choice:hover {
   border-color: var(--accent);
+  color: var(--accent);
 }
 
 .percentiles {
   margin: 0;
-  padding-left: 18px;
+  padding-left: 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  font-size: 12px;
+  line-height: 1.5;
 }
+
+/* ---------- demo scrubber ---------- */
 
 .scrubber {
   position: sticky;
   bottom: 0;
   margin-top: auto;
   background: var(--card);
-  border-radius: 12px;
-  padding: 8px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px 10px;
 }
 
 .scrubber input[type='range'] {
   width: 100%;
-  height: 32px;
+  height: 30px;
   accent-color: var(--accent);
 }
 
@@ -392,8 +551,11 @@ textarea {
   display: flex;
   justify-content: space-between;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
 }
+
+/* ---------- voice capture ---------- */
 
 .voice {
   display: flex;
@@ -406,10 +568,11 @@ textarea {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  font-size: 12px;
 }
 
 .mic-icon {
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
 }
 
@@ -424,7 +587,7 @@ textarea {
   display: block;
   width: 3px;
   border-radius: 999px;
-  background: #f87171;
+  background: var(--hot);
   animation: wave 900ms ease-in-out infinite;
 }
 
@@ -443,27 +606,33 @@ textarea {
   margin: 0;
   color: var(--muted);
   font-style: italic;
-  font-size: 14px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .stop-submit {
   align-self: flex-start;
-  background: #7f1d1d;
-  border: 1px solid #f87171;
+  background: transparent;
+  border: 1px solid var(--hot);
+  color: var(--hot);
+  padding: 10px 16px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .stop-submit:hover {
-  background: #991b1b;
+  background: rgba(255, 45, 120, 0.12);
 }
 
 @media (max-width: 420px) {
   .screen {
-    padding: 16px 12px 32px;
-    gap: 12px;
+    padding: 14px 10px 28px;
+    gap: 10px;
   }
 
   h1 {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .grid {
@@ -490,16 +659,23 @@ textarea {
 /* Fixed download-APK affordance, top-right on every screen. */
 #download-apk {
   position: fixed;
-  top: 12px;
-  right: 12px;
+  top: 10px;
+  right: 10px;
   z-index: 1000;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: #6c5ce7;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
+  padding: 7px 13px;
+  border-radius: 6px;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   text-decoration: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
-#download-apk:hover { background: #5a4bd4; }
+
+#download-apk:hover {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
