@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm --prefix web install && npm --prefix web run build",
+  "outputDirectory": "web/dist",
+  "framework": null,
+  "rewrites": [
+    { "source": "/questions", "destination": "/api/questions" },
+    { "source": "/health", "destination": "/api/health" }
+  ]
+}

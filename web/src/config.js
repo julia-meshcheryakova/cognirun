@@ -13,5 +13,7 @@ export const DEFAULT_COURSE = '3k';
 export const courseOf = (id) => COURSES[id] ?? COURSES[DEFAULT_COURSE];
 
 /** Where the question server lives; falls back to the bundled library if it is down. */
+// Empty string = same origin, so the deployed build hits its own /api routes.
 export const QUESTION_SERVER_URL =
-  import.meta.env?.VITE_QUESTION_SERVER_URL ?? 'http://localhost:4000';
+  import.meta.env?.VITE_QUESTION_SERVER_URL ??
+  (import.meta.env?.PROD ? '' : 'http://localhost:4000');
