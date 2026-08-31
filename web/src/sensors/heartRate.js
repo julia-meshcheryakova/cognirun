@@ -50,14 +50,22 @@ function createNativeHeartRateMonitor({ ble, onHeartRate, onStatus }) {
   // back to an unfiltered manual scan only if the picker is unavailable.
   async function scanForDevice() {
     if (typeof ble.requestDevice === 'function') {
+      // A watch in Broadcast-HR mode advertises 0x180D, so filter on it: the
+      // picker then lists named HR devices only, instead of every unnamed MAC
+      // in range (which is unpickable — you cannot tell which one is yours).
       try {
-        // services: [] keeps non-advertising devices in the list, which is where
-        // a broadcasting Garmin usually hides.
-        const picked = await ble.requestDevice({ services: [], allowDuplicates: true });
+        const picked = await ble.requestDevice({ services: [HEART_RATE_SERVICE_UUID] });
         if (picked?.deviceId) return picked;
       } catch (err) {
-        // A dismissed picker is a real cancel, not a scan failure.
         if (/cancel/i.test(err?.message || '')) throw err;
+        // No HR advertiser in range: fall back to the unfiltered picker so a
+        // non-standard device can still be chosen by hand.
+        try {
+          const any = await ble.requestDevice({ services: [] });
+          if (any?.deviceId) return any;
+        } catch (err2) {
+          if (/cancel/i.test(err2?.message || '')) throw err2;
+        }
       }
     }
     return manualScan();
