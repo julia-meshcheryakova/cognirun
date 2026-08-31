@@ -7,8 +7,6 @@ import { STT_TIMEOUT_MS, sttMode, startListening } from '../stt.js';
 
 /** After this the transcription counts as lost and the runner can retry or type. */
 const TRANSCRIBE_BOUND_MS = STT_TIMEOUT_MS;
-/** How long the correct/wrong verdict stays on screen before the run resumes on its own. */
-const RESULT_DISPLAY_MS = 2500;
 
 /**
  * Shows a question with a 60 second answer window measured on the run's
@@ -215,12 +213,10 @@ export function askQuestion(
         <p class="answer"><strong>${escapeHtml(question.answer)}</strong></p>
       </div>
     `;
-    // Auto-advances — the runner keeps moving right after submitting and just
-    // glances at the verdict; no extra tap needed to get back to running.
-    setTimeout(() => {
-      slot.innerHTML = '';
-      onClosed();
-    }, RESULT_DISPLAY_MS);
+    // The run resumes right away — no extra tap, no fixed timer hiding the verdict.
+    // It stays on screen until the caller decides it is time to clear it (close to
+    // the next milestone), via the `dismiss` it gets back from `onAnswered`.
+    onClosed();
   }
 
   slot.querySelectorAll('.choice').forEach((button) => {

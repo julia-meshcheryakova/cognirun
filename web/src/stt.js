@@ -4,10 +4,15 @@
  * prefixed form) does the transcribing, and typing stays available everywhere.
  */
 
-/** How long we wait for the browser recogniser to flush its last result. */
-const RECOGNITION_FLUSH_MS = 1500;
-/** Bounds `stop()`, so a recogniser that never ends cannot freeze the question. */
-export const STT_TIMEOUT_MS = 5000;
+/** How long we wait for the browser recogniser to flush its last result. Short
+ * utterances ("Au", "no", "56") have been seen to take longer than a couple of
+ * seconds to finalize after stop() — too short a window here silently drops the
+ * whole answer (empty transcript), which reads as the mic "ignoring" you. */
+const RECOGNITION_FLUSH_MS = 4000;
+/** Bounds `stop()`, so a recogniser that never ends cannot freeze the question.
+ * Kept comfortably above RECOGNITION_FLUSH_MS above so a slow-to-finalize short
+ * word still gets its full flush window before this outer bound gives up. */
+export const STT_TIMEOUT_MS = 6000;
 
 import { QUESTION_SERVER_URL } from './config.js';
 
