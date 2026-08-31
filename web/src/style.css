@@ -374,30 +374,63 @@ textarea {
 
 .voice {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mic-status-row {
+  display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.mic {
-  font: inherit;
-  background: #0f172a;
-  color: var(--text);
-  border: 1px solid #334155;
+.mic-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.waveform {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+}
+
+.waveform .bar {
+  display: block;
+  width: 3px;
   border-radius: 999px;
-  padding: 10px 16px;
-  min-height: 44px;
-  cursor: pointer;
+  background: #f87171;
+  animation: wave 900ms ease-in-out infinite;
 }
 
-.mic:disabled {
-  opacity: 0.5;
-  cursor: default;
+.waveform .bar-0 { height: 8px; animation-delay: 0ms; }
+.waveform .bar-1 { height: 16px; animation-delay: 120ms; }
+.waveform .bar-2 { height: 22px; animation-delay: 240ms; }
+.waveform .bar-3 { height: 14px; animation-delay: 360ms; }
+.waveform .bar-4 { height: 10px; animation-delay: 480ms; }
+
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
 }
 
-.mic.recording {
-  border-color: #f87171;
-  color: #fecaca;
+.interim {
+  margin: 0;
+  color: var(--muted);
+  font-style: italic;
+  font-size: 14px;
+}
+
+.stop-submit {
+  align-self: flex-start;
+  background: #7f1d1d;
+  border: 1px solid #f87171;
+}
+
+.stop-submit:hover {
+  background: #991b1b;
 }
 
 @media (max-width: 420px) {

@@ -9,14 +9,6 @@ import { STT_TIMEOUT_MS, sttMode, startListening } from '../stt.js';
 /** After this the transcription counts as lost and the runner can retry or type. */
 const TRANSCRIBE_BOUND_MS = STT_TIMEOUT_MS;
 
-const MIC_LABELS = {
-  waiting: '🎤 Mic opens once the question finishes reading',
-  opening: '🎤 Opening the mic…',
-  recording: '🔴 Listening… ■ stop &amp; submit',
-  transcribing: '… Transcribing',
-  unavailable: '🎤 Microphone unavailable — type instead',
-};
-
 /**
  * Shows a question with a 60 second answer window measured on the run's
  * simulated clock, and reports the elapsed time and the points earned.
@@ -72,8 +64,15 @@ export function askQuestion(
       <p class="prompt">${escapeHtml(question.prompt)}</p>
       ${input}
       <div class="voice">
-        <button class="mic" id="mic" disabled>${MIC_LABELS.waiting}</button>
-        <span class="hint" id="mic-status">Listening starts automatically — or type below.</span>
+        <div class="mic-status-row">
+          <span class="mic-icon" id="mic-icon">🎤</span>
+          <div class="waveform" id="waveform" hidden>
+            ${Array.from({ length: 5 }, (_, i) => `<span class="bar bar-${i}"></span>`).join('')}
+          </div>
+          <span class="hint" id="mic-status">Mic opens once the question finishes reading.</span>
+        </div>
+        <p class="interim" id="interim" hidden></p>
+        <button class="primary stop-submit" id="stop-mic" hidden>■ Stop &amp; submit</button>
       </div>
       <textarea id="answer" rows="2" placeholder="Your answer..."></textarea>
       <div class="row">
@@ -86,8 +85,11 @@ export function askQuestion(
 
   const countdown = slot.querySelector('#countdown');
   const potential = slot.querySelector('#potential');
-  const mic = slot.querySelector('#mic');
+  const micIcon = slot.querySelector('#mic-icon');
+  const waveform = slot.querySelector('#waveform');
   const micStatus = slot.querySelector('#mic-status');
+  const interim = slot.querySelector('#interim');
+  const stopMic = slot.querySelector('#stop-mic');
   let micState = 'waiting';
   let session = null;
   let submitted = false;
@@ -95,13 +97,14 @@ export function askQuestion(
   // answer: the runner did speak in time, only the transcript is still on its way.
   let transcribing = false;
 
+  const MIC_ICONS = { waiting: '🎤', opening: '🎤', recording: '🔴', transcribing: '…', unavailable: '🎤' };
+
   function setMicState(state, status) {
     micState = state;
-    if (!mic) return;
-    mic.innerHTML = MIC_LABELS[state] ?? MIC_LABELS.waiting;
-    // Only the recording state is tappable now (to stop & submit early).
-    mic.disabled = state !== 'recording';
-    mic.classList.toggle('recording', state === 'recording');
+    micIcon.textContent = MIC_ICONS[state] ?? '🎤';
+    waveform.hidden = state !== 'recording';
+    stopMic.hidden = state !== 'recording';
+    if (state !== 'recording') interim.hidden = true;
     if (status) micStatus.textContent = status;
   }
 
@@ -110,13 +113,20 @@ export function askQuestion(
     if (submitted) return;
     setMicState('opening', 'Opening the microphone…');
     try {
-      const opened = await listen({ mode });
+      const opened = await listen({
+        mode,
+        onInterim(text) {
+          if (!text) return;
+          interim.hidden = false;
+          interim.textContent = `“${text}”`;
+        },
+      });
       if (submitted || micState !== 'opening') {
         opened.cancel();
         return;
       }
       session = opened;
-      setMicState('recording', 'Listening… tap to stop &amp; submit early.');
+      setMicState('recording', 'Listening… speak your answer.');
     } catch (err) {
       console.warn('microphone unavailable', err);
       setMicState('unavailable', 'Microphone blocked — type your answer instead.');
@@ -227,7 +237,7 @@ export function askQuestion(
   slot.querySelectorAll('.choice').forEach((button) => {
     button.addEventListener('click', () => submit({ text: button.dataset.option }));
   });
-  mic.addEventListener('click', toggleMic);
+  stopMic.addEventListener('click', toggleMic);
   slot.querySelector('#submit').addEventListener('click', () => submit());
   slot.querySelector('#answer')?.focus();
 }
