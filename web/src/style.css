@@ -1089,3 +1089,75 @@ body:has(.tabs:not([hidden])) .screen {
 .past-challenge a {
   color: var(--text);
 }
+
+/* ---- account (T2) ---- */
+.account-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.account-form label {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.account-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 12px;
+  border-radius: 8px;
+  border: 1px solid #35545c;
+  background: var(--card-2);
+  color: var(--text);
+  font: inherit;
+}
+.account-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.account-form button,
+.account-sync button,
+.account-signout {
+  padding: 11px 14px;
+  background: var(--card-2);
+  border: 1px solid var(--accent-dim);
+  color: var(--accent);
+  font-size: 12px;
+}
+.account-form button:hover,
+.account-sync button:hover {
+  border-color: var(--accent);
+}
+.account-sync button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.account-signin .primary {
+  width: 100%;
+}
+.account-who {
+  margin: 0;
+}
+.account-error,
+.account-notice {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.account-error {
+  color: var(--hot);
+}
+.account-notice {
+  color: var(--accent);
+}
+.account-sync[data-sync-state='error'] #sync-status {
+  color: var(--amber);
+}
+.account-signout {
+  align-self: flex-start;
+  border-color: var(--line);
+  color: var(--muted);
+}

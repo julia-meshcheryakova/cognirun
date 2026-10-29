@@ -17,12 +17,18 @@ import { createDevices } from './sensors/devices.js';
 import { toRunRecord } from './history/runRecord.js';
 import { createLocalRunStore } from './history/store.js';
 import { newPersonalBests } from './progress.js';
+import { createSyncedRunStore } from './history/syncedStore.js';
+import { createAuth } from './auth/session.js';
+import { renderAccount } from './ui/account.js';
+import { loadChallengeLeaderboard } from './challenges/leaderboard.js';
 
 const root = document.querySelector('#app');
 const nav = document.querySelector('#tabs');
 const settings = loadSettings();
 const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '';
-const store = createLocalRunStore();
+const auth = createAuth();
+const store = createSyncedRunStore({ local: createLocalRunStore(), auth });
+auth.init();
 let starting = false;
 let running = false;
 let setup = null;
@@ -41,7 +47,16 @@ function showRoute() {
   setup = null;
   renderNav(nav, { active: tab });
   if (tab === 'history') return renderHistory(root, { store, params });
-  if (tab === 'challenges') return renderChallenges(root, { store, params, settings, startRun });
+  if (tab === 'challenges') {
+    return renderChallenges(root, {
+      store,
+      params,
+      settings,
+      startRun,
+      loadLeaderboard: (id) => loadChallengeLeaderboard(auth, id),
+    });
+  }
+  if (tab === 'account') return renderAccount(root, { auth, store });
   if (tab === 'settings') {
     return renderSettings(root, {
       settings,

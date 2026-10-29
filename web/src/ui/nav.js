@@ -1,12 +1,13 @@
 /**
  * App-level navigation: a bottom tab bar outside #app, driven by the URL hash
- * (#/run, #/challenges, #/history) so screens are deep-linkable and the
+ * (#/run, #/challenges, #/history, #/account, #/settings) so screens are deep-linkable and the
  * Android WebView back button works. Hidden while a run is live.
  */
 export const TABS = [
   { id: 'run', label: 'Run', icon: '▶' },
   { id: 'challenges', label: 'Challenges', icon: '🏁' },
   { id: 'history', label: 'History', icon: '📈' },
+  { id: 'account', label: 'You', icon: '👤' },
   { id: 'settings', label: 'Settings', icon: '⚙' },
 ];
 export const DEFAULT_TAB = 'run';

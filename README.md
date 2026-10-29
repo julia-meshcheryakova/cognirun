@@ -187,3 +187,6 @@ an emergency.
 - **Android:** `.github/workflows/android-build.yml` builds the APK only for a `v*`
   tag (or a manual run) and attaches `cognirun.apk` to that GitHub Release, which the
   app's download link points at. The APK contains no secrets; it calls the Vercel API.
+- **Accounts and sync (Supabase):** optional. Without `VITE_SUPABASE_URL` /
+  `VITE_SUPABASE_ANON_KEY` the app is local-only. Setup, schema and local database
+  tests (`npm run db:test`): [docs/SUPABASE.md](docs/SUPABASE.md).

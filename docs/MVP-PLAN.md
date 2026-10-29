@@ -31,9 +31,9 @@ Work threads, run in parallel on top of the foundation, merged locally:
 | Thread | Scope | Status |
 | --- | --- | --- |
 | T1 Question bank | Generator + ≥300-question bank, seeded selection, `buildChallengeQuestionSet(challenge)` | Done: 383 questions, see `docs/QUESTIONS-SPEC.md` |
-| T2 Supabase | Separate project schema + RLS + pgTAP, auth, remote `RunStore`, sync of local runs | In progress |
+| T2 Supabase | Separate project schema + RLS + pgTAP, auth, remote `RunStore`, sync of local runs | Done: code and 50 pgTAP tests. The owner still has to create the project, see `docs/SUPABASE.md` |
 | T3 History & progress | Run list/detail, personal bests, per-category accuracy, trends, streaks | Done |
-| T4 Weekly challenges | Weekly 3K/5K/10K challenges on T1's question sets, entries and leaderboard (after T1) | Done locally. The leaderboard shows once T2 lands |
+| T4 Weekly challenges | Weekly 3K/5K/10K challenges on T1's question sets, entries and leaderboard (after T1) | Done. The leaderboard uses the `challenge_leaderboard` RPC when Supabase is configured |
 | Settings tab | Voice, default course, data export/delete, version (Phase 2) | Done |
 
 Challenge rules as built: a runner's entry is their best non-demo run that covered the
@@ -41,6 +41,14 @@ full distance (most points, then fastest). Demo attempts are saved and shown but
 Question sets come from `(challengeId, course)`, so consecutive weeks never repeat. When
 the admin page lands, it should freeze the ids at publish time, because a changed bank
 changes the sets.
+
+Next, in order:
+1. Owner setup: create the Supabase project and set the env vars (`docs/SUPABASE.md`).
+2. Recompute points on the server from `run_answers`, so a fabricated score can't enter a leaderboard.
+3. Admin page (Phase 3): publish `challenges` rows with frozen `question_ids`, and themed challenges.
+4. Friends, badges and friend leaderboards (Phase 4).
+5. Real Quizrun mode (Phase 5).
+6. Supabase env in `android-build.yml`, then hardening (Phase 6).
 
 
 ## 1. Where CogniRun is today
