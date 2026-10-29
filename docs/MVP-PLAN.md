@@ -344,8 +344,9 @@ questions.
 
 ## 8. Known issues found during the analysis
 
-- `selectRunQuestions` always picks the first question of each category, so every
-  run is identical (fix in Phase 1).
+- `selectRunQuestions` always picked the first question of each category, so every
+  run was identical. *(Fixed: solo runs draw randomly from a 383-question bank and
+  avoid recently seen questions; see `docs/QUESTIONS-SPEC.md`.)*
 - `/api/tts`, `/api/stt` and `/api/judge` are unauthenticated (Phase 6).
 - At high demo multipliers the live screen used to stall the browser (fixed in
   Phase 0 by painting once per frame).

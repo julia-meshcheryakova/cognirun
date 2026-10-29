@@ -41,7 +41,7 @@ function showRoute() {
   setup = null;
   renderNav(nav, { active: tab });
   if (tab === 'history') return renderHistory(root, { store, params });
-  if (tab === 'challenges') return renderChallenges(root, { store, params, startRun });
+  if (tab === 'challenges') return renderChallenges(root, { store, params, settings, startRun });
   if (tab === 'settings') {
     return renderSettings(root, {
       settings,
@@ -203,7 +203,7 @@ async function startRun({ course = settings.course, challengeId = null, question
 /** Post-run page, rendered from the saved record; the 'New PB!' strip follows once earlier runs load. */
 async function showResults(record) {
   starting = false;
-  renderNav(nav, { active: 'run' });
+  renderNav(nav, { active: parseRoute(location.hash).tab });
   const results = renderResults(root, {
     record,
     onRestart: showRoute,

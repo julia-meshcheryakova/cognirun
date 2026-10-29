@@ -1052,3 +1052,40 @@ body:has(.tabs:not([hidden])) .screen {
   text-decoration: none;
   border-radius: 8px;
 }
+/* ---- weekly challenges (T4) ---- */
+.challenge-card h2 {
+  margin: 0;
+}
+.challenge-best {
+  margin: 4px 0;
+}
+.challenge-best-points {
+  color: var(--accent);
+}
+.primary.compact {
+  min-height: 40px;
+  padding: 10px 16px;
+}
+.demo-note {
+  color: var(--amber);
+}
+.challenge-leaderboard,
+.challenge-entries {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.challenge-leaderboard li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.challenge-leaderboard li.me {
+  color: var(--accent);
+}
+.challenge-entries a,
+.past-challenge a {
+  color: var(--text);
+}
