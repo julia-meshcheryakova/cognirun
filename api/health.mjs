@@ -6,5 +6,6 @@ export default function handler(req, res) {
     ok: true,
     questions: lib.questions.length,
     eleven: Boolean(process.env.ELEVENLABS_API_KEY),
+    groq: Boolean(process.env.GROQ_API_KEY),
   });
 }

@@ -1,0 +1,31 @@
+name: CI
+
+# The full gate (lint, unit, build, Playwright e2e) runs locally via
+# `npm run check` and the husky pre-push hook. CI is the cheap confirmation on
+# pull requests only; Vercel deploys main on its own.
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix web
+      - run: npm run lint
+      - run: npm test
+      - run: npm --prefix web run build

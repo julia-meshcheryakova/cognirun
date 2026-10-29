@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { join, extname, resolve } from 'node:path';
 import { QUESTION_LIBRARY as lib } from './question-server/questions.js';
+import { judgeRequest } from './question-server/llmJudge.js';
 
 const KEY = process.env.ELEVENLABS_API_KEY || '';
 const VOICE = process.env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb';
@@ -17,7 +18,7 @@ function json(res, code, obj) { res.writeHead(code, { 'content-type': 'applicati
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   if (req.method === 'OPTIONS') { res.writeHead(204, CORS); return res.end(); }
-  if (url.pathname === '/health') return json(res, 200, { ok: true, questions: lib.questions.length, eleven: Boolean(KEY) });
+  if (url.pathname === '/health') return json(res, 200, { ok: true, questions: lib.questions.length, eleven: Boolean(KEY), groq: Boolean(process.env.GROQ_API_KEY) });
   if (url.pathname === '/api/config') return json(res, 200, { elevenLabs: Boolean(KEY) });
   if (url.pathname === '/questions') {
     const cat = url.searchParams.get('category');
@@ -30,6 +31,12 @@ const server = createServer(async (req, res) => {
     const up = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(VOICE)}?output_format=mp3_44100_128`, { method: 'POST', headers: { 'xi-api-key': KEY, 'content-type': 'application/json' }, body: JSON.stringify({ text: b.text || '', model_id: TTS_MODEL }) });
     res.writeHead(up.status, { 'content-type': 'audio/mpeg', ...CORS });
     return res.end(Buffer.from(await up.arrayBuffer()));
+  }
+  if (req.method === 'POST' && url.pathname === '/api/judge') {
+    let input;
+    try { input = JSON.parse((await raw(req)).toString() || '{}'); } catch { return json(res, 400, { error: 'invalid JSON' }); }
+    const { status, body } = await judgeRequest(input);
+    return json(res, status, body);
   }
   if (req.method === 'POST' && url.pathname === '/api/stt') {
     if (!KEY) return json(res, 503, { error: 'no key' });

@@ -83,8 +83,8 @@ export function renderLive(root, { settings, onMultiplier, onScrub, onExit }) {
   const count = Math.round(total / course.segment);
 
   root.querySelector('#exit-run')?.addEventListener('click', () => {
-    // eslint-disable-next-line no-alert -- a run in progress needs an explicit,
-    // hard-to-misfire confirmation before it is abandoned.
+    // A run in progress needs an explicit, hard-to-misfire confirmation before
+    // it is abandoned.
     if (confirm('End this run and go back to setup?')) onExit?.();
   });
 
@@ -102,6 +102,7 @@ export function renderLive(root, { settings, onMultiplier, onScrub, onExit }) {
   // (a run cannot rewind), so the thumb just snaps back to the live distance.
   const scrub = el('scrub');
   let dragging = false;
+  let pending = null;
   if (scrub) {
     scrub.addEventListener('input', () => {
       dragging = true;
@@ -133,29 +134,42 @@ export function renderLive(root, { settings, onMultiplier, onScrub, onExit }) {
     enableScrub() {
       if (scrub) scrub.disabled = false;
     },
-    update(snapshot, { points, answered }) {
-      const zone = hrZone(snapshot.heartRate || 0);
-      el('hr').textContent = snapshot.heartRate || '--';
-      el('zone').textContent = snapshot.heartRate ? `· Zone ${zone.zone}` : '';
-      const source = el('hr-source');
-      if (snapshot.heartRate && !snapshot.heartRateIsReal) {
-        source.hidden = false;
-        source.textContent = 'Simulated';
-      } else if (!snapshot.heartRateIsReal) {
-        source.hidden = true;
-      }
-      el('points').textContent = points;
-      el('answered').textContent = `${answered} / ${count}`;
-      el('distance').textContent = formatKm(snapshot.distance);
-      el('pace').textContent = formatPace(snapshot.speed);
-      el('time').textContent = formatClock(snapshot.elapsedSeconds);
-      el('speed').textContent = formatSpeed(snapshot.speed);
-      el('progress').style.width = `${Math.min(100, (snapshot.distance / total) * 100)}%`;
-      drawRoute(el('live-route'), snapshot.samples);
-      if (scrub && !dragging) {
-        scrub.value = snapshot.distance;
-        el('scrub-value').textContent = `${formatKm(snapshot.distance)} km`;
-      }
+    update(snapshot, totals) {
+      // Demo multipliers emit thousands of snapshots per second; only the latest
+      // is worth painting, once per frame (drawRoute redraws the whole route).
+      const frameAlreadyScheduled = pending !== null;
+      pending = { snapshot, totals };
+      if (frameAlreadyScheduled) return;
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(paint);
+      else paint();
     },
   };
+
+  function paint() {
+    const { snapshot, totals } = pending;
+    pending = null;
+    if (!el('hr')) return; // the run ended and another screen replaced this one
+    const zone = hrZone(snapshot.heartRate || 0);
+    el('hr').textContent = snapshot.heartRate || '--';
+    el('zone').textContent = snapshot.heartRate ? `· Zone ${zone.zone}` : '';
+    const source = el('hr-source');
+    if (snapshot.heartRate && !snapshot.heartRateIsReal) {
+      source.hidden = false;
+      source.textContent = 'Simulated';
+    } else if (!snapshot.heartRateIsReal) {
+      source.hidden = true;
+    }
+    el('points').textContent = totals.points;
+    el('answered').textContent = `${totals.answered} / ${count}`;
+    el('distance').textContent = formatKm(snapshot.distance);
+    el('pace').textContent = formatPace(snapshot.speed);
+    el('time').textContent = formatClock(snapshot.elapsedSeconds);
+    el('speed').textContent = formatSpeed(snapshot.speed);
+    el('progress').style.width = `${Math.min(100, (snapshot.distance / total) * 100)}%`;
+    drawRoute(el('live-route'), snapshot.samples);
+    if (scrub && !dragging) {
+      scrub.value = snapshot.distance;
+      el('scrub-value').textContent = `${formatKm(snapshot.distance)} km`;
+    }
+  }
 }

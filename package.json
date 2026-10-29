@@ -8,7 +8,13 @@
     "build": "npm --prefix web install && npm --prefix web run build",
     "start": "node serve-app.mjs",
     "cap:sync": "npx cap sync android",
-    "android": "npm run build:web && npm run cap:sync && cd android && gradlew.bat assembleDebug"
+    "android": "npm run build:web && npm run cap:sync && cd android && gradlew.bat assembleDebug",
+    "lint": "eslint .",
+    "test": "npm --prefix web test && npm --prefix question-server test",
+    "e2e": "playwright test",
+    "check": "node scripts/gate.mjs",
+    "smoke:prod": "node scripts/smoke-prod.mjs",
+    "prepare": "husky"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.3.0",
@@ -16,5 +22,12 @@
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@capacitor/geolocation": "^8.2.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
+    "husky": "^9.1.7"
   }
 }

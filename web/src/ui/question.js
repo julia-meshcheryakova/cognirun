@@ -1,4 +1,4 @@
-import { ANSWER_WINDOW_SECONDS, scoreForAnswer, scoreForElapsed } from '../scoring.js';
+import { ANSWER_WINDOW_SECONDS, scoreForElapsed } from '../scoring.js';
 import { beep } from '../beep.js';
 import { cancelSpeech, speak } from '../tts.js';
 import { escapeHtml } from '../format.js';
@@ -154,7 +154,7 @@ export function askQuestion(
     setMicState('transcribing');
     const active = session;
     session = null;
-    let transcript = '';
+    let transcript;
     try {
       transcript = await Promise.race([
         active.stop(),

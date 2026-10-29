@@ -129,70 +129,84 @@ test('a free-text logic question accepts the bare verdict', async () => {
   assert.equal((await judgeAnswer({ question, text: 'Yes' })).correct, false);
 });
 
-function llmStub(reply, calls) {
+const JUDGE = 'https://judge.test/api/judge';
+
+function judgeStub(reply, calls, status = 200) {
   return async (url, options) => {
     calls.push({ url, body: JSON.parse(options.body) });
-    return {
-      ok: true,
-      json: async () => ({ choices: [{ message: { content: JSON.stringify(reply) } }] }),
-    };
+    return { ok: status === 200, status, json: async () => reply };
   };
 }
 
-test('the LLM judge decides only when both local rules fail', async () => {
+test('the server judge decides only when both local rules fail', async () => {
   const calls = [];
-  const fetchImpl = llmStub({ correct: true, reason: 'synonym of the answer' }, calls);
+  const fetchImpl = judgeStub({ correct: true, reason: 'synonym of the answer' }, calls);
 
   const paraphrase = await judgeAnswer({
-    question: { prompt: 'What is the capital of Japan?', answer: 'Tokyo' },
+    question: QUESTION,
     text: 'the Japanese capital city, Edo renamed',
-    key: 'test-key',
+    endpoint: JUDGE,
     fetchImpl,
   });
   assert.equal(paraphrase.correct, true);
   assert.equal(paraphrase.method, 'llm');
   assert.equal(paraphrase.reason, 'synonym of the answer');
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, 'https://api.groq.com/openai/v1/chat/completions');
-  assert.equal(calls[0].body.model, 'qwen/qwen3.8-27b');
+  assert.equal(calls[0].url, JUDGE);
+  // Only the id and transcript leave the device; the server looks the question up.
+  assert.deepEqual(calls[0].body, {
+    questionId: 'trivia-3',
+    text: 'the Japanese capital city, Edo renamed',
+  });
 
-  const local = await judgeAnswer({ question: QUESTION, text: 'Tokyo', key: 'test-key', fetchImpl });
+  const local = await judgeAnswer({ question: QUESTION, text: 'Tokyo', endpoint: JUDGE, fetchImpl });
   assert.equal(local.method, 'exact');
   assert.equal(calls.length, 1);
 });
 
-test('an LLM verdict of incorrect is reported as such', async () => {
+test('a server verdict of incorrect is reported as such', async () => {
   const verdict = await judgeAnswer({
     question: QUESTION,
     text: 'somewhere in Japan',
-    key: 'test-key',
-    fetchImpl: llmStub({ correct: false, reason: 'no city named' }, []),
+    endpoint: JUDGE,
+    fetchImpl: judgeStub({ correct: false, reason: 'no city named' }, []),
   });
 
   assert.equal(verdict.correct, false);
   assert.equal(verdict.method, 'llm');
 });
 
-test('without a key or with a failing call, grading stays local', async () => {
+test('without a judge, an unconfigured one or a failing call, grading stays local', async () => {
   let called = false;
-  const noKey = await judgeAnswer({
+  const noEndpoint = await judgeAnswer({
     question: QUESTION,
     text: 'Kyoto',
-    key: '',
-    fetchImpl: async () => { called = true; },
+    endpoint: '',
+    fetchImpl: async () => {
+      called = true;
+    },
+  });
+  assert.deepEqual([noEndpoint.correct, noEndpoint.method, called], [false, 'no-match', false]);
+
+  const unconfigured = await judgeAnswer({
+    question: QUESTION,
+    text: 'Kyoto',
+    endpoint: JUDGE,
+    fetchImpl: judgeStub({ error: 'LLM judge is not configured.' }, [], 503),
   });
   assert.deepEqual(
-    [noKey.correct, noKey.method, called],
-    [false, 'no-match', false],
+    [unconfigured.correct, unconfigured.method],
+    [false, 'no-match'],
   );
+  assert.match(unconfigured.reason, /does not match/i);
 
   const failing = await judgeAnswer({
     question: QUESTION,
     text: 'Kyoto',
-    key: 'test-key',
-    fetchImpl: async () => ({ ok: false, status: 401 }),
+    endpoint: JUDGE,
+    fetchImpl: judgeStub({}, [], 502),
   });
   assert.equal(failing.correct, false);
   assert.equal(failing.method, 'no-match');
-  assert.match(failing.reason, /401/);
+  assert.match(failing.reason, /502/);
 });

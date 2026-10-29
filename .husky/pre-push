@@ -1,0 +1,3 @@
+# Full local gate (lint, unit, build, e2e) so CI minutes are not the first check.
+# Skip in an emergency with: git push --no-verify
+npm run check

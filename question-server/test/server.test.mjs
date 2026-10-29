@@ -41,7 +41,7 @@ async function startServer(t) {
   const port = await freePort();
   const child = spawn(process.execPath, [join(serverDir, 'server.mjs')], {
     cwd: serverDir,
-    env: { ...process.env, PORT: String(port) },
+    env: { ...process.env, PORT: String(port), ELEVENLABS_API_KEY: '', GROQ_API_KEY: '' },
     stdio: 'ignore',
   });
   t.after(() => {
@@ -52,13 +52,18 @@ async function startServer(t) {
   return base;
 }
 
-test('GET /health reports the library size', async (t) => {
+test('GET /health reports the library size and which upstreams are configured', async (t) => {
   const base = await startServer(t);
 
   const res = await fetch(`${base}/health`);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('content-type'), 'application/json');
-  assert.deepEqual(await res.json(), { ok: true, questions: QUESTION_LIBRARY.questions.length });
+  assert.deepEqual(await res.json(), {
+    ok: true,
+    questions: QUESTION_LIBRARY.questions.length,
+    eleven: false,
+    groq: false,
+  });
 });
 
 test('GET /questions serves the whole library', async (t) => {

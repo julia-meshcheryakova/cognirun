@@ -31,3 +31,10 @@ function defaultServerUrl() {
 
 export const QUESTION_SERVER_URL =
   import.meta.env?.VITE_QUESTION_SERVER_URL ?? defaultServerUrl();
+
+/**
+ * Server-side LLM judge (POST { questionId, text }). The Groq key stays on the
+ * server. Node has no import.meta.env, so the headless tests never call it.
+ */
+export const JUDGE_URL =
+  import.meta.env?.VITE_JUDGE_URL ?? (import.meta.env ? `${QUESTION_SERVER_URL}/api/judge` : '');

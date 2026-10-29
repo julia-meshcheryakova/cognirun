@@ -7,9 +7,18 @@ faster scores more points (100 points instantly → 50 points at 60 seconds). Af
 population-relative percentile per category, the GPS route and the pace profile.
 
 - `web/` — the browser app (all functionality lives here)
-- `question-server/` — the questions library and the HTTP API serving it
-- `android/` — skeleton wrapper that will host the web app in a WebView later
+- `question-server/` — the questions library, the LLM answer judge and the local dev API
+- `api/` — the same API as Vercel serverless functions (production)
+- `serve-app.mjs` — the same API plus the built app as one Node server (Render)
+- `android/` — Capacitor wrapper that ships the web app as an APK
+- `e2e/` — Playwright smoke tests against the production build
+- `scripts/` — the local ship gate and the post-deploy smoke check
 - `docs/QUESTIONS-SPEC.md` — categories, library, selection and percentile framing
+- `docs/MVP-PLAN.md` — the roadmap from demo to MVP
+
+The three API surfaces (`question-server/server.mjs`, `api/*.mjs`, `serve-app.mjs`)
+must stay in sync: `/health`, `/questions`, `/api/config`, `/api/tts`, `/api/stt`,
+`/api/judge`.
 
 ## Run the web app
 
@@ -43,28 +52,33 @@ same simulated-clock milestone event as the question itself, so they stay in syn
 every demo multiplier. The audio context is created on the "Start run" click so the
 first beep is not blocked by the browser autoplay policy.
 
-Read-aloud uses the browser's built-in SpeechSynthesis (`web/src/tts.js`) — no API key
-and no external service. It can be turned off with the **Read questions aloud** switch
-on the start screen, and a browser without speech synthesis simply stays silent.
+Read-aloud (`web/src/tts.js`) uses ElevenLabs through the server's `/api/tts` when the
+server has `ELEVENLABS_API_KEY`, and falls back to the browser's built-in
+SpeechSynthesis otherwise. It can be turned off with the **Read questions aloud**
+switch on the start screen, and a browser without speech synthesis simply stays silent.
 
 ## Voice answering
 
-You can answer out loud. Everything runs in the browser: **no API key and no external
-service** are needed or used for answering. The flow per question:
+You can answer out loud. API keys live only on the server — the browser bundle and
+the APK never contain one. The flow per question:
 
 1. The question appears and is read aloud (see **Sound** above).
 2. The microphone becomes available the moment the reading *starts* — the mic button
    unlocks then, so you can answer while the question is still being read.
 3. Tap the mic, speak, tap again. The answer time (and therefore the score) is taken
    at that second tap, so transcription latency never costs you points.
-4. What you said is transcribed by the browser's built-in **Web Speech API**
-   (`SpeechRecognition` / `webkitSpeechRecognition`, Chromium only — see
-   `web/src/stt.js`). `stop()` is bounded, so a recogniser that never ends cannot
-   block the question.
-5. The transcript is graded locally by `web/src/judge.js`: case, punctuation and
-   filler words are normalized away ("It's Tokyo!" matches "Tokyo"), and a spoken
+4. What you said is transcribed by ElevenLabs Scribe through the server's `/api/stt`
+   when it is configured (this is what works inside the Android WebView), otherwise
+   by the browser's built-in **Web Speech API** (`SpeechRecognition` /
+   `webkitSpeechRecognition`, Chromium only — see `web/src/stt.js`). `stop()` is
+   bounded, so a recogniser that never ends cannot block the question.
+5. The transcript is graded by `web/src/judge.js`, locally first: case, punctuation
+   and filler words are normalized away ("It's Tokyo!" matches "Tokyo"), and a spoken
    sentence that contains the expected answer counts too ("he is playing Monopoly"
-   is correct for "Monopoly").
+   is correct for "Monopoly"). Only if that fails is it sent to the server's
+   `/api/judge`, which asks a Groq-hosted LLM whether the answer means the same
+   thing. The server looks the question up by id, so the endpoint can only grade
+   CogniRun questions — it is not an open LLM proxy.
 6. Correct answers earn the time-decay points (100 → 50 over 60 s), wrong answers 0.
    The result card shows the transcript, the verdict and which rule decided it
    (`exact`, `contains`, `no-match`).
@@ -74,14 +88,14 @@ still playable when the mic is denied or the browser has no recogniser — the m
 is then disabled and typing is the only input. Multiple-choice questions can still be
 answered by tapping an option. Voice answering works in demo mode too.
 
-Because grading is a local string comparison, a correct answer phrased entirely
-differently from the expected one ("the Japanese capital") is marked wrong. That is the
-deliberate trade-off for a demo with no external dependencies.
+Without `GROQ_API_KEY` on the server, `/api/judge` answers 503 and grading stays a
+local string comparison, so a correct answer phrased entirely differently from the
+expected one ("the Japanese capital") is marked wrong.
 
 ## Demo mode
 
-Demo mode is **on by default** on the start screen, so you can test the whole flow
-without a watch or leaving your desk. It simulates GPS and heart rate: 6:00/km pace
+Turn on **Demo mode** on the start screen to test the whole flow without a watch or
+leaving your desk (it is off by default, so a real run is one tap away). It simulates GPS and heart rate: 6:00/km pace
 with natural variation, slowing down for a while after each kilometer (the runner is
 thinking about the question) and then recovering.
 
@@ -126,3 +140,50 @@ Demo mode never touches Bluetooth — its heart rate comes from the pace simulat
 `web/src/sensors/demo.js`, while real runs use `web/src/sensors/heartRate.js` via
 `web/src/sensors/real.js`. `createRun({ demo })` picks one or the other, so the two paths
 never mix.
+
+## Server environment
+
+Set these on Vercel (Project → Settings → Environment Variables), on Render, or in
+your shell for `question-server`. None of them are ever sent to the browser.
+
+| Variable | Used for | Without it |
+| --- | --- | --- |
+| `GROQ_API_KEY` | `/api/judge` LLM grading | local string matching only |
+| `GROQ_MODEL` | judge model override | `qwen/qwen3.8-27b` |
+| `ELEVENLABS_API_KEY` | `/api/tts`, `/api/stt` | browser speech |
+| `ELEVENLABS_VOICE_ID`, `ELEVENLABS_TTS_MODEL`, `ELEVENLABS_STT_MODEL` | voice overrides | defaults in code |
+
+`GET /health` reports `groq` and `eleven` booleans so you can confirm a deploy is
+configured.
+
+## Development harness
+
+Everything is checked locally first, so GitHub Actions minutes are spent only on
+confirmation. One-time setup from the repo root:
+
+```bash
+npm install                        # root tools + git hooks (husky)
+npm --prefix web install
+npx playwright install chromium
+```
+
+| Command | What it does |
+| --- | --- |
+| `npm run lint` | ESLint over the web app, servers, API functions, tests and scripts |
+| `npm test` | web + question-server unit tests (`node --test`) |
+| `npm run e2e` | Playwright: a full x1000 demo run on the production build, plus a "no API keys in the bundle" check (run `npm --prefix web run build` first) |
+| `npm run check` | the whole gate: lint → unit → build → e2e (`-- --fast` for lint + unit) |
+| `npm run smoke:prod` | post-deploy check of https://cognirun.vercel.app (`SMOKE_URL=` for previews) |
+
+The husky **pre-push** hook runs `npm run check`; `git push --no-verify` skips it in
+an emergency.
+
+## Deploy
+
+- **Web + API:** Vercel deploys `main` automatically (`vercel.json`: builds `web/`,
+  serves `api/*.mjs` as functions). After a merge, run `npm run smoke:prod`.
+- **CI:** `.github/workflows/ci.yml` runs lint, unit tests and the build on pull
+  requests only.
+- **Android:** `.github/workflows/android-build.yml` builds the APK only for a `v*`
+  tag (or a manual run) and attaches `cognirun.apk` to that GitHub Release, which the
+  app's download link points at. The APK contains no secrets; it calls the Vercel API.

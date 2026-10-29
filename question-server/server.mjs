@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
 
+import { judgeRequest } from './llmJudge.js';
 import { QUESTION_LIBRARY as library } from './questions.js';
 
 const PORT = Number(process.env.PORT ?? 4000);
@@ -137,13 +138,30 @@ const server = createServer(async (req, res) => {
   try {
     if (req.method === 'POST' && url.pathname === '/api/tts') return await handleTts(req, res);
     if (req.method === 'POST' && url.pathname === '/api/stt') return await handleStt(req, res);
+    if (req.method === 'POST' && url.pathname === '/api/judge') {
+      let input;
+      try {
+        input = JSON.parse((await readBody(req, 16 * 1024)).toString('utf8') || '{}');
+      } catch {
+        return send(400, { error: 'invalid JSON' });
+      }
+      const { status, body } = await judgeRequest(input);
+      return send(status, body);
+    }
     if (url.pathname === '/api/config') return send(200, { elevenLabs: Boolean(ELEVENLABS_KEY) });
   } catch (error) {
     console.error(error);
     return send(500, { error: 'voice bridge error' });
   }
 
-  if (url.pathname === '/health') return send(200, { ok: true, questions: library.questions.length });
+  if (url.pathname === '/health') {
+    return send(200, {
+      ok: true,
+      questions: library.questions.length,
+      eleven: Boolean(ELEVENLABS_KEY),
+      groq: Boolean(process.env.GROQ_API_KEY),
+    });
+  }
   if (url.pathname !== '/questions') return send(404, { error: 'not found' });
 
   const category = url.searchParams.get('category');
