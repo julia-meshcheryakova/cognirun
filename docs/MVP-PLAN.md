@@ -6,6 +6,36 @@ anywhere, scored by an app instead of an event crew. If it lands, Quizrun become
 feeds it. This document is the analysis behind that, and the plan to get CogniRun
 from a polished demo to an MVP real people sign up for and come back to.
 
+## 0. Decisions so far and the current build
+
+Confirmed by the owner:
+
+- **Separate Supabase project** from Quizrun for now (no shared schema or auth).
+- **Weekly challenges first**, in several lengths: **3K, 5K and 10K**, one question per km.
+- **A question library + generator** that builds questions and maps a fixed set to each challenge.
+- **Personal history and progress** stored and shown.
+
+Assumed (say if you disagree):
+
+- Stay on vanilla JS + Vite for now; logic lives in UI-agnostic modules so a later
+  React/TS port is cheap. Revisit before the friends/admin phase.
+- Weekly challenges are deterministic per ISO week (`2026-W02-5k`); admin overrides come later.
+- Demo (simulated) runs are saved but flagged and left out of progress by default.
+
+Foundation (done): `#/run`, `#/challenges`, `#/history` tabs (`ui/nav.js`), 5K/10K courses,
+the `RunRecord` contract (`history/runRecord.js`) and an async `RunStore` with a
+local adapter (`history/store.js`). Every finished run is saved on the device.
+
+Work threads, run in parallel on top of the foundation, merged locally:
+
+| Thread | Scope |
+| --- | --- |
+| T1 Question bank | Generator + ≥300-question bank, seeded selection, `buildChallengeQuestionSet(challenge)` |
+| T2 Supabase | Separate project schema + RLS + pgTAP, auth, remote `RunStore`, sync of local runs |
+| T3 History & progress | Run list/detail, personal bests, per-category accuracy, trends, streaks |
+| T4 Weekly challenges | Weekly 3K/5K/10K challenges on T1's question sets, entries and leaderboard (after T1) |
+
+
 ## 1. Where CogniRun is today
 
 **What works well**

@@ -29,6 +29,7 @@ test('a full demo run reaches the results page with every answer graded', async 
   await page.locator('#demo-toggle').check();
   await page.locator('[data-mult="1000"]').click();
   await page.locator('#start').click();
+  await expect(page.locator('#tabs')).toBeHidden();
 
   for (const question of RUN_QUESTIONS) {
     const prompt = page.locator('.modal .prompt', { hasText: question.prompt });
@@ -53,8 +54,20 @@ test('a full demo run reaches the results page with every answer graded', async 
   expect(total).toBeGreaterThanOrEqual(150);
   expect(total).toBeLessThanOrEqual(300);
 
-  await page.locator('#restart').click();
+  // The finished run is saved to the device and listed in History.
+  await expect(page.locator('#tabs')).toBeVisible();
+  await page.locator('#tabs [data-tab="history"]').click();
+  await expect(page).toHaveURL(/#\/history$/);
+  const saved = page.locator('.run-item');
+  await expect(saved).toHaveCount(1);
+  await expect(saved).toContainText('3/3 correct');
+  await expect(saved.locator('.run-points')).toHaveText(String(total));
+
+  await page.locator('#tabs [data-tab="run"]').click();
   await expect(page.locator('#start')).toBeVisible();
+  await page.reload();
+  await page.locator('#tabs [data-tab="history"]').click();
+  await expect(page.locator('.run-item')).toHaveCount(1);
 });
 
 test('the shipped bundle carries no API keys', async ({ page, request }) => {

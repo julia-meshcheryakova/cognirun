@@ -1,17 +1,26 @@
 import './style.css';
+import { COURSES, questionCountOf } from './config.js';
 import { loadLibrary, selectRunQuestions } from './questions.js';
 import { createRun } from './run.js';
 import { renderLive } from './ui/live.js';
 import { renderResults } from './ui/results.js';
 import { renderSetup } from './ui/setup.js';
 import { askQuestion } from './ui/question.js';
+import { renderNav, parseRoute, routeHref } from './ui/nav.js';
+import { renderHistory } from './ui/history.js';
+import { renderChallenges } from './ui/challenges.js';
 import { primeAudio } from './beep.js';
 import { setVoiceEnabled } from './tts.js';
 import { createDevices } from './sensors/devices.js';
+import { toRunRecord } from './history/runRecord.js';
+import { createLocalRunStore } from './history/store.js';
 
 const root = document.querySelector('#app');
+const nav = document.querySelector('#tabs');
 const settings = { demo: false, multiplier: 1, voice: true, course: '3k' };
+const store = createLocalRunStore();
 let starting = false;
+let running = false;
 let setup = null;
 
 // The watch and GPS live for the whole session: they are connected on the setup
@@ -21,6 +30,16 @@ const devices = createDevices({
     setup?.updateDevices(state);
   },
 });
+
+function showRoute() {
+  if (running) return; // a live run owns the screen until it ends
+  const { tab, params } = parseRoute(location.hash);
+  setup = null;
+  renderNav(nav, { active: tab });
+  if (tab === 'history') return renderHistory(root, { store, params });
+  if (tab === 'challenges') return renderChallenges(root, { store, params, startRun });
+  return showSetup();
+}
 
 function showSetup() {
   document.querySelector('#download-apk')?.removeAttribute('hidden');
@@ -37,21 +56,28 @@ function showSetup() {
     onConnectGps() {
       devices.connectGps();
     },
-    onStart: startRun,
+    onStart: () => startRun(),
   });
 }
 
-async function startRun() {
-  if (starting) return;
+/**
+ * Start a run. Solo runs use the setup screen's course; a challenge passes its
+ * own `course`, `challengeId` and the fixed `questionIds` everyone answers.
+ */
+async function startRun({ course = settings.course, challengeId = null, questionIds = null } = {}) {
+  if (starting || running) return;
   starting = true;
+  running = true;
 
   setup = null;
+  renderNav(nav, { active: 'run', hidden: true });
   document.querySelector('#download-apk')?.setAttribute('hidden', '');
   primeAudio(); // still inside the click gesture that started the run
   setVoiceEnabled(settings.voice);
 
-  // One question per category (km1 trivia, km2 logic, km3 maths), from the question
-  // server when it is up and from the bundled library otherwise.
+  const runSettings = { ...settings, course: COURSES[course] ? course : settings.course };
+  // Questions come from the question server when it is up and from the bundled
+  // library otherwise.
   const libraryLoad = loadLibrary();
   let runQuestions = [];
 
@@ -61,7 +87,7 @@ async function startRun() {
   let latest = null;
 
   const live = renderLive(root, {
-    settings,
+    settings: runSettings,
     onMultiplier(value) {
       settings.multiplier = value;
       run.setMultiplier(value);
@@ -71,14 +97,16 @@ async function startRun() {
     },
     onExit() {
       run.stop();
-      showSetup();
+      running = false;
+      starting = false;
+      showRoute();
     },
   });
 
   const run = createRun({
-    demo: settings.demo,
-    multiplier: settings.multiplier,
-    course: settings.course,
+    demo: runSettings.demo,
+    multiplier: runSettings.multiplier,
+    course: runSettings.course,
     devices,
     onUpdate(snapshot) {
       latest = snapshot;
@@ -92,6 +120,9 @@ async function startRun() {
       askNext();
     },
     onFinish(snapshot) {
+      running = false;
+      const record = toRunRecord({ snapshot, answers, settings: runSettings, challengeId });
+      store.save(record).catch((err) => console.warn('could not save the run', err));
       showResults(snapshot, answers);
     },
     // Real runs only: connection state of the BLE heart rate device. Never fatal —
@@ -135,14 +166,29 @@ async function startRun() {
   }
 
   const { library } = await libraryLoad;
-  runQuestions = selectRunQuestions(library);
+  runQuestions = questionIds
+    ? questionIds.map((id) => library.questions.find((q) => q.id === id)).filter(Boolean)
+    : selectRunQuestions(library, questionCountOf(runSettings.course));
+  if (runQuestions.length < questionCountOf(runSettings.course)) {
+    console.warn('challenge questions missing from the library; filling with defaults');
+    const fill = selectRunQuestions(library, questionCountOf(runSettings.course));
+    runQuestions = fill.map((q, i) => runQuestions[i] ?? q);
+  }
   starting = false;
   live.enableScrub();
   run.start();
 }
 
 function showResults(snapshot, answers) {
-  renderResults(root, { snapshot, answers, onRestart: showSetup });
+  starting = false;
+  renderNav(nav, { active: 'run' });
+  renderResults(root, {
+    snapshot,
+    answers,
+    onRestart: showRoute,
+    historyHref: routeHref('history'),
+  });
 }
 
-showSetup();
+window.addEventListener('hashchange', showRoute);
+showRoute();

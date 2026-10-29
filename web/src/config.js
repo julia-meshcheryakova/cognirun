@@ -1,16 +1,26 @@
 export const MULTIPLIERS = [1, 10, 100, 1000];
 
 /**
- * Live-run courses. Question count is always total/segment (3 either way); the
- * 60 m course is a walkable test/demo so a full run can be finished on foot.
+ * Live-run courses. Question count is total/segment: one question per kilometre
+ * on the real distances (3, 5, 10). The 300 m and 60 m courses are walkable
+ * test courses, so a full run can be finished on foot.
  */
 export const COURSES = {
   '3k': { label: '3K', segment: 1000, total: 3000 },
+  '5k': { label: '5K', segment: 1000, total: 5000 },
+  '10k': { label: '10K', segment: 1000, total: 10000 },
   '300m': { label: '300 m', segment: 100, total: 300 },
   '60m': { label: '60 m', segment: 20, total: 60 },
 };
 export const DEFAULT_COURSE = '3k';
 export const courseOf = (id) => COURSES[id] ?? COURSES[DEFAULT_COURSE];
+export const questionCountOf = (id) => {
+  const course = courseOf(id);
+  return Math.round(course.total / course.segment);
+};
+
+/** The lengths a weekly challenge is offered in. */
+export const CHALLENGE_COURSES = ['3k', '5k', '10k'];
 
 /**
  * Where the question server lives; falls back to the bundled library if it is down.

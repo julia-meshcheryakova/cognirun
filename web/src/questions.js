@@ -34,14 +34,22 @@ export async function loadLibrary({ url = QUESTION_SERVER_URL, fetchImpl = fetch
 }
 
 /**
- * The single place run selection happens: the first question of each category,
- * in RUN_CATEGORIES order, so a run is reproducible. Swap the `[0]` for a random
- * pick to randomize.
+ * The single place run selection happens: categories rotate in RUN_CATEGORIES
+ * order (km1 trivia, km2 logic, km3 maths, km4 trivia, ...), taking the next
+ * unused question of that category, so a run is reproducible. `count` is the
+ * course's question count (3 for a 3K, 5 for a 5K, ...).
  */
-export function selectRunQuestions(library) {
-  return RUN_CATEGORIES.map((category) => {
-    const question = library.questions.find((q) => q.category === category);
-    if (!question) throw new Error(`no questions for category ${category}`);
-    return question;
+export function selectRunQuestions(library, count = RUN_CATEGORIES.length) {
+  const byCategory = Object.fromEntries(
+    RUN_CATEGORIES.map((category) => [
+      category,
+      library.questions.filter((q) => q.category === category),
+    ]),
+  );
+  return Array.from({ length: count }, (_, i) => {
+    const category = RUN_CATEGORIES[i % RUN_CATEGORIES.length];
+    const pool = byCategory[category];
+    if (!pool.length) throw new Error(`no questions for category ${category}`);
+    return pool[Math.floor(i / RUN_CATEGORIES.length) % pool.length];
   });
 }

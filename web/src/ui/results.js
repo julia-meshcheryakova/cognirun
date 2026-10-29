@@ -10,7 +10,7 @@ function verdictLabel(answer) {
   return answer.correct ? '✅' : '❌';
 }
 
-export function renderResults(root, { snapshot, answers, onRestart }) {
+export function renderResults(root, { snapshot, answers, onRestart, historyHref = null }) {
   const totalPoints = answers.reduce((sum, a) => sum + a.points, 0);
   const categories = categoryBreakdown(answers);
   const avgSpeed = snapshot.elapsedSeconds ? snapshot.distance / snapshot.elapsedSeconds : 0;
@@ -73,6 +73,7 @@ export function renderResults(root, { snapshot, answers, onRestart }) {
       </section>
 
       <button class="primary" id="restart">New run</button>
+      ${historyHref ? `<a class="hint history-link" href="${historyHref}">Saved to your history →</a>` : ''}
     </main>
   `;
 
