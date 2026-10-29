@@ -84,13 +84,6 @@ export function setupMarkup({ settings, devices = IDLE_DEVICES }) {
 
       <section class="card compact">
         <label class="row">
-          <span>Read questions aloud</span>
-          <input type="checkbox" id="voice-toggle" ${settings.voice ? 'checked' : ''} />
-        </label>
-      </section>
-
-      <section class="card compact">
-        <label class="row">
           <span>Demo mode</span>
           <input type="checkbox" id="demo-toggle" ${settings.demo ? 'checked' : ''} />
         </label>
@@ -106,6 +99,7 @@ export function setupMarkup({ settings, devices = IDLE_DEVICES }) {
       </section>
 
       <button class="primary" id="start">Start run</button>
+      <p class="hint">Questions are ${settings.voice ? '' : 'not '}read aloud · <a href="#/settings">Settings</a></p>
     </main>
   `;
 }
@@ -122,8 +116,6 @@ export function renderSetup(
   root.querySelectorAll('[data-course]').forEach((btn) =>
     btn.addEventListener('click', () => onChange({ course: btn.dataset.course })),
   );
-  const voiceToggle = root.querySelector('#voice-toggle');
-  voiceToggle.addEventListener('change', () => onChange({ voice: voiceToggle.checked }));
   const demoToggle = root.querySelector('#demo-toggle');
   demoToggle.addEventListener('change', () => onChange({ demo: demoToggle.checked }));
   root.querySelector('#start').addEventListener('click', onStart);

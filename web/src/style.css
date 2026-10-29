@@ -738,3 +738,21 @@ body:has(.tabs:not([hidden])) .screen {
   text-align: center;
   color: var(--accent);
 }
+/* ---- settings ---- */
+#settings-screen h2 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.chip.danger {
+  color: var(--hot);
+  border-color: var(--hot);
+}
+.chip:disabled {
+  opacity: 0.4;
+}
+.about {
+  text-align: center;
+}

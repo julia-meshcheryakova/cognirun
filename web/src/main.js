@@ -9,6 +9,8 @@ import { askQuestion } from './ui/question.js';
 import { renderNav, parseRoute, routeHref } from './ui/nav.js';
 import { renderHistory } from './ui/history.js';
 import { renderChallenges } from './ui/challenges.js';
+import { renderSettings } from './ui/settings.js';
+import { loadSettings, saveSettings } from './settings.js';
 import { primeAudio } from './beep.js';
 import { setVoiceEnabled } from './tts.js';
 import { createDevices } from './sensors/devices.js';
@@ -17,7 +19,8 @@ import { createLocalRunStore } from './history/store.js';
 
 const root = document.querySelector('#app');
 const nav = document.querySelector('#tabs');
-const settings = { demo: false, multiplier: 1, voice: true, course: '3k' };
+const settings = loadSettings();
+const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '';
 const store = createLocalRunStore();
 let starting = false;
 let running = false;
@@ -38,7 +41,23 @@ function showRoute() {
   renderNav(nav, { active: tab });
   if (tab === 'history') return renderHistory(root, { store, params });
   if (tab === 'challenges') return renderChallenges(root, { store, params, startRun });
+  if (tab === 'settings') {
+    return renderSettings(root, {
+      settings,
+      store,
+      version: APP_VERSION,
+      onChange(patch) {
+        updateSettings(patch);
+        showRoute();
+      },
+    });
+  }
   return showSetup();
+}
+
+function updateSettings(patch) {
+  Object.assign(settings, patch);
+  saveSettings(settings);
 }
 
 function showSetup() {
@@ -47,7 +66,7 @@ function showSetup() {
     settings,
     devices: devices.state(),
     onChange(patch) {
-      Object.assign(settings, patch);
+      updateSettings(patch);
       showSetup();
     },
     onConnectWatch() {
@@ -89,7 +108,7 @@ async function startRun({ course = settings.course, challengeId = null, question
   const live = renderLive(root, {
     settings: runSettings,
     onMultiplier(value) {
-      settings.multiplier = value;
+      updateSettings({ multiplier: value });
       run.setMultiplier(value);
     },
     onScrub(meters) {

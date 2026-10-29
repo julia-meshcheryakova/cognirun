@@ -7,6 +7,7 @@ export const TABS = [
   { id: 'run', label: 'Run', icon: '▶' },
   { id: 'challenges', label: 'Challenges', icon: '🏁' },
   { id: 'history', label: 'History', icon: '📈' },
+  { id: 'settings', label: 'Settings', icon: '⚙' },
 ];
 export const DEFAULT_TAB = 'run';
 

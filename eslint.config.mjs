@@ -16,7 +16,7 @@ export default [
   js.configs.recommended,
   {
     files: ['web/src/**/*.js'],
-    languageOptions: { globals: { ...globals.browser } },
+    languageOptions: { globals: { ...globals.browser, __APP_VERSION__: 'readonly' } },
   },
   {
     files: [
