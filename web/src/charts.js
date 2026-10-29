@@ -90,3 +90,80 @@ export function drawSpeedProfile(canvas, samples) {
   points.forEach((p, i) => (i === 0 ? ctx.moveTo(sx(p.x), sy(p.y)) : ctx.lineTo(sx(p.x), sy(p.y))));
   ctx.stroke();
 }
+
+/**
+ * Small trend line over evenly spaced values (oldest first). Nulls are gaps.
+ * The best and latest values are labelled; `lowerIsBetter` flips the y axis so
+ * "up" always reads as improvement (pace).
+ */
+export function drawSparkline(
+  canvas,
+  values,
+  { color = '#2ee6c5', format = String, lowerIsBetter = false } = {},
+) {
+  const { ctx, width, height } = setupCanvas(canvas);
+  ctx.clearRect(0, 0, width, height);
+  const known = values.filter((v) => Number.isFinite(v));
+  if (!known.length) return;
+
+  const padding = { left: 6, right: 6, top: 16, bottom: 16 };
+  const plotW = width - padding.left - padding.right;
+  const plotH = height - padding.top - padding.bottom;
+  const min = Math.min(...known);
+  const max = Math.max(...known);
+  const span = max - min || 1;
+  const sx = (i) => padding.left + (values.length > 1 ? (i / (values.length - 1)) * plotW : plotW / 2);
+  const level = (v) => (max === min ? 0.5 : (v - min) / span);
+  const sy = (v) => padding.top + (lowerIsBetter ? level(v) : 1 - level(v)) * plotH;
+
+  ctx.strokeStyle = '#1b2f35';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padding.left, height - padding.bottom + 0.5);
+  ctx.lineTo(width - padding.right, height - padding.bottom + 0.5);
+  ctx.stroke();
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  let pen = false;
+  values.forEach((v, i) => {
+    if (!Number.isFinite(v)) {
+      pen = false;
+      return;
+    }
+    if (pen) ctx.lineTo(sx(i), sy(v));
+    else ctx.moveTo(sx(i), sy(v));
+    pen = true;
+  });
+  ctx.stroke();
+
+  ctx.fillStyle = color;
+  values.forEach((v, i) => {
+    if (!Number.isFinite(v)) return;
+    ctx.beginPath();
+    ctx.arc(sx(i), sy(v), i === values.length - 1 ? 3.5 : 2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  ctx.font = '10px system-ui, sans-serif';
+  const bestValue = lowerIsBetter ? min : max;
+  const bestIndex = values.indexOf(bestValue);
+  ctx.fillStyle = '#7ea3ac';
+  ctx.textAlign = 'left';
+  ctx.fillText(`best ${format(bestValue)}`, padding.left, 11);
+  const lastIndex = values.length - 1;
+  if (Number.isFinite(values[lastIndex])) {
+    ctx.fillStyle = color;
+    ctx.textAlign = 'right';
+    ctx.fillText(`last ${format(values[lastIndex])}`, width - padding.right, 11);
+  }
+  if (bestIndex >= 0) {
+    ctx.strokeStyle = '#f5a524';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(sx(bestIndex), sy(bestValue), 5, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.textAlign = 'start';
+}
