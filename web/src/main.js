@@ -14,6 +14,7 @@ import { setVoiceEnabled } from './tts.js';
 import { createDevices } from './sensors/devices.js';
 import { toRunRecord } from './history/runRecord.js';
 import { createLocalRunStore } from './history/store.js';
+import { newPersonalBests } from './progress.js';
 
 const root = document.querySelector('#app');
 const nav = document.querySelector('#tabs');
@@ -123,7 +124,7 @@ async function startRun({ course = settings.course, challengeId = null, question
       running = false;
       const record = toRunRecord({ snapshot, answers, settings: runSettings, challengeId });
       store.save(record).catch((err) => console.warn('could not save the run', err));
-      showResults(snapshot, answers);
+      showResults(record);
     },
     // Real runs only: connection state of the BLE heart rate device. Never fatal —
     // the run keeps going with whatever the last reading was.
@@ -179,15 +180,17 @@ async function startRun({ course = settings.course, challengeId = null, question
   run.start();
 }
 
-function showResults(snapshot, answers) {
+/** Post-run page, rendered from the saved record; the 'New PB!' strip follows once earlier runs load. */
+async function showResults(record) {
   starting = false;
   renderNav(nav, { active: 'run' });
-  renderResults(root, {
-    snapshot,
-    answers,
+  const results = renderResults(root, {
+    record,
     onRestart: showRoute,
-    historyHref: routeHref('history'),
+    historyHref: routeHref('history', record.id),
   });
+  const earlier = await store.list({ includeDemo: false }).catch(() => []);
+  results.showNewBests(newPersonalBests(record, earlier));
 }
 
 window.addEventListener('hashchange', showRoute);
