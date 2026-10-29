@@ -13,12 +13,18 @@
     "test": "npm --prefix web test && npm --prefix question-server test",
     "e2e": "playwright test",
     "check": "node scripts/gate.mjs",
+    "db:start": "npx supabase start",
+    "db:stop": "npx supabase stop",
+    "db:reset": "npx supabase db reset",
+    "db:test": "npx supabase test db",
     "smoke:prod": "node scripts/smoke-prod.mjs",
     "prepare": "husky"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.3.0",
     "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/browser": "^8.0.5",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@capacitor/geolocation": "^8.2.2"
