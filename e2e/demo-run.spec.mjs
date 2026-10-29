@@ -2,10 +2,22 @@ import { expect, test } from '@playwright/test';
 
 import { QUESTION_LIBRARY } from '../question-server/questions.js';
 
-// The run asks the first question of each category, in this order.
-const RUN_QUESTIONS = ['trivia', 'logic', 'math'].map((category) =>
-  QUESTION_LIBRARY.questions.find((q) => q.category === category),
-);
+// Runs pick random questions, so the spec reads the prompt on screen and looks
+// its answer up in the bank (prompts are unique, the bank validator checks it).
+const BY_PROMPT = new Map(QUESTION_LIBRARY.questions.map((q) => [q.prompt, q]));
+
+/** The question currently waiting for an answer (not a verdict still on screen). */
+async function nextQuestion(page, asked) {
+  const prompt = page.locator('.modal:has(#answer) .prompt');
+  let question;
+  await expect(async () => {
+    question = BY_PROMPT.get((await prompt.textContent({ timeout: 1_000 }))?.trim());
+    expect(question, 'the prompt shown is a bank question').toBeTruthy();
+    expect(asked.has(question.id), `${question.id} was already answered`).toBe(false);
+  }).toPass({ timeout: 20_000 });
+  asked.add(question.id);
+  return question;
+}
 
 test.beforeEach(async ({ page }) => {
   // Headless Chromium has no usable mic or voice: remove speech input so the
@@ -31,7 +43,10 @@ test('a full demo run reaches the results page with every answer graded', async 
   await page.locator('#start').click();
   await expect(page.locator('#tabs')).toBeHidden();
 
-  for (const question of RUN_QUESTIONS) {
+  const asked = new Set();
+  for (const category of ['trivia', 'logic', 'math']) {
+    const question = await nextQuestion(page, asked);
+    expect(question.category).toBe(category);
     const prompt = page.locator('.modal .prompt', { hasText: question.prompt });
     await expect(prompt).toBeVisible({ timeout: 20_000 });
     if (question.options) {

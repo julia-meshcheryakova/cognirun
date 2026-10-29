@@ -1,6 +1,6 @@
 import './style.css';
 import { COURSES, questionCountOf } from './config.js';
-import { loadLibrary, selectRunQuestions } from './questions.js';
+import { loadLibrary, selectRunQuestions, selectSoloQuestions } from './questions.js';
 import { createRun } from './run.js';
 import { renderLive } from './ui/live.js';
 import { renderResults } from './ui/results.js';
@@ -166,9 +166,10 @@ async function startRun({ course = settings.course, challengeId = null, question
   }
 
   const { library } = await libraryLoad;
+  const recentRuns = questionIds ? [] : await store.list({ includeDemo: false }).catch(() => []);
   runQuestions = questionIds
     ? questionIds.map((id) => library.questions.find((q) => q.id === id)).filter(Boolean)
-    : selectRunQuestions(library, questionCountOf(runSettings.course));
+    : selectSoloQuestions({ library, count: questionCountOf(runSettings.course), recentRuns });
   if (runQuestions.length < questionCountOf(runSettings.course)) {
     console.warn('challenge questions missing from the library; filling with defaults');
     const fill = selectRunQuestions(library, questionCountOf(runSettings.course));
