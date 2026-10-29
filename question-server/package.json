@@ -6,6 +6,7 @@
   "description": "Serves the CogniRun questions library over HTTP, decoupled from the web app.",
   "scripts": {
     "start": "node server.mjs",
+    "generate": "node generate/cli.mjs",
     "test": "node --test test/*.test.mjs"
   }
 }
