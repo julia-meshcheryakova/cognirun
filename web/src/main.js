@@ -20,6 +20,7 @@ import { newPersonalBests } from './progress.js';
 import { createSyncedRunStore } from './history/syncedStore.js';
 import { createAuth } from './auth/session.js';
 import { renderAccount } from './ui/account.js';
+import { renderLegal } from './ui/legal.js';
 import { loadChallengeLeaderboard } from './challenges/leaderboard.js';
 
 const root = document.querySelector('#app');
@@ -57,6 +58,7 @@ function showRoute() {
     });
   }
   if (tab === 'account') return renderAccount(root, { auth, store });
+  if (tab === 'privacy' || tab === 'terms') return renderLegal(root, tab);
   if (tab === 'settings') {
     return renderSettings(root, {
       settings,

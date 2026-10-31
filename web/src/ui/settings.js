@@ -1,4 +1,5 @@
 import { COURSES } from '../config.js';
+import { legalLinksMarkup } from './legal.js';
 
 /**
  * Settings: preferences that outlive a single run, plus the runner's data on
@@ -39,6 +40,7 @@ export function settingsMarkup({ settings, runCount = 0, version = '' }) {
       </section>
 
       <p class="hint about">CogniRun ${version}</p>
+      ${legalLinksMarkup()}
     </main>`;
 }
 

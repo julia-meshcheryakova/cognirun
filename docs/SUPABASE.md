@@ -24,6 +24,8 @@ separate lazy chunk), and the **You** tab just says sign-in is not configured.
 | `run_answers` | one row per answer (`run_id`, `idx`), with `question_id`, `category`, `km`, `elapsed_s`, `correct`, `points`, `method`. Foreign key `(run_id, user_id)` → `runs`, so an answer always belongs to its run's owner. Deleted with the run. | Own rows only. |
 | `my_category_stats` (view) | per-category answered / correct / average time / points for the caller, non-demo runs. | Runs as the caller (`security_invoker`). |
 | `challenges` | `id` such as `2026-W02-5k`, `course`, `title`, `theme`, `starts_at`, `ends_at`, `question_ids text[]`. | Everyone reads. Only admins (`profiles.is_admin`) or the service role write. |
+| `profiles.terms_version`, `profiles.terms_accepted_at` | the Terms/Privacy version the user agreed to, and when. Set only through `accept_terms(p_version)` (RPC). The app compares it with `TERMS_VERSION` in `web/src/legal.js`. Until it matches, uploads pause (sync state `needs-consent`) and the You tab asks the user to agree. | Own row, through the RPC only (`authenticated`). |
+| `delete_my_account()` (RPC) | deletes the caller's `auth.users` row; profile, runs and answers go with it by cascade. | `authenticated` only, and only for the caller. |
 | `challenge_leaderboard(p_challenge_id, p_limit = 100)` (RPC) | best non-demo run per user for a challenge (most points, then fastest, then earliest), finished within the challenge window and uploaded no later than a day after it closed. Returns `rank, display_name, points, correct, total, duration_s, distance_m, finished_at, is_me`. No user ids, emails or routes. | Anyone (`anon` and `authenticated`). |
 
 Scores are taken from the client as submitted, but they cannot be rewritten after

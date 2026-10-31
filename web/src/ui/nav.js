@@ -11,11 +11,13 @@ export const TABS = [
   { id: 'settings', label: 'Settings', icon: '⚙' },
 ];
 export const DEFAULT_TAB = 'run';
+/** Routable pages without a tab of their own (none is highlighted). */
+export const PAGES = ['privacy', 'terms'];
 
 /** '#/history/abc' -> { tab: 'history', params: ['abc'] } */
 export function parseRoute(hash = '') {
   const [tab, ...params] = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
-  return TABS.some((t) => t.id === tab) ? { tab, params } : { tab: DEFAULT_TAB, params: [] };
+  return TABS.some((t) => t.id === tab) || PAGES.includes(tab) ? { tab, params } : { tab: DEFAULT_TAB, params: [] };
 }
 
 export function routeHref(tab, ...params) {

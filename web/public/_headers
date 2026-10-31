@@ -1,0 +1,9 @@
+# Cloudflare Pages response headers (copied into web/dist by Vite). Keep in sync with vercel.json.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), payment=(), usb=(), geolocation=(self), microphone=(self), bluetooth=(self)
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

@@ -202,15 +202,38 @@ export function createFakeSupabase({ session = null, rls = true } = {}) {
       emit('SIGNED_IN', next);
       return { data: { session: next }, error: null };
     },
-    async signOut() {
-      auth.calls.push(['signOut']);
+    async signOut(options) {
+      auth.calls.push(options ? ['signOut', options] : ['signOut']);
       emit('SIGNED_OUT', null);
       return { error: null };
     },
   };
 
+  /** The account RPCs (accept_terms, delete_my_account), run as the signed-in user. */
+  async function rpc(name, args = {}) {
+    calls.push({ rpc: name, args });
+    const failure = takeFailure('rpc', name);
+    if (failure) return { data: null, error: { message: failure.message } };
+    const uid = current?.user?.id;
+    if (!uid) return { data: null, error: { message: 'not signed in', code: '42501' } };
+    if (name === 'accept_terms') {
+      const profile = tables.profiles.find((p) => p.id === uid);
+      if (profile) Object.assign(profile, { terms_version: args.p_version, terms_accepted_at: new Date().toISOString() });
+      return { data: null, error: null };
+    }
+    if (name === 'delete_my_account') {
+      const runIds = new Set(tables.runs.filter((r) => r.user_id === uid).map((r) => r.id));
+      tables.profiles = tables.profiles.filter((p) => p.id !== uid);
+      tables.runs = tables.runs.filter((r) => r.user_id !== uid);
+      tables.run_answers = tables.run_answers.filter((a) => !runIds.has(a.run_id));
+      return { data: null, error: null };
+    }
+    return { data: null, error: { message: `unknown function ${name}` } };
+  }
+
   return {
     from,
+    rpc,
     auth,
     tables,
     calls,

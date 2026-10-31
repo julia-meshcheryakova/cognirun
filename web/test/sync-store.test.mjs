@@ -358,3 +358,29 @@ test('remove deletes on the device and in the account', async () => {
   assert.equal(fake.tables.runs.length, 0);
   assert.deepEqual(await store.list(), []);
 });
+
+test('nothing uploads until the account accepted the terms', async () => {
+  const fake = createFakeSupabase({ session: { user: { id: 'u1' } } });
+  const local = createLocalRunStore({ storage: memoryStorage() });
+  const auth = fakeAuth(fake);
+  let accepted = false;
+  auth.termsAccepted = async () => accepted;
+  const store = createSyncedRunStore({ local, auth });
+  auth.set({ status: 'signed-out', user: null });
+  await store.save(record('r1'));
+  auth.set(signedIn('u1'));
+  await settle();
+  assert.equal(fake.tables.runs.length, 0);
+  assert.equal(store.syncStatus().state, 'needs-consent');
+  assert.equal(store.syncStatus().unsynced, 1);
+  await store.save(record('r2', '2026-01-06T10:00:00.000Z'));
+  await settle();
+  assert.equal(fake.tables.runs.length, 0, 'saving while waiting for consent uploads nothing');
+
+  accepted = true;
+  auth.set({ ...signedIn('u1'), profile: { terms_version: 'now' } }); // the profile changed
+  await settle();
+  assert.deepEqual(fake.tables.runs.map((r) => r.id).sort(), ['r1', 'r2']);
+  assert.equal(store.syncStatus().state, 'idle');
+  assert.equal(store.syncStatus().unsynced, 0);
+});

@@ -14,11 +14,13 @@ import { createRemoteRunStore } from './remoteStore.js';
  *            account), so the next person to sign in on it never sees them.
  *            Unsynced runs stay. A session lost only because the device is
  *            offline (auth state `offline`) keeps everything.
+ * - consent: nothing is uploaded until the account accepted the current terms
+ *            (auth.termsAccepted()); the state is 'needs-consent' meanwhile.
  *
  * Without an `auth` (or with Supabase unconfigured) it is the local store.
  *
  * @typedef {object} SyncStatus
- * @property {'loading'|'local-only'|'signed-out'|'idle'|'syncing'|'error'} state
+ * @property {'loading'|'local-only'|'signed-out'|'idle'|'syncing'|'needs-consent'|'error'} state
  * @property {number} unsynced     local runs not uploaded yet
  * @property {string|null} lastSyncedAt
  * @property {string|null} error
@@ -97,6 +99,8 @@ export function createSyncedRunStore({ local, auth = null, createRemote = create
     if (state.status !== 'loading') settle();
     if (state.status === 'signed-in' && state.user && auth.client()) {
       if (userId !== state.user.id) attach(auth.client(), state.user.id);
+      // Terms just accepted (the profile changed): uploads can start.
+      else if (status.state === 'needs-consent' && !syncing) void sync();
     } else if (state.status === 'signed-out') {
       detach();
       // Let an in-flight upload notice the sign-out before anything is purged.
@@ -144,6 +148,11 @@ export function createSyncedRunStore({ local, auth = null, createRemote = create
     const run = async () => {
       setStatus({ state: 'syncing', error: null });
       try {
+        // Runs carry location and heart rate: upload nothing until the account agreed to the terms.
+        if (auth?.termsAccepted && !(await auth.termsAccepted())) {
+          if (remote === current) setStatus({ state: 'needs-consent', unsynced: await countUnsynced() });
+          return;
+        }
         let passes = 0;
         let failure = null;
         do {

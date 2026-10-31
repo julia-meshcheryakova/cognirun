@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { accountMarkup } from '../src/ui/account.js';
 import { TABS, navMarkup, parseRoute } from '../src/ui/nav.js';
+import { TERMS_VERSION } from '../src/legal.js';
 
 const sync = (patch = {}) => ({ state: 'idle', unsynced: 0, lastSyncedAt: null, error: null, ...patch });
 const auth = (patch = {}) => ({ status: 'signed-out', user: null, profile: null, error: null, notice: null, ...patch });
@@ -85,4 +86,44 @@ test('account markup escapes user content', () => {
 
 test('loading shows a placeholder', () => {
   assert.match(accountMarkup({ auth: auth({ status: 'loading' }), sync: sync({ state: 'loading' }) }), /Checking your account/);
+});
+
+test('signed out: sign-in stays disabled until the terms are ticked', () => {
+  const off = accountMarkup({ auth: auth(), sync: sync({ state: 'signed-out' }) });
+  assert.match(off, /id="accept-terms" (?!checked)/);
+  assert.match(off, /href="#\/terms"[\s\S]*href="#\/privacy"[\s\S]*heart rate/);
+  assert.match(off, /id="google-signin" type="button" disabled/);
+  assert.match(off, /id="email-signin" disabled/);
+  const on = accountMarkup({ auth: auth(), sync: sync({ state: 'signed-out' }), consent: true });
+  assert.match(on, /id="accept-terms" checked/);
+  assert.doesNotMatch(on, /id="google-signin" type="button" disabled|id="email-signin" disabled/);
+});
+
+test('signed in on older terms: a re-accept card and the waiting sync state', () => {
+  const html = accountMarkup({
+    auth: auth({ status: 'signed-in', user: { id: 'u', email: 'a@b.co' }, profile: { display_name: 'A', terms_version: '2020-01-01' } }),
+    sync: sync({ state: 'needs-consent', unsynced: 2 }),
+  });
+  assert.match(html, /id="terms-card"[\s\S]*have changed[\s\S]*id="accept-terms-now"/);
+  assert.match(html, /Accept the updated terms above/);
+  const current = accountMarkup({
+    auth: auth({ status: 'signed-in', user: { id: 'u' }, profile: { display_name: 'A', terms_version: TERMS_VERSION } }),
+    sync: sync(),
+  });
+  assert.doesNotMatch(current, /terms-card/);
+});
+
+test('signed in: delete account asks for confirmation first', () => {
+  const signedIn = auth({ status: 'signed-in', user: { id: 'u' }, profile: { display_name: 'A', terms_version: TERMS_VERSION } });
+  const idle = accountMarkup({ auth: signedIn, sync: sync() });
+  assert.match(idle, /id="delete-account"/);
+  assert.doesNotMatch(idle, /confirm-delete/);
+  const confirming = accountMarkup({ auth: signedIn, sync: sync(), draft: { confirmDelete: true } });
+  assert.match(confirming, /cannot be undone[\s\S]*id="confirm-delete"[\s\S]*id="cancel-delete"/);
+});
+
+test('every account state links to the legal pages', () => {
+  for (const status of ['unconfigured', 'loading', 'signed-out']) {
+    assert.match(accountMarkup({ auth: auth({ status }), sync: sync() }), /class="legal-links"/);
+  }
 });

@@ -1,4 +1,5 @@
 import { getSupabase } from '../supabase.js';
+import { PENDING_TERMS_KEY, TERMS_VERSION, needsTermsAcceptance } from '../legal.js';
 import {
   authRedirectUrl,
   capacitorPlugin,
@@ -26,29 +27,50 @@ import {
  *                                 refreshed (no network); not a real sign-out
  */
 
-const PROFILE_COLUMNS = 'id, display_name, is_admin, created_at';
+const PROFILE_COLUMNS = 'id, display_name, is_admin, created_at, terms_version, terms_accepted_at';
 export const DISPLAY_NAME_MAX = 40;
 
 function message(error) {
   return error?.message || String(error);
 }
 
+function storageOf(win) {
+  try {
+    return win?.localStorage ?? null;
+  } catch {
+    return null; // e.g. storage blocked by the browser
+  }
+}
+
 /**
  * @param {object} [options]
  * @param {() => Promise<object|null>} [options.getClient]  supabase client loader (null = not configured)
  * @param {Window} [options.win]
+ * @param {Storage|null} [options.storage]  where a consent ticked before sign-in waits
  */
-export function createAuth({ getClient = () => getSupabase(), win = globalThis.window } = {}) {
+export function createAuth({ getClient = () => getSupabase(), win = globalThis.window, storage = storageOf(win) } = {}) {
   const native = isNativePlatform(win);
   const listeners = new Set();
   /** @type {AuthState} */
   let state = { status: 'loading', user: null, profile: null, error: null, notice: null, offline: false };
   let client = null;
   let initPromise = null;
+  let profileLoad = Promise.resolve();
 
   function set(patch) {
     state = { ...state, ...patch };
     listeners.forEach((listener) => listener(state));
+  }
+
+  const pendingTerms = () => storage?.getItem(PENDING_TERMS_KEY) ?? null;
+
+  async function recordTerms(version) {
+    const { error } = await client.rpc('accept_terms', { p_version: version });
+    if (error) return error;
+    if (state.profile) {
+      set({ profile: { ...state.profile, terms_version: version, terms_accepted_at: new Date().toISOString() } });
+    }
+    return null;
   }
 
   async function loadProfile(user) {
@@ -58,7 +80,17 @@ export function createAuth({ getClient = () => getSupabase(), win = globalThis.w
       .eq('id', user.id)
       .maybeSingle();
     if (error) console.warn('could not load the profile', error);
-    if (state.user?.id === user.id) set({ profile: data ?? null });
+    if (state.user?.id !== user.id) return;
+    set({ profile: data ?? null });
+    // Consent ticked on the sign-in screen: record it now that the profile exists.
+    const pending = pendingTerms();
+    if (data && pending === TERMS_VERSION) {
+      const failed = data.terms_version === pending ? null : await recordTerms(pending);
+      if (failed) console.warn('could not record the terms acceptance', failed);
+      else storage?.removeItem(PENDING_TERMS_KEY);
+    } else if (pending && pending !== TERMS_VERSION) {
+      storage?.removeItem(PENDING_TERMS_KEY); // ticked for an older version
+    }
   }
 
   async function applySession(session, { offline = false } = {}) {
@@ -73,8 +105,10 @@ export function createAuth({ getClient = () => getSupabase(), win = globalThis.w
       state = { ...state, user }; // token refresh: same account, nothing to redraw
       return;
     }
+    // Assigned before set(): listeners (the run store) may ask termsAccepted() straight away.
+    profileLoad = Promise.resolve().then(() => loadProfile(user));
     set({ status: 'signed-in', user, profile: null, error: null, notice: null, offline: false });
-    await loadProfile(user);
+    await profileLoad;
   }
 
   /** Android: the deep link carrying `?code=` (or an error) back from the browser. */
@@ -212,6 +246,49 @@ export function createAuth({ getClient = () => getSupabase(), win = globalThis.w
       const { error } = await client.auth.signOut();
       if (error) console.warn('sign-out failed on the server; signing out locally', error);
       await applySession(null);
+    },
+    /** Ticked (or unticked) on the sign-in screen, before there is an account to record it on. */
+    setPendingTerms(accepted) {
+      if (accepted) storage?.setItem(PENDING_TERMS_KEY, TERMS_VERSION);
+      else storage?.removeItem(PENDING_TERMS_KEY);
+    },
+    hasPendingTerms: () => pendingTerms() === TERMS_VERSION,
+    /** Signed in: agree to the current Terms & Privacy version. */
+    async acceptTerms() {
+      if (!client || !state.user) return false;
+      const error = await recordTerms(TERMS_VERSION);
+      if (error) {
+        set({ error: message(error), notice: null });
+        return false;
+      }
+      set({ error: null });
+      return true;
+    },
+    /** Whether the signed-in account agreed to the current terms (waits for the profile). */
+    async termsAccepted() {
+      if (!client || state.status !== 'signed-in') return false;
+      await profileLoad;
+      if (!state.profile && state.user) {
+        profileLoad = loadProfile(state.user);
+        await profileLoad;
+      }
+      return Boolean(state.profile) && !needsTermsAcceptance(state.profile);
+    },
+    /** Permanently delete the account and everything stored with it, then sign out. */
+    async deleteAccount() {
+      if (!client || !state.user) return false;
+      set({ error: null, notice: null });
+      const { error } = await client.rpc('delete_my_account');
+      if (error) {
+        set({ error: `Could not delete your account: ${message(error)}` });
+        return false;
+      }
+      // The user no longer exists, so the server may reject the sign-out; drop the session anyway.
+      const { error: signOutError } = await client.auth.signOut({ scope: 'local' });
+      if (signOutError) console.warn('local sign-out after deletion failed', signOutError);
+      await applySession(null);
+      set({ notice: 'Your account and everything stored with it have been deleted.' });
+      return true;
     },
     async updateDisplayName(name) {
       const displayName = String(name ?? '').trim();

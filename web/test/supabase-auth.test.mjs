@@ -296,3 +296,62 @@ test('display name updates validate and save', async () => {
   assert.equal(fake.tables.profiles[0].display_name, 'Dora');
   assert.equal(auth.state().notice, 'Display name saved.');
 });
+
+test('terms ticked before sign-in are recorded on the profile once signed in', async () => {
+  const { memoryStorage } = await import('./fakeSupabase.mjs');
+  const { TERMS_VERSION, PENDING_TERMS_KEY } = await import('../src/legal.js');
+  const fake = createFakeSupabase();
+  fake.tables.profiles.push(profileRow('u5', 'Eve'));
+  const storage = memoryStorage();
+  const auth = createAuth({ getClient: async () => fake, win: fakeWindow(), storage });
+  await auth.init();
+  assert.equal(auth.hasPendingTerms(), false);
+  auth.setPendingTerms(true);
+  assert.equal(auth.hasPendingTerms(), true);
+  assert.equal(await auth.termsAccepted(), false, 'signed out: nothing accepted yet');
+
+  fake.emit('SIGNED_IN', { user: { id: 'u5', email: 'e@example.com' } });
+  assert.equal(await auth.termsAccepted(), true, 'waits for the profile and the pending acceptance');
+  assert.deepEqual(fake.calls.find((c) => c.rpc), { rpc: 'accept_terms', args: { p_version: TERMS_VERSION } });
+  assert.equal(fake.tables.profiles[0].terms_version, TERMS_VERSION);
+  assert.equal(auth.state().profile.terms_version, TERMS_VERSION);
+  assert.equal(storage.getItem(PENDING_TERMS_KEY), null, 'the pending flag is cleared');
+});
+
+test('an account on older terms accepts the new version from the You tab', async () => {
+  const { TERMS_VERSION } = await import('../src/legal.js');
+  const fake = createFakeSupabase({ session: { user: { id: 'u6', email: 'f@example.com' } } });
+  fake.tables.profiles.push({ ...profileRow('u6', 'Fay'), terms_version: '2020-01-01' });
+  const auth = createAuth({ getClient: async () => fake, win: fakeWindow(), storage: null });
+  await auth.init();
+  assert.equal(await auth.termsAccepted(), false);
+
+  fake.fail('rpc', 'accept_terms', 'offline');
+  assert.equal(await auth.acceptTerms(), false);
+  assert.equal(auth.state().error, 'offline');
+  assert.equal(await auth.acceptTerms(), true);
+  assert.equal(auth.state().profile.terms_version, TERMS_VERSION);
+  assert.equal(await auth.termsAccepted(), true);
+});
+
+test('deleting the account removes it server-side and signs out', async () => {
+  const fake = createFakeSupabase({ session: { user: { id: 'u7', email: 'g@example.com' } } });
+  fake.tables.profiles.push(profileRow('u7', 'Gus'), profileRow('other', 'Other'));
+  fake.tables.runs.push({ id: 'r1', user_id: 'u7' }, { id: 'r2', user_id: 'other' });
+  fake.tables.run_answers.push({ run_id: 'r1', user_id: 'u7', idx: 0 });
+  const auth = createAuth({ getClient: async () => fake, win: fakeWindow(), storage: null });
+  await auth.init();
+
+  fake.fail('rpc', 'delete_my_account', 'server down');
+  assert.equal(await auth.deleteAccount(), false);
+  assert.match(auth.state().error, /Could not delete your account: server down/);
+  assert.equal(auth.state().status, 'signed-in');
+
+  assert.equal(await auth.deleteAccount(), true);
+  assert.equal(auth.state().status, 'signed-out');
+  assert.match(auth.state().notice, /deleted/);
+  assert.deepEqual(fake.tables.profiles.map((p) => p.id), ['other']);
+  assert.deepEqual(fake.tables.runs.map((r) => r.id), ['r2']);
+  assert.equal(fake.tables.run_answers.length, 0);
+  assert.deepEqual(fake.auth.calls.at(-1), ['signOut', { scope: 'local' }]);
+});

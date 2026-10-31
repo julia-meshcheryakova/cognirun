@@ -338,6 +338,39 @@ questions.
 - **Done when:** a non-team tester installs from Play internal testing, registers, and
   completes a daily challenge and a Quizrun-mode run, with no help.
 
+### Production readiness — status
+
+**Done (privacy and compliance basics, modelled on Quizrun's site):**
+
+- Privacy notice (`#/privacy`) and Terms of use (`#/terms`), linked from Settings
+  and You. The text is a template, not legal advice. The controller ("the team
+  behind Quizrun") and the contact address (`quizrun.org@gmail.com`) are interim.
+  The governing law is England and Wales, and the minimum age is 16.
+- Explicit consent before sign-in. It covers GPS route and heart rate, which is
+  GDPR Art. 9 health data. Consent is versioned through `TERMS_VERSION`.
+  Accounts on an older version are asked to agree again, and uploads pause until
+  they do.
+- In-app account deletion (`delete_my_account`), which also removes the synced
+  runs from the device.
+- Fonts are self-hosted, so the app sends no requests to Google Fonts.
+- Security headers (`web/public/_headers` for Cloudflare and `vercel.json`),
+  `robots.txt`, a meta description and a theme colour.
+
+**Still missing before a public launch:**
+
+1. Rate limits, auth and a CORS allowlist on the paid endpoints `/api/tts`,
+   `/api/stt` and `/api/judge`.
+2. Server-side score recompute from `run_answers`.
+3. Real SMTP (e.g. Resend) and a Google OAuth client.
+4. Error logging (Quizrun has a logger and an `app_log` table) and uptime checks.
+5. Database backups (Quizrun's `db-backup.yml`) and a staging project.
+6. The Cloudflare Pages cutover, then a CSP header.
+7. A real controller identity and contact address in the legal pages.
+8. Data export (download my data).
+9. Play Store data-safety form, listing, signed release.
+10. PWA manifest and icons, plus an OG image.
+11. An About / FAQ / support page and an accessibility pass.
+
 ## 7. Gaps in the brief, with the default I'd pick
 
 | Gap | Recommended default |

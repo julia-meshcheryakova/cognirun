@@ -4,7 +4,11 @@
    readouts, magenta for the live/critical state, mono type.
    Restyle only — every class name matches the existing markup.
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap');
+/* Self-hosted (no request to Google Fonts, so no visitor IPs shared with Google). */
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/700.css';
+@import '@fontsource/jetbrains-mono/800.css';
 
 :root {
   color-scheme: dark;
@@ -1160,4 +1164,83 @@ body:has(.tabs:not([hidden])) .screen {
   align-self: flex-start;
   border-color: var(--line);
   color: var(--muted);
+}
+
+/* ============================================================
+   Legal pages, consent and account deletion
+   ============================================================ */
+.legal .legal-section h2 {
+  margin-top: 0;
+}
+.legal .legal-section p,
+.legal .legal-section li,
+.legal .legal-section dd {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.legal .legal-section ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.legal .legal-section dt {
+  margin-top: 10px;
+  color: var(--accent);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.legal .legal-section dd {
+  margin: 4px 0 0;
+}
+.legal a,
+.account-consent a {
+  color: var(--accent);
+}
+.legal-links {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  padding: 8px 0 4px;
+  font-size: 12px;
+}
+.legal-links a {
+  color: var(--muted);
+}
+.legal-links a:hover {
+  color: var(--accent);
+}
+.account-consent {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.account-consent input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: var(--accent);
+}
+.account-signin button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.account-terms {
+  border-color: var(--amber);
+}
+.account-terms .legal-links {
+  justify-content: flex-start;
+  padding: 0 0 12px;
+}
+.account-terms .primary {
+  width: 100%;
+}
+.account-danger .row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
