@@ -32,13 +32,13 @@ is re-run after each round.
 | Step | What | Commit |
 | --- | --- | --- |
 | — | New app icon from a clean vector trace of the logo (not a refactor step; done in between) | [b0202a9](https://github.com/julia-meshcheryakova/cognirun/commit/b0202a9) |
-| 0.1 | Audit, this plan, `npm run typecheck` (checkJs, 98 → 0 errors) in the gate, wrong docs fixed | this commit |
+| 0.1 | Audit, this plan, `npm run typecheck` (checkJs, 98 → 0 errors) in the gate, wrong docs fixed | [c5988d1](https://github.com/julia-meshcheryakova/cognirun/commit/c5988d1) |
+| 1.1 | Dropped `export` from 20 file-internal names (and the `ROTATION` re-export); deleted the dead `sttAvailable`; deleted `build:web` (identical to `build`, callers moved) | this commit |
 
 ## What's next
 
 | Step | What | Needs you? |
 | --- | --- | --- |
-| 1.1 | Drop `export` from 20 file-internal constants; delete the dead `sttAvailable`; merge the identical `build`/`build:web` scripts | No |
 | 1.2 | Delete the remote store's unused server-side filters and `subscribe`, and their tests | No |
 | 1.3 | One shared setup for the two e2e specs that copy 30 lines of stubs | No |
 | 1.4 | Delete Render (`serve-app.mjs`, `render.yaml`, `npm start`, its origin and docs) | Yes, Q1 |

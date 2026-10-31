@@ -41,7 +41,7 @@ jobs:
 
       - name: Build web app + sync Capacitor
         run: |
-          npm run build:web
+          npm run build
           npx cap sync android
 
       - name: Build debug APK

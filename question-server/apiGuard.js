@@ -40,7 +40,7 @@ export function originAllowed(origin, host = '', extra = '') {
   }
 }
 
-export function corsHeaders(origin, allowed, allowHeaders = 'content-type') {
+function corsHeaders(origin, allowed, allowHeaders = 'content-type') {
   const headers = { vary: 'origin', 'access-control-allow-headers': allowHeaders };
   if (allowed) {
     headers['access-control-allow-origin'] = origin;

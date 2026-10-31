@@ -31,7 +31,7 @@ function parseVerdict(content) {
   return { correct: parsed.correct, reason: String(parsed.reason ?? '').slice(0, 120) };
 }
 
-export async function llmVerdict({
+async function llmVerdict({
   question,
   text,
   key,

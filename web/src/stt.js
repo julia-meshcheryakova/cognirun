@@ -117,10 +117,6 @@ export function sttMode() {
   return 'none';
 }
 
-export function sttAvailable() {
-  return sttMode() !== 'none';
-}
-
 /** Both listener styles of the Web Speech API are in the wild; support either. */
 function on(recognition, type, handler) {
   if (typeof recognition.addEventListener === 'function') recognition.addEventListener(type, handler);

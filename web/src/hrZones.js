@@ -1,4 +1,4 @@
-export const MAX_HR = 190;
+const MAX_HR = 190;
 
 const ZONES = [
   { zone: 1, name: 'Recovery', upper: 0.6 },

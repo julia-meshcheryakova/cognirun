@@ -14,7 +14,7 @@ Native Android wrapper around the `/web` app, built with Capacitor.
 ```bash
 # from repo root
 npm install                 # Capacitor CLI + plugins
-npm run build:web           # builds web/ -> web/dist
+npm run build               # builds web/ -> web/dist
 npx cap sync android        # copies web assets + plugins into android/
 cd android
 ./gradlew assembleDebug     # needs Android SDK + JDK 21

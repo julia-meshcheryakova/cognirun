@@ -1,5 +1,5 @@
-export const HEART_RATE_SERVICE = 0x180d;
-export const HEART_RATE_MEASUREMENT = 0x2a37;
+const HEART_RATE_SERVICE = 0x180d;
+const HEART_RATE_MEASUREMENT = 0x2a37;
 
 // Full 128-bit forms of the adopted 16-bit UUIDs; the native BLE plugin keys its
 // scan filters and notification events off these strings, not the 0x180d shorthand.

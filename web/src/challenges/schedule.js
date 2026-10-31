@@ -42,7 +42,7 @@ export function parseChallengeId(id) {
  * @property {string} startsAt   ISO, Monday 00:00 UTC
  * @property {string} endsAt     ISO, next Monday 00:00 UTC (exclusive)
  */
-export function challengeFor(week, course) {
+function challengeFor(week, course) {
   const start = weekStart(week);
   return {
     id: `${weekKey(week)}-${course}`,

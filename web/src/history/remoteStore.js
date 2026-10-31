@@ -8,7 +8,7 @@ import { RUN_RECORD_SCHEMA } from './runRecord.js';
  * signed-in user's own runs.
  */
 
-export const REMOTE_LIST_LIMIT = 1000;
+const REMOTE_LIST_LIMIT = 1000;
 const RUN_COLUMNS =
   'id, schema, started_at, finished_at, mode, challenge_id, course, demo, distance_m, duration_s, avg_speed, points, correct, total, hr_avg, hr_max, route';
 const ANSWER_COLUMNS = 'idx, question_id, category, km, elapsed_s, text, correct_answer, correct, points, method';

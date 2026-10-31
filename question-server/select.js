@@ -8,7 +8,7 @@ import { hashString } from './generate/rng.js';
 import { QUESTION_LIBRARY } from './questions.js';
 
 /** Category asked at km 1, 2, 3, then again from the start. */
-export const ROTATION = [...CATEGORIES];
+const ROTATION = [...CATEGORIES];
 
 const DAY_MS = 86400000;
 const WEEK_MS = 7 * DAY_MS;

@@ -10,9 +10,9 @@ export const TABS = [
   { id: 'account', label: 'You', icon: '👤' },
   { id: 'settings', label: 'Settings', icon: '⚙' },
 ];
-export const DEFAULT_TAB = 'run';
+const DEFAULT_TAB = 'run';
 /** Routable pages without a tab of their own (none is highlighted). */
-export const PAGES = ['privacy', 'terms', 'about'];
+const PAGES = ['privacy', 'terms', 'about'];
 
 /** '#/history/abc' -> { tab: 'history', params: ['abc'] } */
 export function parseRoute(hash = '') {

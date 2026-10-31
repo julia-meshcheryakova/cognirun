@@ -1,7 +1,7 @@
 import { CATEGORIES, DIFFICULTIES } from '../bank/schema.js';
 
 /** An answer the runner can say in one breath. */
-export const SHORT_ANSWER = { maxWords: 3, maxChars: 24 };
+const SHORT_ANSWER = { maxWords: 3, maxChars: 24 };
 const MAX_PROMPT_CHARS = 160;
 
 const words = (text) => String(text).trim().split(/\s+/).length;

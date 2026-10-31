@@ -1,6 +1,6 @@
 const TONE_MS = 180;
 const GAP_MS = 250;
-export const BEEP_DURATION_MS = GAP_MS + TONE_MS;
+const BEEP_DURATION_MS = GAP_MS + TONE_MS;
 
 let ctx;
 

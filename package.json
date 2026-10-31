@@ -4,11 +4,10 @@
   "version": "1.2.0",
   "description": "CogniRun Android (Capacitor) wrapper for the web app.",
   "scripts": {
-    "build:web": "npm --prefix web install && npm --prefix web run build",
     "build": "npm --prefix web install && npm --prefix web run build",
     "start": "node serve-app.mjs",
     "cap:sync": "npx cap sync android",
-    "android": "npm run build:web && npm run cap:sync && cd android && gradlew.bat assembleDebug",
+    "android": "npm run build && npm run cap:sync && cd android && gradlew.bat assembleDebug",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json",
     "test": "npm --prefix web test && npm --prefix question-server test",

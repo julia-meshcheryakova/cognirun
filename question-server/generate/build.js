@@ -7,9 +7,9 @@ import { spokenNumberForms } from './numberWords.js';
 import { generateFromTemplates } from './templates.js';
 
 /** Changing the seed regenerates every templated question (and its id): don't. */
-export const BANK_SEED = 'cognirun-bank-v1';
+const BANK_SEED = 'cognirun-bank-v1';
 /** Logic and maths are topped up to this many questions per difficulty. */
-export const PER_DIFFICULTY = 40;
+const PER_DIFFICULTY = 40;
 /** What the committed bank must satisfy (checked by tests and the CLI). */
 export const BANK_REQUIREMENTS = { minTotal: 300, minPerCell: 30 };
 
@@ -21,7 +21,7 @@ const GENERATED = [
 const KEY_ORDER = ['id', 'category', 'difficulty', 'prompt', 'answer', 'acceptedAnswers', 'options'];
 
 /** Same key order for every question, so the generated file reads uniformly. */
-export function canonicalQuestion(question) {
+function canonicalQuestion(question) {
   const ordered = {};
   for (const key of KEY_ORDER) if (question[key] !== undefined) ordered[key] = question[key];
   for (const [key, value] of Object.entries(question)) if (!(key in ordered)) ordered[key] = value;
@@ -29,7 +29,7 @@ export function canonicalQuestion(question) {
 }
 
 /** Adds the spoken words of a whole-number answer ('56' -> 'fifty six') to acceptedAnswers. */
-export function enrichSpokenNumbers(question) {
+function enrichSpokenNumbers(question) {
   const forms = spokenNumberForms(question.answer);
   const existing = question.acceptedAnswers ?? [];
   const extra = forms.filter((f) => !existing.includes(f));

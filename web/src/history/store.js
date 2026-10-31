@@ -20,8 +20,8 @@ import { upgradeRunRecord } from './runRecord.js';
  * @property {string|null} [challengeId]  null: solo runs only
  */
 
-export const LOCAL_RUNS_KEY = 'cognirun.runs.v1';
-export const LOCAL_RUNS_LIMIT = 500;
+const LOCAL_RUNS_KEY = 'cognirun.runs.v1';
+const LOCAL_RUNS_LIMIT = 500;
 
 function memoryStorage() {
   const data = new Map();

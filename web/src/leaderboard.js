@@ -14,7 +14,7 @@ export const SYNTHETIC_COHORT = [
 
 export const SYNTHETIC_LABEL = 'SYNTHETIC DATA';
 
-export const SYNTHETIC_DISCLAIMER =
+const SYNTHETIC_DISCLAIMER =
   'Synthetic demo data — the other runners are made up, not real people or research.';
 
 /** Row label for the participant's own score: the only real row in the table. */
