@@ -137,6 +137,9 @@ function on(recognition, type, handler) {
  * could drop the actual final revision entirely if the mic was stopped between
  * an early partial-final and the last one. Tracking final text per result index
  * (replacing, not appending, on every revision of the same index) fixes both.
+ *
+ * @param {object} [options]
+ * @param {(text: string) => void} [options.onInterim]
  */
 function transcriptCollector({ onInterim } = {}) {
   const finals = new Map(); // result index -> final transcript
@@ -172,6 +175,11 @@ function transcriptCollector({ onInterim } = {}) {
 /**
  * `continuous` decides who ends the session: the runner tapping stop, or the
  * recogniser itself once an utterance is over (one-shot).
+ *
+ * @param {object} [options]
+ * @param {string} [options.lang]
+ * @param {boolean} [options.continuous]
+ * @param {(text: string) => void} [options.onInterim]
  */
 function startRecognitionSession({ lang = DEFAULT_LANG, continuous = true, onInterim } = {}) {
   const Recognition = recognitionCtor();
@@ -232,6 +240,11 @@ function startRecognitionSession({ lang = DEFAULT_LANG, continuous = true, onInt
 /**
  * Opens the microphone and returns a session: `stop()` resolves with the
  * transcribed answer, `cancel()` drops the recording without transcribing.
+ *
+ * @param {object} [options]
+ * @param {string} [options.mode]
+ * @param {string} [options.lang]
+ * @param {(text: string) => void} [options.onInterim]
  */
 export async function startListening({ mode = sttMode(), lang, onInterim } = {}) {
   // Prefer ElevenLabs when the server has it: works in the WebView where the
@@ -269,6 +282,10 @@ export function cancelListening() {
  * partial transcripts while the speaker is still talking. `reason` explains an
  * empty transcript: `unsupported`, `start-failed`, `no-speech`, or the
  * recogniser's own error.
+ *
+ * @param {object} [options]
+ * @param {string} [options.lang]
+ * @param {(text: string) => void} [options.onInterim]
  */
 export async function listenOnce({ lang, onInterim } = {}) {
   if (!recognitionCtor()) {

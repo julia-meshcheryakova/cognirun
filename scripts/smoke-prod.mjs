@@ -12,6 +12,7 @@ const check = (ok, message) => {
   if (!ok) failures.push(message);
 };
 
+/** @type {Pick<Response, 'ok' | 'statusText'> & Partial<Pick<Response, 'status' | 'json'>>} */
 const health = await fetch(`${base}/health`).catch((err) => ({ ok: false, statusText: err.message }));
 check(health.ok, `GET /health -> ${health.status ?? health.statusText}`);
 if (health.ok) {

@@ -1,0 +1,25 @@
+{
+  // Type-checks the JavaScript (JSDoc) with `npm run typecheck`; part of `npm run check`.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "types": ["node"],
+    "skipLibCheck": true
+  },
+  "include": [
+    "web/src",
+    "question-server/*.js",
+    "question-server/*.mjs",
+    "question-server/bank",
+    "question-server/generate",
+    "api",
+    "functions",
+    "serve-app.mjs",
+    "scripts"
+  ]
+}

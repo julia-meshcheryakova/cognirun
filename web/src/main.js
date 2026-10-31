@@ -110,6 +110,8 @@ function showSetup() {
 /**
  * Start a run. Solo runs use the setup screen's course; a challenge passes its
  * own `course`, `challengeId` and the fixed `questionIds` everyone answers.
+ *
+ * @param {{course?: string, challengeId?: string|null, questionIds?: string[]|null}} [run]
  */
 async function startRun({ course = settings.course, challengeId = null, questionIds = null } = {}) {
   if (starting || running) return;

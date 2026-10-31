@@ -18,6 +18,12 @@ const COMPLETE_SHARE = 0.99;
 const time = (r) => Date.parse(r.finishedAt);
 const chronological = (runs) => runs.slice().sort((a, b) => time(a) - time(b));
 
+/**
+ * @param {import('./history/runRecord.js').RunRecord[]} runs
+ * @param {object} [options]
+ * @param {boolean} [options.includeDemo]
+ * @param {string|null} [options.course]
+ */
 export function countedRuns(runs, { includeDemo = false, course } = {}) {
   return runs.filter((r) => (includeDemo || !r.demo) && (course === undefined || course === null || r.course === course));
 }
@@ -33,7 +39,7 @@ export function weekStart(date) {
 export function isoWeekKey(date) {
   const thursday = new Date(weekStart(date) + 3 * DAY_MS);
   const year = thursday.getUTCFullYear();
-  const week = Math.floor((thursday - Date.UTC(year, 0, 1)) / WEEK_MS) + 1;
+  const week = Math.floor((thursday.getTime() - Date.UTC(year, 0, 1)) / WEEK_MS) + 1;
   return `${year}-W${String(week).padStart(2, '0')}`;
 }
 
@@ -198,6 +204,7 @@ export function newPersonalBests(record, runs, { includeDemo = false } = {}) {
   );
   if (!before.length) return [];
   const [prev] = personalBests(before);
+  /** @type {{kind:'points'|'time'|'accuracy', value:number, previous:number|null}[]} */
   const found = [];
   if (record.points > prev.points.value) {
     found.push({ kind: 'points', value: record.points, previous: prev.points.value });
@@ -217,16 +224,26 @@ export function bestsHeldBy(run, runs, { includeDemo = false } = {}) {
   if (run.demo && !includeDemo) return [];
   const [entry] = personalBests(countedRuns(runs, { includeDemo, course: run.course }));
   if (!entry) return [];
-  return [
+  return /** @type {[string, {runId:string}|null][]} */ ([
     ['points', entry.points],
     ['time', entry.fastest],
     ['accuracy', entry.accuracy],
-  ]
+  ])
     .filter(([, pb]) => pb?.runId === run.id)
     .map(([kind]) => kind);
 }
 
-/** Everything the History overview shows, for the runs that count. */
+/**
+ * Everything the History overview shows, for the runs that count.
+ *
+ * @param {import('./history/runRecord.js').RunRecord[]} runs
+ * @param {object} [options]
+ * @param {boolean} [options.includeDemo]
+ * @param {string|null} [options.course]
+ * @param {number} [options.now]
+ * @param {number} [options.trendLimit]
+ * @param {number} [options.weeks]
+ */
 export function progressSummary(
   runs,
   { includeDemo = false, course, now = Date.now(), trendLimit = 10, weeks = 6 } = {},

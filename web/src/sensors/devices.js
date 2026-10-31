@@ -1,5 +1,7 @@
 import { createHeartRateMonitor } from './heartRate.js';
 
+/** @typedef {import('./heartRate.js').DeviceStatus} DeviceStatus */
+
 const GPS_OPTIONS = { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 };
 const NO_FIX_WARNING_MS = 15_000;
 
@@ -77,6 +79,12 @@ function gpsErrorStatus(err) {
  *
  * `bluetooth` and `geolocation` are injectable so the flow can be tested without
  * real hardware.
+ *
+ * @param {object} [options]
+ * @param {(state: {heartRate: DeviceStatus, gps: DeviceStatus}) => void} [options.onChange]
+ * @param {(message: string) => void} [options.onError]
+ * @param {Bluetooth} [options.bluetooth]
+ * @param {Geolocation} [options.geolocation]
  */
 export function createDevices({
   onChange = () => {},
@@ -89,7 +97,9 @@ export function createDevices({
   if (geolocation === (typeof navigator === 'undefined' ? undefined : navigator.geolocation)) {
     geolocation = nativeGeolocation() ?? geolocation;
   }
+  /** @type {DeviceStatus} */
   let heartRateState = { ...IDLE_DEVICES.heartRate };
+  /** @type {DeviceStatus} */
   let gpsState = { ...IDLE_DEVICES.gps };
   let watchId = null;
   let noFixTimer = null;

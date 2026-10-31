@@ -48,6 +48,7 @@ export function createSyncedRunStore({ local, auth = null, createRemote = create
   /** @type {SyncStatus} */
   let status = { state: auth ? 'loading' : 'local-only', unsynced: 0, lastSyncedAt: null, error: null };
   let settled = false;
+  /** @type {() => void} */
   let settle;
   const authSettled = new Promise((resolve) => {
     settle = () => {

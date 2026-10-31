@@ -3,8 +3,8 @@
  * Local ship gate: everything CI would check, run on this machine so GitHub
  * Actions minutes are only spent on the final confirmation.
  *
- *   npm run check            lint, unit tests, build, e2e
- *   npm run check -- --fast  lint + unit tests only (what the pre-push hook runs)
+ *   npm run check            lint, typecheck, unit tests, build, e2e (the pre-push hook)
+ *   npm run check -- --fast  lint, typecheck and unit tests only
  *   npm run check -- --db    also the Supabase pgTAP tests (needs Docker and a
  *                            running local stack: npm run db:start)
  */
@@ -15,6 +15,7 @@ const db = process.argv.includes('--db');
 
 const steps = [
   ['lint', 'npm run lint'],
+  ['typecheck', 'npm run typecheck'],
   ['web unit tests', 'npm --prefix web test'],
   ['question-server tests', 'npm --prefix question-server test'],
   ...(db ? [['database tests (pgTAP)', 'npm run db:test']] : []),

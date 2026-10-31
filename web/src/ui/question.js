@@ -38,11 +38,11 @@ export function askQuestion(
     // actually finished — starting the mic in parallel with speak() let it
     // record and transcribe the question's own TTS audio as the answer.
     if (mode === 'none') {
-      setMicState('unavailable', 'Microphone unavailable — type your answer instead.');
+      setMicState('unavailable');
       await speak(question.prompt);
       return;
     }
-    setMicState('waiting', 'Reading the question…');
+    setMicState('waiting');
     await speak(question.prompt);
     if (submitted) return;
     await autoStartMic();
@@ -187,6 +187,12 @@ export function askQuestion(
     submit({ text: transcript, elapsedSeconds, spoken: true });
   }
 
+  /**
+   * @param {object} [answer]
+   * @param {string} [answer.text]
+   * @param {number} [answer.elapsedSeconds]
+   * @param {boolean} [answer.spoken]
+   */
   async function submit({ text, elapsedSeconds, spoken = false } = {}) {
     if (submitted) return;
     submitted = true;

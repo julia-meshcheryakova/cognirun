@@ -162,6 +162,15 @@ export function challengeDetailMarkup({
  * `#/challenges/<id>` shows one with its leaderboard and your attempts.
  * `loadLeaderboard(challengeId)` resolves to rows, or null when there is no
  * account to compare against (signed out / local-only).
+ *
+ * @param {Element} root
+ * @param {object} options
+ * @param {import('../history/store.js').RunStore} options.store
+ * @param {string[]} [options.params]
+ * @param {{demo?: boolean}} [options.settings]
+ * @param {(run: {course: string, challengeId: string, questionIds: string[]}) => void} options.startRun
+ * @param {(challengeId: string) => ReturnType<typeof import('../challenges/leaderboard.js').loadChallengeLeaderboard>} [options.loadLeaderboard]
+ * @param {Date} [options.now]
  */
 export async function renderChallenges(
   root,
@@ -183,7 +192,7 @@ export async function renderChallenges(
     root.innerHTML = challengesMarkup({ runs, now, demo: settings.demo });
   }
 
-  root.querySelectorAll('[data-start-challenge]').forEach((btn) =>
+  /** @type {NodeListOf<HTMLElement>} */ (root.querySelectorAll('[data-start-challenge]')).forEach((btn) =>
     btn.addEventListener('click', () => {
       const picked = challengeById(btn.dataset.startChallenge);
       startRun({

@@ -14,6 +14,18 @@ const MAX_ACCURACY_METERS = 30;
 const STALE_FIX_MS = 10_000; // no fix for this long: the last pace is meaningless
 const SCRUB_MAX_SECONDS = 3600; // safety net so a scrub can never loop forever
 
+/** @typedef {import('./sensors/heartRate.js').DeviceStatus} DeviceStatus */
+
+/**
+ * @typedef {object} RunSnapshot
+ * @property {number} distance
+ * @property {number} speed
+ * @property {number} heartRate
+ * @property {boolean} heartRateIsReal
+ * @property {number} elapsedSeconds
+ * @property {{lat:number,lng:number,accuracy?:number,t:number,distance:number,speed:number,heartRate:number}[]} samples
+ */
+
 function haversine(a, b) {
   const toRad = (deg) => (deg * Math.PI) / 180;
   const dLat = toRad(b.lat - a.lat);
@@ -28,6 +40,20 @@ function haversine(a, b) {
  * Turns a position/heart-rate stream into run metrics, emitting a milestone
  * every completed kilometer and finishing once the distance and all questions
  * are done.
+ *
+ * @param {object} options
+ * @param {boolean} options.demo
+ * @param {number} options.multiplier
+ * @param {string} options.course
+ * @param {(snapshot: RunSnapshot) => void} options.onUpdate
+ * @param {(km: number) => void} options.onKilometer
+ * @param {(snapshot: RunSnapshot) => void} options.onFinish
+ * @param {(message: string) => void} [options.onError]
+ * @param {(status: DeviceStatus) => void} [options.onHeartRateStatus]
+ * @param {(status: DeviceStatus) => void} [options.onGpsStatus]
+ * @param {ReturnType<typeof createDevices>} [options.devices]
+ * @param {Bluetooth} [options.bluetooth]
+ * @param {Geolocation} [options.geolocation]
  */
 export function createRun({
   demo,

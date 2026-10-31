@@ -80,7 +80,7 @@ const sharedLimiter = createRateLimiter();
  * Decide whether a paid-endpoint request may proceed.
  * @param {'tts'|'stt'|'judge'} kind
  * @param {{ method: string, origin?: string|null, host?: string, ip?: string,
- *   size?: number|null, extraOrigins?: string, allowHeaders?: string,
+ *   size?: number|string|null, extraOrigins?: string, allowHeaders?: string,
  *   limiter?: ReturnType<typeof createRateLimiter> }} req
  * @returns {{ ok: boolean, status?: number, body?: object, headers: Record<string,string> }}
  */

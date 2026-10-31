@@ -51,19 +51,19 @@ export function renderRunDetail(root, { record, runs, onDelete }) {
   root.innerHTML = runDetailMarkup(record, { runs });
   drawRunCharts(root, record);
 
-  const ask = root.querySelector('#delete-run');
-  const confirm = root.querySelector('#delete-confirm');
+  const ask = /** @type {HTMLButtonElement} */ (root.querySelector('#delete-run'));
+  const confirm = /** @type {HTMLDivElement} */ (root.querySelector('#delete-confirm'));
   ask.addEventListener('click', () => {
     ask.hidden = true;
     confirm.hidden = false;
-    root.querySelector('#cancel-delete').focus();
+    /** @type {HTMLButtonElement} */ (root.querySelector('#cancel-delete')).focus();
   });
   root.querySelector('#cancel-delete').addEventListener('click', () => {
     confirm.hidden = true;
     ask.hidden = false;
   });
   root.querySelector('#confirm-delete').addEventListener('click', async (event) => {
-    event.currentTarget.disabled = true;
+    /** @type {HTMLButtonElement} */ (event.currentTarget).disabled = true;
     await onDelete();
   });
 }

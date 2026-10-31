@@ -95,6 +95,13 @@ export function drawSpeedProfile(canvas, samples) {
  * Small trend line over evenly spaced values (oldest first). Nulls are gaps.
  * The best and latest values are labelled; `lowerIsBetter` flips the y axis so
  * "up" always reads as improvement (pace).
+ *
+ * @param {HTMLCanvasElement} canvas
+ * @param {(number|null)[]} values
+ * @param {object} [options]
+ * @param {string} [options.color]
+ * @param {(value: number) => string} [options.format]
+ * @param {boolean} [options.lowerIsBetter]
  */
 export function drawSparkline(
   canvas,

@@ -10,6 +10,7 @@
     "cap:sync": "npx cap sync android",
     "android": "npm run build:web && npm run cap:sync && cd android && gradlew.bat assembleDebug",
     "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json",
     "test": "npm --prefix web test && npm --prefix question-server test",
     "e2e": "playwright test",
     "check": "node scripts/gate.mjs",
@@ -37,6 +38,7 @@
     "@playwright/test": "^1.64.1",
     "eslint": "^10.13.0",
     "globals": "^17.13.0",
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "typescript": "^5.9.3"
   }
 }

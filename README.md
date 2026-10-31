@@ -1,9 +1,10 @@
 # CogniRun
 
-Run 3 km; after every completed kilometer the app beeps and asks a question — one
-per cognitive dimension: trivia at km 1, logic at km 2, maths at km 3. Answering
-faster scores more points (100 points instantly → 50 points at 60 seconds). After
-3 km and 3 questions you get a results page with the score breakdown, a
+Pick a course (3K, 5K or 10K, plus 300 m and 60 m walkable test courses); after every
+segment (each kilometre on the real distances) the app beeps and asks a question drawn
+at random from the library (trivia, logic, maths and more), or the fixed set of a weekly
+challenge. Answering faster scores more points (100 points instantly → 50 points at 60
+seconds). At the end you get a results page with the score breakdown, a
 population-relative percentile per category, the GPS route and the pace profile.
 
 - `web/` — the browser app (all functionality lives here)
@@ -126,8 +127,8 @@ strap broadcasting heart rate works without a vendor SDK.
    rate → Broadcast heart rate** (wording varies slightly per model). The watch now
    advertises the HR service.
 2. Open the app over https or localhost in a Chromium-based browser, turn **Demo mode**
-   off and press **Start run**. Pairing is triggered from that click because Web
-   Bluetooth requires user activation.
+   off and press **Connect watch** on the setup screen. Pairing is triggered from that
+   click because Web Bluetooth requires user activation.
 3. Pick the watch in the browser's Bluetooth chooser. The live screen shows the
    connection state under the heart rate, then streams the watch's beats into the run
    (heart rate, zone, and the heart rate track on the results chart).
@@ -137,10 +138,9 @@ permission or a failing GATT connection only show a warning under the heart rate
 run continues on GPS alone. If the watch drops out mid-run the app retries with a backoff
 (1/2/4/8 s) and resumes streaming when it comes back.
 
-Demo mode never touches Bluetooth — its heart rate comes from the pace simulator in
-`web/src/sensors/demo.js`, while real runs use `web/src/sensors/heartRate.js` via
-`web/src/sensors/real.js`. `createRun({ demo })` picks one or the other, so the two paths
-never mix.
+Demo mode simulates GPS and pace in `web/src/sensors/demo.js`. Heart rate comes from a
+watch connected on the setup screen if there is one (`web/src/sensors/heartRate.js`),
+otherwise from the simulator, so a demo run can still show your real pulse.
 
 ## Server environment
 
@@ -182,9 +182,10 @@ npx playwright install chromium
 | Command | What it does |
 | --- | --- |
 | `npm run lint` | ESLint over the web app, servers, API functions, tests and scripts |
+| `npm run typecheck` | `tsc` over the JavaScript (`checkJs` with JSDoc types, root `tsconfig.json`) |
 | `npm test` | web + question-server unit tests (`node --test`) |
 | `npm run e2e` | Playwright: a full x1000 demo run on the production build, plus a "no API keys in the bundle" check (run `npm --prefix web run build` first) |
-| `npm run check` | the whole gate: lint → unit → build → e2e (`-- --fast` for lint + unit) |
+| `npm run check` | the whole gate: lint → typecheck → unit → build → e2e (`-- --fast` stops after unit) |
 | `npm run smoke:prod` | post-deploy check of https://cognirun.vercel.app (`SMOKE_URL=` for previews) |
 | `npm run cf:dev` | serve `web/dist` plus `functions/` in Cloudflare's local runtime on :8788 (build first) |
 | `npm run icons` | regenerate every app icon (Android mipmaps, favicon, PWA, apple-touch) and the OG image from `scripts/icons.mjs` |

@@ -9,6 +9,16 @@ const HEART_RATE_MEASUREMENT_UUID = '00002a37-0000-1000-8000-00805f9b34fb';
 const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000];
 
 /**
+ * Connection state of the watch or the GPS, as shown on the setup and run screens.
+ * @typedef {object} DeviceStatus
+ * @property {string} state
+ * @property {string} [message]
+ * @property {string} [name]
+ * @property {number} [bpm]
+ * @property {number} [accuracy]
+ */
+
+/**
  * The native @capacitor-community/bluetooth-le plugin, or null on the web / when
  * a test injects its own `bluetooth`. Kept behind a getter so the module still
  * imports in Node (no `window`).
@@ -206,6 +216,11 @@ export function parseHeartRate(value) {
  *
  * `bluetooth` is injectable so the notification flow can be tested without a
  * real adapter.
+ *
+ * @param {object} [options]
+ * @param {(bpm: number) => void} [options.onHeartRate]
+ * @param {(status: DeviceStatus) => void} [options.onStatus]
+ * @param {Bluetooth} [options.bluetooth]
  */
 export function createHeartRateMonitor({
   onHeartRate,

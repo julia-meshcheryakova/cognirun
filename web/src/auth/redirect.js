@@ -13,11 +13,18 @@
  */
 export const NATIVE_AUTH_REDIRECT = 'com.cognirun.app://auth-callback';
 
+/** @param {Window} [win] */
 export function isNativePlatform(win = globalThis.window) {
   return Boolean(win?.Capacitor?.isNativePlatform?.());
 }
 
-/** A Capacitor plugin registered on window.Capacitor.Plugins, or null on the web. */
+/**
+ * A Capacitor plugin registered on window.Capacitor.Plugins, or null on the web.
+ * @template {keyof CapacitorPlugins} K
+ * @param {K} name
+ * @param {Window} [win]
+ * @returns {CapacitorPlugins[K] | null}
+ */
 export function capacitorPlugin(name, win = globalThis.window) {
   return win?.Capacitor?.Plugins?.[name] ?? null;
 }

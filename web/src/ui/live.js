@@ -116,14 +116,20 @@ export function renderLive(root, { settings, onMultiplier, onScrub, onExit }) {
 
   return {
     questionSlot: el('question-slot'),
-    /** Real watch connection status; only shown once a watch is actually connected. */
+    /**
+     * Real watch connection status; only shown once a watch is actually connected.
+     * @param {import('../sensors/heartRate.js').DeviceStatus} status
+     */
     setHeartRateStatus({ state, message }) {
       const source = el('hr-source');
       source.hidden = false;
       source.textContent = message;
       source.dataset.state = state;
     },
-    /** Real runs only: whether GPS is feeding the run, and how well. */
+    /**
+     * Real runs only: whether GPS is feeding the run, and how well.
+     * @param {import('../sensors/heartRate.js').DeviceStatus} status
+     */
     setGpsStatus({ state, message }) {
       const status = el('gps-status');
       status.hidden = false;

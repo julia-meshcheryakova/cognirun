@@ -13,6 +13,13 @@ import { upgradeRunRecord } from './runRecord.js';
  * @typedef {object} RunStore
  */
 
+/**
+ * @typedef {object} RunFilter
+ * @property {boolean} [includeDemo]
+ * @property {string} [course]
+ * @property {string|null} [challengeId]  null: solo runs only
+ */
+
 export const LOCAL_RUNS_KEY = 'cognirun.runs.v1';
 export const LOCAL_RUNS_LIMIT = 500;
 
@@ -25,6 +32,10 @@ function memoryStorage() {
   };
 }
 
+/**
+ * @param {import('./runRecord.js').RunRecord[]} runs
+ * @param {RunFilter} [filter]
+ */
 export function filterRuns(runs, { includeDemo = true, course, challengeId } = {}) {
   return runs.filter(
     (r) =>

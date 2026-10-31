@@ -6,6 +6,11 @@ const REAL_TICK_MS = 20;
  * distance advances) so the run can't overshoot 3km while waiting for an answer;
  * a separate real-time answer clock drives the question countdown so the 60s
  * window stays answerable at any multiplier.
+ *
+ * @param {object} options
+ * @param {number} [options.multiplier]
+ * @param {(simMs: number) => void} [options.onSecond]
+ * @param {(answerMs: number) => void} [options.onAnswerSecond]
  */
 export function createClock({ multiplier = 1, onSecond = () => {}, onAnswerSecond = () => {} }) {
   let simMs = 0;

@@ -15,10 +15,10 @@ const stamp = new Date().toISOString().replace(/[:]/g, '').slice(0, 15);
 const dir = join('backups', stamp);
 mkdirSync(dir, { recursive: true });
 
-for (const [file, args] of [
+for (const [file, args] of /** @type {[string, string[]][]} */ ([
   ['schema.sql', []],
   ['data.sql', ['--data-only', '--use-copy']],
-]) {
+])) {
   const out = join(dir, file);
   const result = spawnSync('npx', ['--yes', 'supabase', 'db', 'dump', '--linked', ...args, '-f', out], {
     stdio: 'inherit',

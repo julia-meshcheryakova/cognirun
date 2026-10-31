@@ -114,6 +114,7 @@ export function createRemoteRunStore({ client, userId }) {
   const changed = () => listeners.forEach((listener) => listener());
 
   return {
+    /** @param {import('./store.js').RunFilter} [filter] */
     async list({ includeDemo = true, course, challengeId } = {}) {
       let query = client.from('runs').select(SELECT).eq('user_id', userId);
       if (!includeDemo) query = query.eq('demo', false);

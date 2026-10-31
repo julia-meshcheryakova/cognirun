@@ -20,6 +20,7 @@ function parseHeaders(text) { const out = {}; let all = false; for (const line o
 const PAGE_HEADERS = await readFile(join(web, '_headers'), 'utf8').then(parseHeaders).catch(() => ({}));
 
 async function raw(req, limit = LIMITS.stt.maxBytes) { const c = []; let n = 0; for await (const x of req) { n += x.length; if (n > limit) throw new Error('body too large'); c.push(x); } return Buffer.concat(c); }
+/** @param {Record<string, string>} [cors] */
 function json(res, code, obj, cors = CORS) { res.writeHead(code, { 'content-type': 'application/json', ...cors }); res.end(JSON.stringify(obj)); }
 
 // Paid endpoints, reached only after guard() passed; CORS here is the guard's headers.
@@ -80,5 +81,5 @@ const server = createServer(async (req, res) => {
   try { const data = await readFile(f); res.writeHead(200, { 'content-type': MIME[extname(f)] || 'application/octet-stream', ...CORS, ...PAGE_HEADERS }); res.end(data); }
   catch { res.writeHead(404); res.end('not found'); }
 });
-const PORT = process.env.PORT || 4173;
+const PORT = Number(process.env.PORT || 4173);
 server.listen(PORT, '0.0.0.0', () => console.log(`CogniRun on http://0.0.0.0:${PORT}`));

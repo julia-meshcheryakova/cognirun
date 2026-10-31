@@ -6,6 +6,7 @@
  */
 import { isNativePlatform } from './auth/redirect.js';
 
+/** @type {Partial<ImportMetaEnv>} */
 const viteEnv = import.meta.env ?? {};
 
 export function supabaseConfig(env = viteEnv) {
