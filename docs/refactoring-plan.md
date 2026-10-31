@@ -36,15 +36,16 @@ is re-run after each round.
 | 1.1 | Dropped `export` from 20 file-internal names (and the `ROTATION` re-export); deleted the dead `sttAvailable`; deleted `build:web` (identical to `build`, callers moved) | [ed65f89](https://github.com/julia-meshcheryakova/cognirun/commit/ed65f89) |
 | 1.2 | Remote store is a plain adapter for syncedStore: `list()` takes no filter (server-side filters were never used), no `subscribe`; `filterRuns` lost its test-only `challengeId` filter; fake Supabase lost `is()` | [7671f9e](https://github.com/julia-meshcheryakova/cognirun/commit/7671f9e) |
 | 1.3 | `e2e/helpers.mjs` (`stubSpeech`, `answerQuestions`) replaces the stubs and answer loop copied in the demo-run and challenges specs | [ed9b5ab](https://github.com/julia-meshcheryakova/cognirun/commit/ed9b5ab) |
-| 1.5 | Re-audit after Round 1 (see the collapsed section); no new work found beyond the existing plan | this commit |
+| 1.5 | Re-audit after Round 1 (see the collapsed section); no new work found beyond the existing plan | [6a2bacd](https://github.com/julia-meshcheryakova/cognirun/commit/6a2bacd) |
+| 2.1 | [Run flow memo](memos/run-flow.md): a new bug (exit during a question leaves the mic and voice on), the real cause of the challenge fallback, and `run.js`'s test-only device path | this commit |
 
 ## What's next
 
 | Step | What | Needs you? |
 | --- | --- | --- |
 | 1.4 | Delete Render (`serve-app.mjs`, `render.yaml`, `npm start`, its origin and docs) | Yes, Q1 |
-| 2.x | Memos: run flow, answering (question, STT, TTS, judge), history and progress, challenges and leaderboard, account and sync, settings and legal pages, API and hosting, Android and sensors | No (each memo ends with questions) |
-| 3.1 | Fix exit-while-loading starting a hidden run (`main.js` `startRun`) | No |
+| 2.x | Memos: answering (question, STT, TTS, judge), history and progress, challenges and leaderboard, account and sync, settings and legal pages, API and hosting, Android and sensors | No (each memo ends with questions) |
+| 3.1 | Fix exit-while-loading starting a hidden run, and exit during a question leaving the mic on ([run flow](memos/run-flow.md) 1, 2) | No |
 | 3.2 | Fix a demo run never detaching the watch handler (`run.js` `stop`) | No |
 | 3.3 | One fetch-style API handler shared by every host, so each host file is a few lines | Yes, Q2 |
 | 4.x | Strict types one flag at a time (`strictNullChecks`, then `noImplicitAny`, then the rest); then type-check tests and e2e | No |
@@ -142,15 +143,18 @@ Re-plan: nothing new. Round 1 is finished except 1.4, which waits on Q1. Round 2
 1. **Exit while loading starts a hidden run** (`web/src/main.js`, `startRun`).
    `onExit` stops the run and shows another page, but `startRun` then finishes
    `await loadLibrary()` (up to 2 s) and `store.list()` (up to 3 s while auth
-   settles) and calls `run.start()` anyway. The hidden run later saves a record
-   and takes over the screen with results. Step 3.1.
+   settles) and calls `run.start()` anyway. A hidden demo run reads questions aloud and
+   can later save a record and take over the screen with results. Step 3.1.
 2. **A demo run never detaches the watch** (`web/src/run.js`). Demo runs call
    `devices.attach(...)` but `stop()` never calls `devices.detach()`, so a
    connected watch keeps updating the finished run's detached screen. Step 3.2.
 3. **Challenge fallback can repeat a question** (`main.js`): when challenge ids
    are missing from the library, gaps are filled from `selectRunQuestions` by
-   index, which can pick a question already in the set. Rare (the bank is
-   bundled). Covered by the run-flow memo.
+   index, which can pick a question already in the set. See the [run flow memo](memos/run-flow.md)
+   for the real cause.
+4. **Exit during a question leaves the mic and voice on** (`ui/question.js`):
+   `askQuestion` has no cancel, so after exit the question is still read aloud and
+   the mic opens and stays open. Step 3.1.
 
 Typing to 0 errors found no further bugs. Two dead arguments (`setMicState`
 was passed a status message nothing displays since `4c6addd`) were removed, and
