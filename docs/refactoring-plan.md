@@ -24,6 +24,11 @@ is re-run after each round.
      (tests only), dead exports.
   4. **Docs that drifted:** wrong CI and JDK facts, an MVP "missing" table that is
      now mostly done, and a README intro from the 3-question era.
+  5. **Ownership and delete rules in sync** (found in Round 2): runs carry no
+     owner, so a signed-out user's runs upload into the next account, and
+     "Delete all runs" deletes the account copies while saying "this device".
+  6. **The answer loop in `ui/question.js`:** no cancel, the mic restarts in a loop
+     after the deadline, and typed text loses to the mic.
 - **Not the debt:** file size (`style.css` 1143 lines, `generate/logic.js` 403) and
   the `innerHTML` templates. Neither is causing bugs.
 
@@ -37,17 +42,33 @@ is re-run after each round.
 | 1.2 | Remote store is a plain adapter for syncedStore: `list()` takes no filter (server-side filters were never used), no `subscribe`; `filterRuns` lost its test-only `challengeId` filter; fake Supabase lost `is()` | [7671f9e](https://github.com/julia-meshcheryakova/cognirun/commit/7671f9e) |
 | 1.3 | `e2e/helpers.mjs` (`stubSpeech`, `answerQuestions`) replaces the stubs and answer loop copied in the demo-run and challenges specs | [ed9b5ab](https://github.com/julia-meshcheryakova/cognirun/commit/ed9b5ab) |
 | 1.5 | Re-audit after Round 1 (see the collapsed section); no new work found beyond the existing plan | [6a2bacd](https://github.com/julia-meshcheryakova/cognirun/commit/6a2bacd) |
-| 2.1 | [Run flow memo](memos/run-flow.md): a new bug (exit during a question leaves the mic and voice on), the real cause of the challenge fallback, and `run.js`'s test-only device path | this commit |
+| 2.1 | [Run flow memo](memos/run-flow.md): a new bug (exit during a question leaves the mic and voice on), the real cause of the challenge fallback, and `run.js`'s test-only device path | [ee2e208](https://github.com/julia-meshcheryakova/cognirun/commit/ee2e208) |
+| 2.2–2.8 | Six more memos, each fact-checked by a second agent (about 60 corrections applied): [answering](memos/answering.md), [history and progress](memos/history-and-progress.md), [challenges and leaderboard](memos/challenges-and-leaderboard.md), [account and sync](memos/account-and-sync.md), [settings, legal and nav](memos/settings-legal-and-nav.md), [API and hosting](memos/api-and-hosting.md), [Android and sensors](memos/android-and-sensors.md). 39 new bugs, see the collapsed list. One commit, not seven: docs only | this commit |
+| 2.9 | Round 2 re-plan: Round 3 steps below, no-answer steps first; memo questions merged into "Waiting on you" | this commit |
 
 ## What's next
 
 | Step | What | Needs you? |
 | --- | --- | --- |
+| 3.1 | Exit while loading starts a hidden run; `askQuestion` returns `close()` so exit stops mic, voice and a late judge ([run flow](memos/run-flow.md) 1, 2; [answering](memos/answering.md) P6) | No |
+| 3.2 | Demo run detaches the watch; `onPosition?.` (run flow 4, Android B6) | No |
+| 3.3 | Android: cancelling the watch picker no longer kills GPS (Android B1) | No |
+| 3.4 | Answer loop: typed text wins over the mic, no mic restart after the deadline, cancelled TTS stays silent (answering P1, P2, P5) | No |
+| 3.5 | Sync: one pass (fixes the tab hang), upload on `online`, delete in the account first, profile-load error (account P1, P5–P7; history P1) | No |
+| 3.6 | Late renders in Settings and Challenges are no-ops; download link on every tab; results "New run" route (settings P2, P4, P5) | No |
+| 3.7 | Charts: latitude-corrected route, "5:60" pace labels; History re-renders only when runs change (history P2, P4, P8) | No |
+| 3.8 | Challenges: "Leaderboard unavailable" error, one ISO-week key, small deletions (challenges P5–P7) | No |
+| 3.9 | Android GPS: 1 s interval, honest denied / location-off states, `bluetooth_le required="false"` (Android P4, P5, P9). Code only; a device check needs an APK build (Actions minutes, so I will ask) | No |
+| 3.10 | Delete test-only code: `run.js` own devices, STT test hooks, `real.js` helpers, `calibration.js`, `LEGAL_PAGES`, `filterRuns`, unused options (run flow, answering P8, Android P10, settings P7, history P5, P6) | No |
+| 3.11 | Doc fixes listed in the memos | No |
 | 1.4 | Delete Render (`serve-app.mjs`, `render.yaml`, `npm start`, its origin and docs) | Yes, Q1 |
-| 2.x | Memos: answering (question, STT, TTS, judge), history and progress, challenges and leaderboard, account and sync, settings and legal pages, API and hosting, Android and sensors | No (each memo ends with questions) |
-| 3.1 | Fix exit-while-loading starting a hidden run, and exit during a question leaving the mic on ([run flow](memos/run-flow.md) 1, 2) | No |
-| 3.2 | Fix a demo run never detaching the watch handler (`run.js` `stop`) | No |
-| 3.3 | One fetch-style API handler shared by every host, so each host file is a few lines | Yes, Q2 |
+| 3.12 | One fetch-style API handler shared by every host ([API memo](memos/api-and-hosting.md) P2–P5) | Yes, Q2 |
+| 3.13 | "Delete all runs" deletes this device only | Yes, Q7 |
+| 3.14 | Runs carry an owner; only the signed-in owner's runs upload; sign-out is device-only | Yes, Q8, Q9 |
+| 3.15 | Challenge window/course/distance rule on server and client, drop the `challenges` table, delete the synthetic leaderboard (migration) | Yes, Q5, Q10, Q11 |
+| 3.16 | Scoring and grading: rescued hands-free answers score 50, tapped options graded locally, no `reason` strings | Yes, Q12 |
+| 3.17 | Privacy text, GPS stop at run end, error-log purge, speech fallback | Yes, memo questions |
+| 3.18 | Android watch disconnect, jitter filter, Start connects GPS | Yes, memo questions |
 | 4.x | Strict types one flag at a time (`strictNullChecks`, then `noImplicitAny`, then the rest); then type-check tests and e2e | No |
 
 ## Waiting on you
@@ -65,6 +86,29 @@ is re-run after each round.
    "Next, in order" (done or not needed). They would be replaced by one line
    pointing at "Production readiness — status". I would also correct the T2 row
    (85 pgTAP tests, project exists). Default: **yes, exactly that and nothing else**.
+5. **New migration timestamps.** Your rule is today's date (2026-10-31), but
+   `20261101000000` and `20261101000100` already exist, so a 2026-10-31 file would
+   sort before them. Default: **continue the sequence (`20261101000200`, …)**.
+6. **Production has no `GROQ_API_KEY` or `ELEVENLABS_API_KEY`** (`/health`), so
+   voice transcription and the AI judge are off. Set both on Vercel production
+   (and rotate the Groq key that leaked in v1.1.0)? Default: **yes, you set them**.
+   I won't touch secrets.
+7. **"Delete all runs" in Settings: this device only?** Today it also deletes the
+   account copies while the dialog says "this device". Default: **device only**.
+8. **Which runs upload?** Default: **only runs stamped with the signed-in user**.
+   Runs made while signed out stay on the device and never upload automatically.
+9. **Sign out on this device only** (`scope: 'local'`)? Today it signs out every
+   device. Default: **yes**.
+10. **Delete the fake leaderboard on the results page** (link challenge runs to the
+    real board)? Default: **yes**.
+11. **Challenges:** count a run by its **start** time, and drop the never-used
+    `challenges` table until an admin page exists? Default: **yes, both**.
+12. **A correct hands-free answer rescued at the 60 s deadline:** 50 points (the
+    floor) or 0 (today)? Default: **50**.
+
+The memos hold about 25 smaller questions, each with a default (answering Q2–Q4,
+history Q1–Q5, challenges Q4 and Q6, account Q4–Q6, settings Q2–Q8, API Q3–Q6,
+Android Q1–Q6). Silence means the default.
 
 ## Not doing, and why
 
@@ -76,6 +120,9 @@ is re-run after each round.
   reports as unused. False positives: Gradle links the plugins
   (`android/capacitor.settings.gradle`) and CSS imports the font
   (`web/src/style.css:8`).
+- **A service worker (offline website) or an Android foreground service**
+  (settings Q8, Android Q5). Both are new architecture; the docs will say what
+  works offline and that the app must stay open.
 - **Durable rate limiting, server-side grading.** These are features, not
   refactors. They stay on the MVP plan.
 
@@ -155,6 +202,24 @@ Re-plan: nothing new. Round 1 is finished except 1.4, which waits on Q1. Round 2
 4. **Exit during a question leaves the mic and voice on** (`ui/question.js`):
    `askQuestion` has no cancel, so after exit the question is still read aloud and
    the mic opens and stays open. Step 3.1.
+
+Round 2 memos found 39 more, each with cause and evidence in its memo. The
+ones above Low:
+
+- **High:** the mic loops after a silent deadline; typed text loses to the mic
+  (answering 1, 2). "Delete all runs" deletes the account copies (settings 1,
+  same as account 4 and history 6). Cancelling the watch picker kills GPS on
+  Android (Android 1).
+- **Medium:** a signed-out user's runs upload into the next account, also mid-upload
+  (account 1, 2); the sync loop can hang the tab (account 3); a synced delete comes
+  back (history 1, account 7); weekly leaderboards skip the window, course and
+  distance checks (challenges 1); a hands-free correct answer scores 0
+  (answering 3); ElevenLabs recording stops at 12 s (answering 4); a late Settings
+  or Challenges render covers the live run (settings 2); GPS stays on after the run
+  and error logs can outlive 30 days, against the privacy text (settings 3, 4); the
+  rate limit trusts a client IP header on the Node hosts (API 2); Android manual
+  scan throws, a dropped watch goes unnoticed, GPS is requested every 20 s and a
+  denied permission shows "No GPS signal" (Android 2–5).
 
 Typing to 0 errors found no further bugs. Two dead arguments (`setMicState`
 was passed a status message nothing displays since `4c6addd`) were removed, and
