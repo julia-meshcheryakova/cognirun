@@ -1,7 +1,7 @@
 {
   "name": "cognirun",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.2.0",
   "description": "CogniRun Android (Capacitor) wrapper for the web app.",
   "scripts": {
     "build:web": "npm --prefix web install && npm --prefix web run build",
