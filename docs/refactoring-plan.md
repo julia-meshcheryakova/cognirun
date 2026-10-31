@@ -9,8 +9,8 @@ is re-run after each round.
 
 - **Size:** about 6k lines of hand-written JS across a vanilla Vite app (55
   modules), a Node question server, Vercel `api/`, Cloudflare `functions/`,
-  `serve-app.mjs` (Render) and Supabase SQL. Lint 0, no import cycles, 0.9% exact
-  duplication.
+  `serve-app.mjs` (Render) and Supabase SQL. Lint 0, no import cycles, 0.4% exact
+  duplication (mostly the API copies, step 3.3).
 - **One check command:** `npm run check` = lint, typecheck, unit tests, build, e2e
   (`--fast` = lint, typecheck, unit; `--db` adds pgTAP). The pre-push hook runs it.
 - **Where the debt really is:**
@@ -35,14 +35,14 @@ is re-run after each round.
 | 0.1 | Audit, this plan, `npm run typecheck` (checkJs, 98 → 0 errors) in the gate, wrong docs fixed | [c5988d1](https://github.com/julia-meshcheryakova/cognirun/commit/c5988d1) |
 | 1.1 | Dropped `export` from 20 file-internal names (and the `ROTATION` re-export); deleted the dead `sttAvailable`; deleted `build:web` (identical to `build`, callers moved) | [ed65f89](https://github.com/julia-meshcheryakova/cognirun/commit/ed65f89) |
 | 1.2 | Remote store is a plain adapter for syncedStore: `list()` takes no filter (server-side filters were never used), no `subscribe`; `filterRuns` lost its test-only `challengeId` filter; fake Supabase lost `is()` | [7671f9e](https://github.com/julia-meshcheryakova/cognirun/commit/7671f9e) |
-| 1.3 | `e2e/helpers.mjs` (`stubSpeech`, `answerQuestions`) replaces the stubs and answer loop copied in the demo-run and challenges specs | this commit |
+| 1.3 | `e2e/helpers.mjs` (`stubSpeech`, `answerQuestions`) replaces the stubs and answer loop copied in the demo-run and challenges specs | [ed9b5ab](https://github.com/julia-meshcheryakova/cognirun/commit/ed9b5ab) |
+| 1.5 | Re-audit after Round 1 (see the collapsed section); no new work found beyond the existing plan | this commit |
 
 ## What's next
 
 | Step | What | Needs you? |
 | --- | --- | --- |
 | 1.4 | Delete Render (`serve-app.mjs`, `render.yaml`, `npm start`, its origin and docs) | Yes, Q1 |
-| 1.5 | Re-audit and re-plan | No |
 | 2.x | Memos: run flow, answering (question, STT, TTS, judge), history and progress, challenges and leaderboard, account and sync, settings and legal pages, API and hosting, Android and sensors | No (each memo ends with questions) |
 | 3.1 | Fix exit-while-loading starting a hidden run (`main.js` `startRun`) | No |
 | 3.2 | Fix a demo run never detaching the watch handler (`run.js` `stop`) | No |
@@ -90,6 +90,21 @@ is re-run after each round.
 | Types | `tsc --checkJs` | non-strict: 98 errors in source (fixed in 0.1), 46 more in tests and e2e (not yet checked). `strict`: 846 in `web/src` alone (Round 4 baseline) |
 | Largest files | `wc -l` | `style.css` 1143, `generate/logic.js` 403, `library.generated.js` 387, `heartRate.js` 336, `session.js` 316, `stt.js` 274 |
 | Live hosts | `curl /health` | Vercel 200; `cognirun.pages.dev` does not resolve; `cognirun-app.onrender.com` 404 |
+
+</details>
+
+<details>
+<summary>Round 1 re-audit (2026-10-31)</summary>
+
+| Check | Result | Change since Round 0 |
+| --- | --- | --- |
+| Lint, typecheck | 0 problems, 0 errors | typecheck is new (0.1) |
+| Import cycles (madge) | none | same |
+| Duplication (jscpd, same settings) | 6 clones: 5 in the API handlers (`api/{stt,judge}.mjs`, `functions/api/{stt,judge}.js`, `question-server/server.mjs`), 1 in `web/test/history-ui.test.mjs` | 11 clones/134 lines → 6/55 (0.4%); the e2e copies are gone (1.3). The API clones go with 3.3; the test clone is left (setup code, not worth a helper) |
+| Dead code (knip) | only the 5 false-positive deps; 0 unused exports | 22 unused exports → 0 (1.1, 1.2) |
+| Strict types | 674 errors in `web/src`, 918 across the whole typecheck scope | 846 → 674 in `web/src` (typing in 0.1) |
+
+Re-plan: nothing new. Round 1 is finished except 1.4, which waits on Q1. Round 2 memos are next.
 
 </details>
 
