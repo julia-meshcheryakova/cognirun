@@ -1,38 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-import { QUESTION_LIBRARY } from '../question-server/questions.js';
+import { answerQuestions, stubSpeech } from './helpers.mjs';
 
-// Runs pick random questions, so the spec reads the prompt on screen and looks
-// its answer up in the bank (prompts are unique, the bank validator checks it).
-const BY_PROMPT = new Map(QUESTION_LIBRARY.questions.map((q) => [q.prompt, q]));
-
-/** The question currently waiting for an answer (not a verdict still on screen). */
-async function nextQuestion(page, asked) {
-  const prompt = page.locator('.modal:has(#answer) .prompt');
-  let question;
-  await expect(async () => {
-    question = BY_PROMPT.get((await prompt.textContent({ timeout: 1_000 }))?.trim());
-    expect(question, 'the prompt shown is a bank question').toBeTruthy();
-    expect(asked.has(question.id), `${question.id} was already answered`).toBe(false);
-  }).toPass({ timeout: 20_000 });
-  asked.add(question.id);
-  return question;
-}
-
-test.beforeEach(async ({ page }) => {
-  // Headless Chromium has no usable mic or voice: remove speech input so the
-  // question falls back to typing, and make read-aloud finish instantly.
-  await page.addInitScript(() => {
-    delete window.SpeechRecognition;
-    delete window.webkitSpeechRecognition;
-    delete window.MediaRecorder;
-    window.speechSynthesis = {
-      speak: (utterance) => setTimeout(() => utterance.onend?.(), 0),
-      cancel() {},
-      getVoices: () => [],
-    };
-  });
-});
+test.beforeEach(({ page }) => stubSpeech(page));
 
 test('a full demo run reaches the results page with every answer graded', async ({ page }) => {
   await page.goto('/');
@@ -43,21 +13,10 @@ test('a full demo run reaches the results page with every answer graded', async 
   await page.locator('#start').click();
   await expect(page.locator('#tabs')).toBeHidden();
 
-  const asked = new Set();
-  for (const category of ['trivia', 'logic', 'math']) {
-    const question = await nextQuestion(page, asked);
-    expect(question.category).toBe(category);
-    const prompt = page.locator('.modal .prompt', { hasText: question.prompt });
-    await expect(prompt).toBeVisible({ timeout: 20_000 });
-    if (question.options) {
-      await page.locator(`.choice[data-option="${question.answer}"]`).click();
-    } else {
-      await page.locator('#answer').fill(question.acceptedAnswers?.[0] ?? question.answer);
-      await page.locator('#submit').click();
-    }
-    // The verdict popup is transient (the last one gives way to the results
-    // page), so grading is asserted on the results table below.
-  }
+  const questions = await answerQuestions(page, 3);
+  expect(questions.map((q) => q.category)).toEqual(['trivia', 'logic', 'math']);
+  // The verdict popup is transient (the last one gives way to the results
+  // page), so grading is asserted on the results table below.
 
   await expect(page.getByRole('heading', { name: 'Run complete' })).toBeVisible({
     timeout: 20_000,

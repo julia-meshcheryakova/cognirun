@@ -1,34 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-import { QUESTION_LIBRARY } from '../question-server/questions.js';
 import { weeklyChallenges } from '../web/src/challenges/schedule.js';
+import { answerQuestions, stubSpeech } from './helpers.mjs';
 
-const BY_PROMPT = new Map(QUESTION_LIBRARY.questions.map((q) => [q.prompt, q]));
-
-async function nextQuestion(page, asked) {
-  const prompt = page.locator('.modal:has(#answer) .prompt');
-  let question;
-  await expect(async () => {
-    question = BY_PROMPT.get((await prompt.textContent({ timeout: 1_000 }))?.trim());
-    expect(question, 'the prompt shown is a bank question').toBeTruthy();
-    expect(asked.has(question.id), `${question.id} was already answered`).toBe(false);
-  }).toPass({ timeout: 20_000 });
-  asked.add(question.id);
-  return question;
-}
-
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    delete window.SpeechRecognition;
-    delete window.webkitSpeechRecognition;
-    delete window.MediaRecorder;
-    window.speechSynthesis = {
-      speak: (utterance) => setTimeout(() => utterance.onend?.(), 0),
-      cancel() {},
-      getVoices: () => [],
-    };
-  });
-});
+test.beforeEach(({ page }) => stubSpeech(page));
 
 test('a demo attempt at this week\'s 3K challenge is saved but not counted', async ({ page }) => {
   const [challenge3k] = weeklyChallenges(new Date());
@@ -48,16 +23,7 @@ test('a demo attempt at this week\'s 3K challenge is saved but not counted', asy
   await card.locator('[data-start-challenge]').click();
   await expect(page.locator('#tabs')).toBeHidden();
 
-  const asked = new Set();
-  for (let i = 0; i < 3; i += 1) {
-    const question = await nextQuestion(page, asked);
-    if (question.options) {
-      await page.locator(`.choice[data-option="${question.answer}"]`).click();
-    } else {
-      await page.locator('#answer').fill(question.acceptedAnswers?.[0] ?? question.answer);
-      await page.locator('#submit').click();
-    }
-  }
+  await answerQuestions(page, 3);
 
   await expect(page.getByRole('heading', { name: 'Run complete' })).toBeVisible({ timeout: 30_000 });
   await page.locator('#restart').click();

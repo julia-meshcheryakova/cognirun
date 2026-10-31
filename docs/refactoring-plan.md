@@ -34,13 +34,13 @@ is re-run after each round.
 | — | New app icon from a clean vector trace of the logo (not a refactor step; done in between) | [b0202a9](https://github.com/julia-meshcheryakova/cognirun/commit/b0202a9) |
 | 0.1 | Audit, this plan, `npm run typecheck` (checkJs, 98 → 0 errors) in the gate, wrong docs fixed | [c5988d1](https://github.com/julia-meshcheryakova/cognirun/commit/c5988d1) |
 | 1.1 | Dropped `export` from 20 file-internal names (and the `ROTATION` re-export); deleted the dead `sttAvailable`; deleted `build:web` (identical to `build`, callers moved) | [ed65f89](https://github.com/julia-meshcheryakova/cognirun/commit/ed65f89) |
-| 1.2 | Remote store is a plain adapter for syncedStore: `list()` takes no filter (server-side filters were never used), no `subscribe`; `filterRuns` lost its test-only `challengeId` filter; fake Supabase lost `is()` | this commit |
+| 1.2 | Remote store is a plain adapter for syncedStore: `list()` takes no filter (server-side filters were never used), no `subscribe`; `filterRuns` lost its test-only `challengeId` filter; fake Supabase lost `is()` | [7671f9e](https://github.com/julia-meshcheryakova/cognirun/commit/7671f9e) |
+| 1.3 | `e2e/helpers.mjs` (`stubSpeech`, `answerQuestions`) replaces the stubs and answer loop copied in the demo-run and challenges specs | this commit |
 
 ## What's next
 
 | Step | What | Needs you? |
 | --- | --- | --- |
-| 1.3 | One shared setup for the two e2e specs that copy 30 lines of stubs | No |
 | 1.4 | Delete Render (`serve-app.mjs`, `render.yaml`, `npm start`, its origin and docs) | Yes, Q1 |
 | 1.5 | Re-audit and re-plan | No |
 | 2.x | Memos: run flow, answering (question, STT, TTS, judge), history and progress, challenges and leaderboard, account and sync, settings and legal pages, API and hosting, Android and sensors | No (each memo ends with questions) |
