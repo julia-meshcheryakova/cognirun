@@ -1,13 +1,24 @@
 // Cloudflare Pages Function: POST /api/tts. Mirrors api/tts.mjs.
-const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type' };
+import { guard, clientIp, MAX_TTS_CHARS } from '../../question-server/apiGuard.js';
 
 export async function onRequest({ request, env }) {
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-  if (request.method !== 'POST') return Response.json({ error: 'POST only' }, { status: 405, headers: CORS });
+  const h = (name) => request.headers.get(name);
+  const check = guard('tts', {
+    method: request.method,
+    origin: h('origin'),
+    host: new URL(request.url).host,
+    ip: clientIp(h),
+    size: h('content-length'),
+    extraOrigins: env.ALLOWED_ORIGINS,
+  });
+  const CORS = check.headers;
+  if (!check.ok) return check.body ? Response.json(check.body, { status: check.status, headers: CORS }) : new Response(null, { status: check.status, headers: CORS });
   const key = env.ELEVENLABS_API_KEY || '';
   if (!key) return Response.json({ error: 'no key' }, { status: 503, headers: CORS });
 
-  const { text = '' } = await request.json().catch(() => ({}));
+  const input = await request.json().catch(() => ({}));
+  const text = String(input?.text || '').trim().slice(0, MAX_TTS_CHARS);
+  if (!text) return Response.json({ error: 'text is required' }, { status: 400, headers: CORS });
   const voice = env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb';
   const up = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}?output_format=mp3_44100_128`,

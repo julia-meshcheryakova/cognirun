@@ -19,7 +19,7 @@ const PRIVACY = [
       <li>With an account, we store your email, display name and the runs you sync, so you can see them on any device and join challenges.</li>
       <li>A run can include your GPS route and, if you connect a watch, your heart rate. Heart rate is health data: we only store it with your explicit consent.</li>
       <li>Leaderboards show your display name and score, never your email or route.</li>
-      <li>No ads, no analytics, no tracking cookies. We don't sell or share your data for marketing.</li>
+      <li>No ads, no analytics, no tracking cookies. We don't sell or share your data for marketing. If the app crashes, it sends us an error report.</li>
       <li>You can export your runs and delete your account in the app at any time.</li>
     </ul>`,
   ],
@@ -38,6 +38,8 @@ const PRIVACY = [
       <dd>To mark a free-text answer, the question and your answer text (no account details) may be sent to Groq's AI service.</dd>
       <dt>Technical logs</dt>
       <dd>Our hosting providers log IP addresses and request details for a short time to keep the service secure (legitimate interests).</dd>
+      <dt>Error reports</dt>
+      <dd>If the app hits an error, it sends us the error message, the app version, the screen you were on, your browser or phone type and, if you're signed in, your account id, so we can fix it. Reports are kept for 30 days (legitimate interests).</dd>
     </dl>`,
   ],
   [
@@ -58,7 +60,7 @@ const PRIVACY = [
   ],
   [
     'How long we keep it',
-    `<p>Account data and synced runs are kept until you delete them or your account. Deleting your account removes your profile, runs and answers from our database straight away. Copies may remain in provider backups and logs for up to 30 days. Runs on your device stay until you delete them in Settings or remove the app.</p>`,
+    `<p>Account data and synced runs are kept until you delete them or your account. Deleting your account removes your profile, runs and answers from our database straight away. Copies may remain in provider backups and logs for up to 30 days. Error reports are deleted after 30 days. Runs on your device stay until you delete them in Settings or remove the app.</p>`,
   ],
   [
     'Your rights',

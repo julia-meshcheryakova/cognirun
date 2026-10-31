@@ -13,10 +13,12 @@
     "test": "npm --prefix web test && npm --prefix question-server test",
     "e2e": "playwright test",
     "check": "node scripts/gate.mjs",
+    "icons": "node scripts/icons.mjs",
     "db:start": "npx supabase start",
     "db:stop": "npx supabase stop",
     "db:reset": "npx supabase db reset",
     "db:test": "npx supabase test db",
+    "db:backup": "node scripts/db-backup.mjs",
     "smoke:prod": "node scripts/smoke-prod.mjs",
     "cf:dev": "npx --yes wrangler@4 pages dev web/dist --port 8788 --compatibility-date=2026-10-01",
     "prepare": "husky"

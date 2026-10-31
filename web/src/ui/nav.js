@@ -12,7 +12,7 @@ export const TABS = [
 ];
 export const DEFAULT_TAB = 'run';
 /** Routable pages without a tab of their own (none is highlighted). */
-export const PAGES = ['privacy', 'terms'];
+export const PAGES = ['privacy', 'terms', 'about'];
 
 /** '#/history/abc' -> { tab: 'history', params: ['abc'] } */
 export function parseRoute(hash = '') {

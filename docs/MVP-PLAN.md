@@ -356,20 +356,38 @@ questions.
 - Security headers (`web/public/_headers` for Cloudflare and `vercel.json`),
   `robots.txt`, a meta description and a theme colour.
 
+**Done (production hardening):**
+
+- The paid endpoints `/api/tts`, `/api/stt` and `/api/judge` sit behind
+  `question-server/apiGuard.js` on all four API surfaces. It checks an origin
+  allowlist (`ALLOWED_ORIGINS` adds more origins), applies per-IP rate limits
+  (per instance, best effort) and caps body sizes.
+- Score plausibility: check constraints on `runs` and `run_answers`. The
+  leaderboard also requires a plausible speed, the full course distance and
+  answers that add up to the score.
+- Error logging: `web/src/logger.js` reports to `app_log` through the throttled
+  RPC `log_client_error`, with 30-day retention.
+- Backups: `npm run db:backup` takes a local schema and data dump (see
+  `docs/SUPABASE.md`).
+- Content-Security-Policy and HSTS on Vercel, Cloudflare and Render. The e2e test
+  `csp.spec` keeps the copies identical and walks the app under the policy.
+- Data export ("Export my data (JSON)" in Settings): the account plus all runs.
+- PWA manifest, the icon set (`npm run icons`), the apple-touch icon and an OG image.
+- An About / FAQ / contact page (`#/about`).
+- `web/.env.production` carries the public Supabase URL and anon key, so every
+  production build is configured.
+
 **Still missing before a public launch:**
 
-1. Rate limits, auth and a CORS allowlist on the paid endpoints `/api/tts`,
-   `/api/stt` and `/api/judge`.
-2. Server-side score recompute from `run_answers`.
-3. Real SMTP (e.g. Resend) and a Google OAuth client.
-4. Error logging (Quizrun has a logger and an `app_log` table) and uptime checks.
-5. Database backups (Quizrun's `db-backup.yml`) and a staging project.
-6. The Cloudflare Pages cutover, then a CSP header.
-7. A real controller identity and contact address in the legal pages.
-8. Data export (download my data).
-9. Play Store data-safety form, listing, signed release.
-10. PWA manifest and icons, plus an OG image.
-11. An About / FAQ / support page and an accessibility pass.
+1. Server-side grading. Points are still computed on the client; only their
+   plausibility is checked.
+2. Real SMTP (e.g. Resend) and a Google OAuth client (owner setup).
+3. Uptime checks (e.g. a free UptimeRobot monitor on `/health`).
+4. A staging Supabase project.
+5. A real controller identity and contact address in the legal pages.
+6. The Play Store data-safety form, listing and a signed release.
+7. An accessibility pass (screen reader, contrast, focus order).
+8. A branded icon. The current one is Capacitor's placeholder mark, enlarged.
 
 ## 7. Gaps in the brief, with the default I'd pick
 
@@ -395,7 +413,7 @@ questions.
 - `selectRunQuestions` always picked the first question of each category, so every
   run was identical. *(Fixed: solo runs draw randomly from a 383-question bank and
   avoid recently seen questions; see `docs/QUESTIONS-SPEC.md`.)*
-- `/api/tts`, `/api/stt` and `/api/judge` are unauthenticated (Phase 6).
+- `/api/tts`, `/api/stt` and `/api/judge` were open to anyone. *(Now origin-checked and rate-limited; still no user auth.)*
 - At high demo multipliers the live screen used to stall the browser (fixed in
   Phase 0 by painting once per frame).
 - `/questions` 404s under `vite preview`. The app falls back to the bundled library,

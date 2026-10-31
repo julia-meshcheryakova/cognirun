@@ -21,12 +21,20 @@ import { createSyncedRunStore } from './history/syncedStore.js';
 import { createAuth } from './auth/session.js';
 import { renderAccount } from './ui/account.js';
 import { renderLegal } from './ui/legal.js';
+import { renderAbout } from './ui/about.js';
+import { createErrorReporter } from './logger.js';
+import { getSupabase } from './supabase.js';
+import { isNativePlatform } from './auth/redirect.js';
+
+// Already in the Android app: the download link is only for web visitors.
+if (isNativePlatform()) document.getElementById('download-apk')?.remove();
 import { loadChallengeLeaderboard } from './challenges/leaderboard.js';
 
 const root = document.querySelector('#app');
 const nav = document.querySelector('#tabs');
 const settings = loadSettings();
 const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '';
+createErrorReporter({ getClient: () => getSupabase(), version: APP_VERSION }).install();
 const auth = createAuth();
 const store = createSyncedRunStore({ local: createLocalRunStore(), auth });
 auth.init();
@@ -59,10 +67,12 @@ function showRoute() {
   }
   if (tab === 'account') return renderAccount(root, { auth, store });
   if (tab === 'privacy' || tab === 'terms') return renderLegal(root, tab);
+  if (tab === 'about') return renderAbout(root, { version: APP_VERSION });
   if (tab === 'settings') {
     return renderSettings(root, {
       settings,
       store,
+      auth,
       version: APP_VERSION,
       onChange(patch) {
         updateSettings(patch);

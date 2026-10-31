@@ -6,17 +6,19 @@
     <title>CogniRun</title>
     <meta name="description" content="CogniRun: a running app that asks you quiz and logic questions as you run. Answer by voice, track your runs and join weekly challenges." />
     <meta name="theme-color" content="#05080a" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="CogniRun" />
+    <meta property="og:description" content="Quiz and logic questions while you run. Answer by voice and join weekly challenges." />
+    <meta property="og:image" content="https://cognirun.vercel.app/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <a id="download-apk" href="https://github.com/julia-meshcheryakova/cognirun/releases/latest/download/cognirun.apk">⬇ Download Android app</a>
     <div id="app"></div>
     <nav id="tabs" class="tabs" aria-label="Sections"></nav>
-    <script>
-      // Already in the Android app — the download link is only for web visitors.
-      if (window.Capacitor?.isNativePlatform?.()) {
-        document.getElementById('download-apk')?.remove();
-      }
-    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

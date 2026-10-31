@@ -48,14 +48,13 @@ To test the judge or voice locally, put the server keys in a git-ignored
 
    | Variable | Type | Value |
    | --- | --- | --- |
-   | `VITE_SUPABASE_URL` | text | `https://rbnnlbhlvtcthyqnuioq.supabase.co` |
-   | `VITE_SUPABASE_ANON_KEY` | text | the anon key from `web/.env.local` |
    | `GROQ_API_KEY` | secret | Groq key (answer judge) |
    | `ELEVENLABS_API_KEY` | secret | ElevenLabs key (voice) |
    | `NODE_VERSION` | text | `22` |
 
-   The `VITE_` values are public and get baked into the build. The two keys stay
-   on the server.
+   The Supabase URL and anon key come from the committed `web/.env.production`,
+   so they need no setting here. The two keys stay on the server. If the API is
+   called from another origin, add it in `ALLOWED_ORIGINS`.
 4. Click **Save and Deploy**, then check the result with
    `SMOKE_URL=https://cognirun.pages.dev npm run smoke:prod`.
 

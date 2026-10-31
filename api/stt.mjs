@@ -1,23 +1,38 @@
+import { guard, clientIp, LIMITS } from '../question-server/apiGuard.js';
+
 const KEY = () => process.env.ELEVENLABS_API_KEY || '';
 const MODEL = () => process.env.ELEVENLABS_STT_MODEL || 'scribe_v2';
 
 // Vercel's default body parser would mangle the raw audio bytes.
 export const config = { api: { bodyParser: false } };
 
-async function raw(req) {
+async function raw(req, limit) {
   const chunks = [];
-  for await (const c of req) chunks.push(c);
+  let size = 0;
+  for await (const c of req) {
+    size += c.length;
+    if (size > limit) return null;
+    chunks.push(c);
+  }
   return Buffer.concat(chunks);
 }
 
 export default async function handler(req, res) {
-  res.setHeader('access-control-allow-origin', '*');
-  res.setHeader('access-control-allow-headers', 'content-type, x-audio-filename');
-  if (req.method === 'OPTIONS') return res.status(204).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
+  const check = guard('stt', {
+    method: req.method,
+    origin: req.headers.origin,
+    host: req.headers.host,
+    ip: clientIp((name) => req.headers[name]),
+    size: req.headers['content-length'],
+    extraOrigins: process.env.ALLOWED_ORIGINS,
+    allowHeaders: 'content-type, x-audio-filename',
+  });
+  for (const [k, v] of Object.entries(check.headers)) res.setHeader(k, v);
+  if (!check.ok) return check.body ? res.status(check.status).json(check.body) : res.status(check.status).end();
   if (!KEY()) return res.status(503).json({ error: 'no key' });
 
-  const audio = await raw(req);
+  const audio = await raw(req, LIMITS.stt.maxBytes);
+  if (!audio) return res.status(413).json({ error: 'request too large' });
   if (audio.length < 100) return res.status(400).json({ error: 'no usable audio' });
 
   const ct = req.headers['content-type'] || 'audio/webm';

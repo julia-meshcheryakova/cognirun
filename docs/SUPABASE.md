@@ -27,11 +27,17 @@ separate lazy chunk), and the **You** tab just says sign-in is not configured.
 | `profiles.terms_version`, `profiles.terms_accepted_at` | the Terms/Privacy version the user agreed to, and when. Set only through `accept_terms(p_version)` (RPC). The app compares it with `TERMS_VERSION` in `web/src/legal.js`. Until it matches, uploads pause (sync state `needs-consent`) and the You tab asks the user to agree. | Own row, through the RPC only (`authenticated`). |
 | `delete_my_account()` (RPC) | deletes the caller's `auth.users` row; profile, runs and answers go with it by cascade. | `authenticated` only, and only for the caller. |
 | `challenge_leaderboard(p_challenge_id, p_limit = 100)` (RPC) | best non-demo run per user for a challenge (most points, then fastest, then earliest), finished within the challenge window and uploaded no later than a day after it closed. Returns `rank, display_name, points, correct, total, duration_s, distance_m, finished_at, is_me`. No user ids, emails or routes. | Anyone (`anon` and `authenticated`). |
+| `run_is_plausible(runs)`, `course_meters(text)` | plausibility check used by the leaderboard: duration > 0, average speed ≤ 6.5 m/s, and the uploaded answers count equals `total` and sum to `points`. | Internal (not callable by `anon` / `authenticated`). |
+| `app_log` | client error reports: level, message, stack, URL (no query string), app version, user agent, user id if signed in. Rows older than 30 days are deleted. | Admins read. Nobody writes directly. |
+| `log_client_error(...)` (RPC) | the only way into `app_log`. Trims every field and throttles to 120 reports a minute overall and 10 per user. | `anon` and `authenticated`. |
 
 Scores are taken from the client as submitted, but they cannot be rewritten after
-upload, and a run backdated into a closed challenge does not count. A server-side
-recompute of points from `run_answers` is a later step, before leaderboards carry
-prizes.
+upload, and a run backdated into a closed challenge does not count. Check
+constraints cap them (at most 100 points per answer, a wrong answer scores 0,
+`correct ≤ total ≤ 50`). The leaderboard also skips implausible runs: too fast
+for the distance, shorter than the challenge course, a different course, or
+answers that don't add up to the score. Fully recomputing points on the server
+from graded answers is a later step, before leaderboards carry prizes.
 
 ### How the app syncs
 
@@ -117,22 +123,22 @@ The Android app uses the same web client: it opens Google in a Chrome Custom Tab
 
 The two variables are read **at build time** by Vite, so redeploy after changing them.
 
+The live values are committed in `web/.env.production`. The anon key is public
+by design: it ships inside every web bundle, and RLS protects the data. So every
+production build (Vercel, Cloudflare, Render, the release APK) is configured
+without any dashboard setup. `npm run dev` does not read it (dev uses `web/.env.local`). Never put the
+service-role key in any `VITE_` variable.
+
+To point a build at another project (staging, say), override the variables:
+
 | Where | How |
 | --- | --- |
-| Local dev | copy `web/.env.example` to `web/.env.local` and fill it in (git-ignored) |
-| Vercel | Project → Settings → Environment Variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (Production, and Preview if wanted) → redeploy |
-| Render | `cognirun-app` → Environment: the same two keys (the build runs `npm run build`) → Manual Deploy |
-| Android, local build | put them in `web/.env.local`, then `npm run android` |
-| Android, release APK | add repository **variables** (Settings → Secrets and variables → Actions → Variables) `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, and pass them to the "Build web app + sync Capacitor" step of `.github/workflows/android-build.yml`: |
+| Local dev | `web/.env.local` (git-ignored; copy `web/.env.example`), e.g. the local stack below |
+| Vercel / Render / Cloudflare | Environment variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` override the file (redeploy) |
+| Production builds on your machine (incl. `npm run android`) | `web/.env.production.local` (git-ignored) overrides `.env.production` |
 
-```yaml
-      - name: Build web app + sync Capacitor
-        env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
-```
-
-(That workflow edit was left to the owner on purpose; without it the APK is local-only.)
+If you change the project, also update `connect-src` in the CSP (`web/public/_headers`
+and `vercel.json`).
 
 ### 6. Make yourself admin (for the later admin page)
 
@@ -150,6 +156,29 @@ insert them in the SQL editor (it runs as the service role):
 insert into public.challenges (id, course, title, starts_at, ends_at, question_ids)
 values ('2026-W02-5k', '5k', 'Week 2 · 5K', '2026-01-05', '2026-01-12', array['t1','l1','m1','t2','l2']);
 ```
+
+## Error logs
+
+The app reports uncaught errors and unhandled promise rejections through
+`log_client_error` (`web/src/logger.js`). It sends at most 5 distinct reports per
+page load and never from `http://localhost`. Admins read them in the SQL editor:
+
+```sql
+select created_at, level, message, url, app_version, user_agent
+from public.app_log order by created_at desc limit 50;
+```
+
+## Backups
+
+- Supabase takes daily backups on paid plans. The free plan has none you can
+  restore yourself, so take your own.
+- `npm run db:backup` (needs Docker and a linked project) writes
+  `backups/<timestamp>/schema.sql` and `data.sql`. The data includes `auth.users`
+  and runs with GPS routes, so keep the files private. `backups/` is git-ignored,
+  and there is deliberately no GitHub Actions backup job (it would need the
+  database password as a secret, and it costs minutes).
+- Restore into a fresh project: `psql "<connection string>" -f schema.sql`, then
+  `-f data.sql`.
 
 ## Android redirect handling
 

@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
 
 import { judgeRequest } from './llmJudge.js';
+import { guard, clientIp, LIMITS, MAX_TTS_CHARS } from './apiGuard.js';
 import { QUESTION_LIBRARY as library } from './questions.js';
 
 const PORT = Number(process.env.PORT ?? 4000);
@@ -13,6 +14,7 @@ const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb';
 const TTS_MODEL = process.env.ELEVENLABS_TTS_MODEL || 'eleven_flash_v2_5';
 const STT_MODEL = process.env.ELEVENLABS_STT_MODEL || 'scribe_v2';
 const ttsCache = new Map();
+const PAID = { '/api/tts': 'tts', '/api/stt': 'stt', '/api/judge': 'judge' };
 
 function readBody(req, limit = 25 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
@@ -37,7 +39,7 @@ async function handleTts(req, res) {
     res.writeHead(503, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
     return res.end(JSON.stringify({ error: 'ElevenLabs is not configured.' }));
   }
-  const raw = await readBody(req, 128 * 1024);
+  const raw = await readBody(req, LIMITS.tts.maxBytes);
   let input;
   try {
     input = JSON.parse(raw.toString('utf8'));
@@ -45,7 +47,7 @@ async function handleTts(req, res) {
     res.writeHead(400, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
     return res.end(JSON.stringify({ error: 'invalid JSON' }));
   }
-  const text = String(input.text || '').trim().slice(0, 1500);
+  const text = String(input.text || '').trim().slice(0, MAX_TTS_CHARS);
   if (!text) {
     res.writeHead(400, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
     return res.end(JSON.stringify({ error: 'text is required' }));
@@ -80,7 +82,7 @@ async function handleStt(req, res) {
     res.writeHead(503, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
     return res.end(JSON.stringify({ error: 'ElevenLabs is not configured.' }));
   }
-  const audio = await readBody(req);
+  const audio = await readBody(req, LIMITS.stt.maxBytes);
   if (audio.length < 100) {
     res.writeHead(400, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
     return res.end(JSON.stringify({ error: 'no usable audio' }));
@@ -125,7 +127,24 @@ const server = createServer(async (req, res) => {
     res.end(JSON.stringify(body));
   };
 
-  // CORS preflight for the voice POST endpoints called from the WebView/browser.
+  const kind = PAID[url.pathname];
+  if (kind) {
+    const check = guard(kind, {
+      method: req.method,
+      origin: req.headers.origin,
+      host: req.headers.host,
+      ip: clientIp((name) => req.headers[name]),
+      size: req.headers['content-length'],
+      extraOrigins: process.env.ALLOWED_ORIGINS,
+      allowHeaders: 'content-type, x-audio-filename',
+    });
+    if (!check.ok) {
+      res.writeHead(check.status, { 'content-type': 'application/json', ...check.headers });
+      return res.end(check.body ? JSON.stringify(check.body) : undefined);
+    }
+  }
+
+  // CORS preflight for the remaining endpoints.
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'access-control-allow-origin': '*',
@@ -141,7 +160,7 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/judge') {
       let input;
       try {
-        input = JSON.parse((await readBody(req, 16 * 1024)).toString('utf8') || '{}');
+        input = JSON.parse((await readBody(req, LIMITS.judge.maxBytes)).toString('utf8') || '{}');
       } catch {
         return send(400, { error: 'invalid JSON' });
       }

@@ -77,8 +77,8 @@ select throws_ok(
   'nor save a run as someone else'
 );
 select throws_ok(
-  $$insert into public.runs (id, started_at, finished_at, course, points)
-    values ('run-a', now(), now(), '3k', 999)
+  $$insert into public.runs (id, started_at, finished_at, course, points, total)
+    values ('run-a', now(), now(), '3k', 999, 10)
     on conflict (id) do update set points = excluded.points$$,
   '42501',
   null,

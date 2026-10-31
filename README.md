@@ -154,9 +154,19 @@ your shell for `question-server`. None of them are ever sent to the browser.
 | `GROQ_MODEL` | judge model override | `qwen/qwen3.8-27b` |
 | `ELEVENLABS_API_KEY` | `/api/tts`, `/api/stt` | browser speech |
 | `ELEVENLABS_VOICE_ID`, `ELEVENLABS_TTS_MODEL`, `ELEVENLABS_STT_MODEL` | voice overrides | defaults in code |
+| `ALLOWED_ORIGINS` | extra comma-separated origins allowed to call `/api/tts`, `/api/stt`, `/api/judge` | only the built-in list: the same host, the production hosts, `cognirun-*.vercel.app` previews, localhost, and the Android/iOS app |
 
 `GET /health` reports `groq` and `eleven` booleans so you can confirm a deploy is
 configured.
+
+The three paid endpoints go through `question-server/apiGuard.js` on every
+surface: a request from an unknown origin gets 403, each IP is rate-limited (per
+server instance, best effort), and oversized bodies get 413.
+
+Security headers, including the Content-Security-Policy, are kept in two
+identical copies: `web/public/_headers` (Cloudflare Pages, also read by
+`serve-app.mjs` for Render) and `vercel.json`. `e2e/csp.spec.mjs` fails if the
+copies drift or if the app breaks the policy.
 
 ## Development harness
 
@@ -177,6 +187,8 @@ npx playwright install chromium
 | `npm run check` | the whole gate: lint → unit → build → e2e (`-- --fast` for lint + unit) |
 | `npm run smoke:prod` | post-deploy check of https://cognirun.vercel.app (`SMOKE_URL=` for previews) |
 | `npm run cf:dev` | serve `web/dist` plus `functions/` in Cloudflare's local runtime on :8788 (build first) |
+| `npm run icons` | regenerate every app icon (Android mipmaps, favicon, PWA, apple-touch) and the OG image from `scripts/icons.mjs` |
+| `npm run db:test` / `npm run db:backup` | pgTAP database tests on the local stack / local dump of the live database into `backups/` (git-ignored) |
 
 The husky **pre-push** hook runs `npm run check`; `git push --no-verify` skips it in
 an emergency.
@@ -192,6 +204,6 @@ an emergency.
 - **Android:** `.github/workflows/android-build.yml` builds the APK only for a `v*`
   tag (or a manual run) and attaches `cognirun.apk` to that GitHub Release, which the
   app's download link points at. The APK contains no secrets; it calls the Vercel API.
-- **Accounts and sync (Supabase):** optional. Without `VITE_SUPABASE_URL` /
-  `VITE_SUPABASE_ANON_KEY` the app is local-only. Setup, schema and local database
-  tests (`npm run db:test`): [docs/SUPABASE.md](docs/SUPABASE.md).
+- **Accounts and sync (Supabase):** the live project's public URL and anon key
+  are in `web/.env.production`, so production builds have sign-in. Setup, schema
+  and local database tests (`npm run db:test`): [docs/SUPABASE.md](docs/SUPABASE.md).

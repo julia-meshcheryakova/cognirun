@@ -21,10 +21,16 @@ insert into public.runs (id, user_id, started_at, finished_at, mode, challenge_i
   ('b1', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '2026-01-06T09:00:00Z', '2026-01-06T09:28:00Z', 'challenge', '2026-W02-5k', '5k', false, 1680, 250, 5, 5, '2026-01-06T09:29:00Z'),
   ('b2', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '2026-01-13T09:00:00Z', '2026-01-13T09:20:00Z', 'challenge', '2026-W02-5k', '5k', false, 1200, 400, 5, 5, '2026-01-13T09:21:00Z'),
   -- finished inside the window but uploaded more than a day after it closed
-  ('b4', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '2026-01-11T09:00:00Z', '2026-01-11T09:20:00Z', 'challenge', '2026-W02-5k', '5k', false, 1200, 999, 5, 5, '2026-01-14T00:00:00Z'),
+  ('b4', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '2026-01-11T09:00:00Z', '2026-01-11T09:20:00Z', 'challenge', '2026-W02-5k', '5k', false, 1200, 450, 5, 5, '2026-01-14T00:00:00Z'),
   ('b3', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '2026-01-06T09:00:00Z', '2026-01-06T09:28:00Z', 'challenge', 'friend-xyz', '3k', false, 900, 150, 3, 3, '2026-01-06T09:29:00Z'),
   ('c1', 'cccccccc-cccc-cccc-cccc-cccccccccccc', '2026-01-06T09:00:00Z', '2026-01-06T09:28:00Z', 'solo', null, '5k', false, 1680, 300, 5, 5, '2026-01-06T09:29:00Z');
 
+  -- Full-course distances and the answers that add up to each score (see 05_score_plausibility).
+  update public.runs set distance_m = public.course_meters(course);
+  insert into public.run_answers (run_id, idx, user_id, question_id, category, km, correct, points)
+  select r.id, g, r.user_id, 'q' || g, 'trivia', g + 1, true,
+         case when g = 0 then r.points - (r.total - 1) * (r.points / r.total) else r.points / r.total end
+  from public.runs r, generate_series(0, r.total - 1) g;
 -- ---------------------------------------------------------------- challenges
 set local role anon;
 select set_config('request.jwt.claims', '{"role": "anon"}', true);

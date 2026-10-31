@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="18 18 72 72">
+<defs>
+<linearGradient id="g" gradientUnits="userSpaceOnUse" x1="30" y1="78" x2="78" y2="30">
+<stop offset="0" stop-color="#7dd1ff"/><stop offset="1" stop-color="#4fadff"/>
+</linearGradient>
+<clipPath id="mark"><rect transform="translate(54 54) rotate(45) scale(1.22)" x="-3.5" y="-24.75" width="7" height="14.25"/><rect transform="translate(54 54) rotate(45) scale(1.22)" x="-17.75" y="-10.5" width="35.5" height="7"/><rect transform="translate(54 54) rotate(45) scale(1.22)" x="-17.75" y="3.5" width="35.5" height="7"/><rect transform="translate(54 54) rotate(45) scale(1.22)" x="-3.5" y="10.5" width="7" height="14.25"/></clipPath>
+<clipPath id="shape"><rect x="18" y="18" width="72" height="72" rx="15.84"/></clipPath>
+</defs>
+<g clip-path="url(#shape)">
+<rect x="-54" y="-54" width="216" height="216" fill="#fff"/>
+<g stroke="#e5e9f1" stroke-width="0.4"><line x1="-108" y1="0" x2="-216" y2="108"/><line x1="-216" y1="0" x2="-108" y2="108"/><line x1="-87.75" y1="0" x2="-195.75" y2="108"/><line x1="-195.75" y1="0" x2="-87.75" y2="108"/><line x1="-67.5" y1="0" x2="-175.5" y2="108"/><line x1="-175.5" y1="0" x2="-67.5" y2="108"/><line x1="-47.25" y1="0" x2="-155.25" y2="108"/><line x1="-155.25" y1="0" x2="-47.25" y2="108"/><line x1="-27" y1="0" x2="-135" y2="108"/><line x1="-135" y1="0" x2="-27" y2="108"/><line x1="-6.75" y1="0" x2="-114.75" y2="108"/><line x1="-114.75" y1="0" x2="-6.75" y2="108"/><line x1="13.5" y1="0" x2="-94.5" y2="108"/><line x1="-94.5" y1="0" x2="13.5" y2="108"/><line x1="33.75" y1="0" x2="-74.25" y2="108"/><line x1="-74.25" y1="0" x2="33.75" y2="108"/><line x1="54" y1="0" x2="-54" y2="108"/><line x1="-54" y1="0" x2="54" y2="108"/><line x1="74.25" y1="0" x2="-33.75" y2="108"/><line x1="-33.75" y1="0" x2="74.25" y2="108"/><line x1="94.5" y1="0" x2="-13.5" y2="108"/><line x1="-13.5" y1="0" x2="94.5" y2="108"/><line x1="114.75" y1="0" x2="6.75" y2="108"/><line x1="6.75" y1="0" x2="114.75" y2="108"/><line x1="135" y1="0" x2="27" y2="108"/><line x1="27" y1="0" x2="135" y2="108"/><line x1="155.25" y1="0" x2="47.25" y2="108"/><line x1="47.25" y1="0" x2="155.25" y2="108"/><line x1="175.5" y1="0" x2="67.5" y2="108"/><line x1="67.5" y1="0" x2="175.5" y2="108"/><line x1="195.75" y1="0" x2="87.75" y2="108"/><line x1="87.75" y1="0" x2="195.75" y2="108"/><line x1="216" y1="0" x2="108" y2="108"/><line x1="108" y1="0" x2="216" y2="108"/></g>
+<rect width="108" height="108" fill="url(#g)" clip-path="url(#mark)"/>
+</g>
+</svg>

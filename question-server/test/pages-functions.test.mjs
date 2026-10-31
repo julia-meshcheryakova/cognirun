@@ -14,8 +14,12 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
-const call = (mod, url, init = {}, env = {}) =>
-  mod.onRequest({ request: new Request(`https://cognirun.pages.dev${url}`, init), env });
+// Browsers always send Origin on POST; default to the site's own origin.
+const call = (mod, url, init = {}, env = {}, origin = 'https://cognirun.pages.dev') => {
+  const headers = new Headers(init.headers);
+  if (origin) headers.set('origin', origin);
+  return mod.onRequest({ request: new Request(`https://cognirun.pages.dev${url}`, { ...init, headers }), env });
+};
 
 test('health reports the bank size and which keys are set', async () => {
   const res = await call(health, '/health', {}, { GROQ_API_KEY: 'g' });
@@ -115,4 +119,26 @@ test('stt rejects tiny bodies and forwards real audio as multipart', async () =>
   assert.deepEqual(await res.json(), { text: 'paris' });
   assert.equal(form.get('file').name, 'ab.m4a');
   assert.equal(form.get('file').size, 500);
+});
+
+test('paid endpoints refuse other sites and scripts without an Origin', async () => {
+  const env = { ELEVENLABS_API_KEY: 'k', GROQ_API_KEY: 'g' };
+  globalThis.fetch = async () => assert.fail('must not reach the paid upstream');
+  for (const [mod, path] of [[tts, '/api/tts'], [stt, '/api/stt'], [judge, '/api/judge']]) {
+    const foreign = await call(mod, path, { method: 'POST', body: '{}' }, env, 'https://evil.example');
+    assert.equal(foreign.status, 403, path);
+    assert.equal(foreign.headers.get('access-control-allow-origin'), null);
+    const script = await call(mod, path, { method: 'POST', body: '{}' }, env, null);
+    assert.equal(script.status, 403, path);
+    const preflight = await call(mod, path, { method: 'OPTIONS' }, env, 'https://localhost');
+    assert.equal(preflight.status, 204, path);
+    assert.equal(preflight.headers.get('access-control-allow-origin'), 'https://localhost');
+  }
+});
+
+test('stt refuses bodies over the size cap before calling ElevenLabs', async () => {
+  globalThis.fetch = async () => assert.fail('must not reach the paid upstream');
+  const big = new Uint8Array(2 * 1024 * 1024 + 1);
+  const res = await call(stt, '/api/stt', { method: 'POST', body: big }, { ELEVENLABS_API_KEY: 'k' });
+  assert.equal(res.status, 413);
 });
