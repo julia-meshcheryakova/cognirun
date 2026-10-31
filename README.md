@@ -9,6 +9,7 @@ population-relative percentile per category, the GPS route and the pace profile.
 - `web/` — the browser app (all functionality lives here)
 - `question-server/` — the questions library, the LLM answer judge and the local dev API
 - `api/` — the same API as Vercel serverless functions (production)
+- `functions/` — the same API as Cloudflare Pages Functions ([docs/CLOUDFLARE.md](docs/CLOUDFLARE.md))
 - `serve-app.mjs` — the same API plus the built app as one Node server (Render)
 - `android/` — Capacitor wrapper that ships the web app as an APK
 - `e2e/` — Playwright smoke tests against the production build
@@ -16,8 +17,8 @@ population-relative percentile per category, the GPS route and the pace profile.
 - `docs/QUESTIONS-SPEC.md` — categories, library, selection and percentile framing
 - `docs/MVP-PLAN.md` — the roadmap from demo to MVP
 
-The three API surfaces (`question-server/server.mjs`, `api/*.mjs`, `serve-app.mjs`)
-must stay in sync: `/health`, `/questions`, `/api/config`, `/api/tts`, `/api/stt`,
+The API surfaces (`question-server/server.mjs`, `api/*.mjs`, `functions/`,
+`serve-app.mjs`) must stay in sync: `/health`, `/questions`, `/api/config`, `/api/tts`, `/api/stt`,
 `/api/judge`.
 
 ## Run the web app
@@ -143,7 +144,8 @@ never mix.
 
 ## Server environment
 
-Set these on Vercel (Project → Settings → Environment Variables), on Render, or in
+Set these on Vercel (Project → Settings → Environment Variables), on Cloudflare Pages
+(Settings → Variables and Secrets), on Render, or in
 your shell for `question-server`. None of them are ever sent to the browser.
 
 | Variable | Used for | Without it |
@@ -174,6 +176,7 @@ npx playwright install chromium
 | `npm run e2e` | Playwright: a full x1000 demo run on the production build, plus a "no API keys in the bundle" check (run `npm --prefix web run build` first) |
 | `npm run check` | the whole gate: lint → unit → build → e2e (`-- --fast` for lint + unit) |
 | `npm run smoke:prod` | post-deploy check of https://cognirun.vercel.app (`SMOKE_URL=` for previews) |
+| `npm run cf:dev` | serve `web/dist` plus `functions/` in Cloudflare's local runtime on :8788 (build first) |
 
 The husky **pre-push** hook runs `npm run check`; `git push --no-verify` skips it in
 an emergency.
@@ -182,6 +185,8 @@ an emergency.
 
 - **Web + API:** Vercel deploys `main` automatically (`vercel.json`: builds `web/`,
   serves `api/*.mjs` as functions). After a merge, run `npm run smoke:prod`.
+  Moving to Cloudflare Pages (like Quizrun) is ready in code; the dashboard setup and
+  cutover steps are in [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md).
 - **CI:** `.github/workflows/ci.yml` runs lint, unit tests and the build on pull
   requests only.
 - **Android:** `.github/workflows/android-build.yml` builds the APK only for a `v*`

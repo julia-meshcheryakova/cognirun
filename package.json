@@ -18,6 +18,7 @@
     "db:reset": "npx supabase db reset",
     "db:test": "npx supabase test db",
     "smoke:prod": "node scripts/smoke-prod.mjs",
+    "cf:dev": "npx --yes wrangler@4 pages dev web/dist --port 8788 --compatibility-date=2026-10-01",
     "prepare": "husky"
   },
   "dependencies": {
