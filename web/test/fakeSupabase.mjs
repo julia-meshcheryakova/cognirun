@@ -62,9 +62,7 @@ export function createFakeSupabase({ session = null, rls = true } = {}) {
     let options = {};
 
     function matches(row) {
-      return state.filters.every(([kind, col, value]) =>
-        kind === 'is' ? (row[col] ?? null) === value : row[col] === value,
-      );
+      return state.filters.every(([, col, value]) => row[col] === value);
     }
 
     function execute() {
@@ -125,10 +123,7 @@ export function createFakeSupabase({ session = null, rls = true } = {}) {
         state.filters.push(['eq', col, value]);
         return builder;
       },
-      is(col, value) {
-        state.filters.push(['is', col, value]);
-        return builder;
-      },
+
       order(col, { ascending = true } = {}) {
         state.order = { col, ascending };
         return builder;

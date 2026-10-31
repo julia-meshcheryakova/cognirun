@@ -1,14 +1,14 @@
 import { upgradeRunRecord } from './runRecord.js';
 
 /**
- * Run store contract. Every adapter (this local one, the Supabase one) exposes
- * the same async API so screens never care where runs live:
+ * Run store contract. This local store and syncedStore (what the screens use)
+ * expose the same async API:
  *
- *   list({ includeDemo = true, course, challengeId }) -> RunRecord[] (newest first)
- *   get(id)                                           -> RunRecord | null
- *   save(record)                                      -> RunRecord (insert or replace by id)
- *   remove(id)                                        -> void
- *   subscribe(listener)                               -> unsubscribe(); listener() after every change
+ *   list({ includeDemo = true, course }) -> RunRecord[] (newest first)
+ *   get(id)                              -> RunRecord | null
+ *   save(record)                         -> RunRecord (insert or replace by id)
+ *   remove(id)                           -> void
+ *   subscribe(listener)                  -> unsubscribe(); listener() after every change
  *
  * @typedef {object} RunStore
  */
@@ -17,7 +17,6 @@ import { upgradeRunRecord } from './runRecord.js';
  * @typedef {object} RunFilter
  * @property {boolean} [includeDemo]
  * @property {string} [course]
- * @property {string|null} [challengeId]  null: solo runs only
  */
 
 const LOCAL_RUNS_KEY = 'cognirun.runs.v1';
@@ -36,13 +35,8 @@ function memoryStorage() {
  * @param {import('./runRecord.js').RunRecord[]} runs
  * @param {RunFilter} [filter]
  */
-export function filterRuns(runs, { includeDemo = true, course, challengeId } = {}) {
-  return runs.filter(
-    (r) =>
-      (includeDemo || !r.demo) &&
-      (course === undefined || r.course === course) &&
-      (challengeId === undefined || r.challengeId === challengeId),
-  );
+export function filterRuns(runs, { includeDemo = true, course } = {}) {
+  return runs.filter((r) => (includeDemo || !r.demo) && (course === undefined || r.course === course));
 }
 
 /**

@@ -5,7 +5,7 @@ import { COURSES, CHALLENGE_COURSES, questionCountOf } from '../src/config.js';
 import { QUESTION_LIBRARY } from '../../question-server/questions.js';
 import { selectRunQuestions } from '../src/questions.js';
 import { MAX_ROUTE_POINTS, downsample, toRunRecord, upgradeRunRecord } from '../src/history/runRecord.js';
-import { createLocalRunStore, filterRuns } from '../src/history/store.js';
+import { createLocalRunStore } from '../src/history/store.js';
 import { parseRoute, routeHref, navMarkup } from '../src/ui/nav.js';
 import { historyMarkup } from '../src/ui/history.js';
 
@@ -129,7 +129,6 @@ test('local store survives corrupt storage and respects its cap', async () => {
     await store.save(record({ id, finishedAt: `2026-01-0${['x', 'y', 'z'].indexOf(id) + 1}T00:00:00.000Z` }));
   }
   assert.deepEqual((await store.list()).map((r) => r.id), ['z', 'y']);
-  assert.deepEqual(filterRuns([{ challengeId: 'c' }, { challengeId: null }], { challengeId: 'c' }).length, 1);
 });
 
 test('routes parse from the hash and fall back to the run tab', () => {

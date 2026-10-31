@@ -1,11 +1,10 @@
-import { filterRuns } from './store.js';
 import { RUN_RECORD_SCHEMA } from './runRecord.js';
 
 /**
- * RunStore adapter backed by Supabase (tables `runs` + `run_answers`, see
- * supabase/migrations). Same contract as createLocalRunStore in store.js.
- * Records it returns are `synced: true`. RLS limits every query to the
- * signed-in user's own runs.
+ * The signed-in user's runs in Supabase (tables `runs` + `run_answers`, see
+ * supabase/migrations). Only syncedStore uses it, and it filters and merges
+ * the full list itself. Records it returns are `synced: true`. RLS limits
+ * every query to the signed-in user's own runs.
  */
 
 const REMOTE_LIST_LIMIT = 1000;
@@ -107,23 +106,20 @@ function check({ data, error }) {
  * @param {object} options
  * @param {object} options.client  supabase-js client
  * @param {string} options.userId  the signed-in user's id
- * @returns {import('./store.js').RunStore}
  */
 export function createRemoteRunStore({ client, userId }) {
-  const listeners = new Set();
-  const changed = () => listeners.forEach((listener) => listener());
-
   return {
-    /** @param {import('./store.js').RunFilter} [filter] */
-    async list({ includeDemo = true, course, challengeId } = {}) {
-      let query = client.from('runs').select(SELECT).eq('user_id', userId);
-      if (!includeDemo) query = query.eq('demo', false);
-      if (course !== undefined) query = query.eq('course', course);
-      if (challengeId === null) query = query.is('challenge_id', null);
-      else if (challengeId !== undefined) query = query.eq('challenge_id', challengeId);
-      const rows = check(await query.order('finished_at', { ascending: false }).limit(REMOTE_LIST_LIMIT));
-      // filterRuns again so the semantics match the local store exactly.
-      return filterRuns((rows ?? []).map(fromRunRow), { includeDemo, course, challengeId });
+    /** All the user's runs, newest first. */
+    async list() {
+      const rows = check(
+        await client
+          .from('runs')
+          .select(SELECT)
+          .eq('user_id', userId)
+          .order('finished_at', { ascending: false })
+          .limit(REMOTE_LIST_LIMIT),
+      );
+      return (rows ?? []).map(fromRunRow);
     },
     async get(id) {
       const row = check(await client.from('runs').select(SELECT).eq('id', id).maybeSingle());
@@ -135,16 +131,10 @@ export function createRemoteRunStore({ client, userId }) {
       if (answers.length) {
         check(await client.from('run_answers').upsert(answers, { onConflict: 'run_id,idx' }));
       }
-      changed();
       return { ...record, synced: true };
     },
     async remove(id) {
       check(await client.from('runs').delete().eq('id', id));
-      changed();
-    },
-    subscribe(listener) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
     },
   };
 }
