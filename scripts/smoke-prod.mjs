@@ -30,10 +30,20 @@ for (const src of scripts) {
 
 const judge = await fetch(`${base}/api/judge`, {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json', Origin: new URL(base).origin },
   body: JSON.stringify({ questionId: 'logic-1', text: 'no it does not follow' }),
 });
 check([200, 503].includes(judge.status), `POST /api/judge -> ${judge.status}`);
+
+const foreign = await fetch(`${base}/api/judge`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', Origin: 'https://example.com' },
+  body: '{}',
+});
+check(foreign.status === 403, `POST /api/judge from a foreign origin -> ${foreign.status} (want 403)`);
+
+const page = await fetch(base);
+check(/script-src 'self'/.test(page.headers.get('content-security-policy') ?? ''), 'Content-Security-Policy header present');
 
 if (failures.length) {
   console.error(`\n${failures.length} check(s) failed against ${base}`);
