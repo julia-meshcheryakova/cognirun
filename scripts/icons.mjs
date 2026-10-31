@@ -11,54 +11,34 @@ const res = join(root, 'android/app/src/main/res');
 const pub = join(root, 'web/public');
 
 // Adaptive-icon canvas is 108dp; launchers show the middle 72dp and guarantee
-// a 66dp circle. MARK_SCALE makes the mark fill that circle, tips just inside it.
-const MARK_SCALE = 1.22;
-const GRID_STEP = 20.25;
+// a 66dp circle. The mark (scripts/logo-mark.svg, 1024 units) fits in a circle
+// of radius 432 around (550, 562); MARK_RADIUS sets its size in dp.
+const MARK_RADIUS = 32;
+const MARK_PATH = readFileSync(join(root, 'scripts/logo-mark.svg'), 'utf8').match(/ d="([^"]+)"/)[1];
+const TOP = '#3d0acb';
+const BOTTOM = '#9509db';
 
-function markShapes() {
-  // The mark drawn upright around (0,0); it is turned 45° when placed.
-  const t = `translate(54 54) rotate(45) scale(${MARK_SCALE})`;
-  const r = (x, y, w, h) => `<rect transform="${t}" x="${x}" y="${y}" width="${w}" height="${h}"/>`;
-  return [
-    r(-3.5, -24.75, 7, 14.25),
-    r(-17.75, -10.5, 35.5, 7),
-    r(-17.75, 3.5, 35.5, 7),
-    r(-3.5, 10.5, 7, 14.25),
-  ].join('');
-}
-
-function gridLines() {
-  const lines = [];
-  for (let c = -108; c <= 216; c += GRID_STEP) {
-    lines.push(`<line x1="${c}" y1="0" x2="${c - 108}" y2="108"/>`);
-    lines.push(`<line x1="${c - 108}" y1="0" x2="${c}" y2="108"/>`);
-  }
-  return `<g stroke="#e5e9f1" stroke-width="0.4">${lines.join('')}</g>`;
-}
-
-/** @param {{ background?: boolean, viewBox?: string, shape?: 'square'|'rounded'|'circle' }} o */
-export function iconSvg({ background = true, viewBox = '0 0 108 108', shape = 'square' } = {}) {
+/** @param {{ background?: boolean, mark?: boolean, viewBox?: string, shape?: 'square'|'rounded'|'circle' }} o */
+export function iconSvg({ background = true, mark = true, viewBox = '0 0 108 108', shape = 'square' } = {}) {
   const [vx, vy, vw] = viewBox.split(' ').map(Number);
   const clip =
     shape === 'circle'
       ? `<circle cx="54" cy="54" r="${vw / 2}"/>`
       : `<rect x="${vx}" y="${vy}" width="${vw}" height="${vw}" rx="${shape === 'rounded' ? vw * 0.22 : 0}"/>`;
+  const k = MARK_RADIUS / 432;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">
 <defs>
-<linearGradient id="g" gradientUnits="userSpaceOnUse" x1="30" y1="78" x2="78" y2="30">
-<stop offset="0" stop-color="#7dd1ff"/><stop offset="1" stop-color="#4fadff"/>
+<linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0" y1="18" x2="0" y2="90">
+<stop offset="0" stop-color="${TOP}"/><stop offset="1" stop-color="${BOTTOM}"/>
 </linearGradient>
-<clipPath id="mark">${markShapes()}</clipPath>
 <clipPath id="shape">${clip}</clipPath>
 </defs>
 <g clip-path="url(#shape)">
-${background ? '<rect x="-54" y="-54" width="216" height="216" fill="#fff"/>' : ''}
-${gridLines()}
-<rect width="108" height="108" fill="url(#g)" clip-path="url(#mark)"/>
+${background ? '<rect x="-54" y="-54" width="216" height="216" fill="url(#g)"/>' : ''}
+${mark ? `<path transform="translate(54 54) scale(${k}) translate(-550 -562)" fill="#fff" fill-rule="evenodd" d="${MARK_PATH}"/>` : ''}
 </g>
 </svg>`;
 }
-
 const VISIBLE = '18 18 72 72'; // what a launcher shows of the 108dp canvas
 
 async function main() {
@@ -78,6 +58,7 @@ async function main() {
   for (const [name, k] of Object.entries(densities)) {
     const dir = join(res, `mipmap-${name}`);
     await render(iconSvg({ background: false }), 108 * k, join(dir, 'ic_launcher_foreground.png'));
+    await render(iconSvg({ mark: false }), 108 * k, join(dir, 'ic_launcher_background.png'), false);
     await render(iconSvg({ viewBox: VISIBLE, shape: 'rounded' }), 48 * k, join(dir, 'ic_launcher.png'));
     await render(iconSvg({ viewBox: VISIBLE, shape: 'circle' }), 48 * k, join(dir, 'ic_launcher_round.png'));
   }

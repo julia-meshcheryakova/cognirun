@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launch screen: the icon gradient with the mark centred (not stretched). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#3d0acb" android:endColor="#9509db" />
+        </shape>
+    </item>
+    <item
+        android:width="216dp"
+        android:height="216dp"
+        android:gravity="center"
+        android:drawable="@mipmap/ic_launcher_foreground" />
+</layer-list>
